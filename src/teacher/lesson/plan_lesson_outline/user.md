@@ -1,8 +1,11 @@
 # Lesson outline request
 
-Language: {{ language }}
-Lesson time: {{ metadata.lesson_start_seconds }}s to {{ metadata.lesson_end_seconds }}s, lasting {{ metadata.lesson_duration_seconds }}s
-Documents: {{ metadata.document_count }}
+| Field | Value |
+| --- | --- |
+| Language | {{ language }} |
+| Lesson time | {{ metadata.lesson_start_seconds }}s to {{ metadata.lesson_end_seconds }}s |
+| Lesson duration | {{ metadata.lesson_duration_seconds }}s |
+| Documents | {{ metadata.document_count }} |
 
 ## Document explanations
 

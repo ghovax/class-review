@@ -1,7 +1,9 @@
 # Transcript correction
 
-Language: {{ language }}
-Source time range: {{ start_seconds }}s to {{ end_seconds }}s
+| Field | Value |
+| --- | --- |
+| Language | {{ language }} |
+| Source time range | {{ start_seconds }}s to {{ end_seconds }}s |
 
 ## Canonical terminology
 

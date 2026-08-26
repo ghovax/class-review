@@ -1,10 +1,12 @@
 # Section to explain
 
-Document: `{{ section.document_file_name }}`
-Document index: {{ section.document_index }}
-Section: {{ section.section_index }} - {{ section.section_title }}
-Pages: {{ section.start_page }} to {{ section.end_page }}
-Description: {{ section.section_description }}
+| Field | Value |
+| --- | --- |
+| Document | `{{ section.document_file_name }}` |
+| Document index | {{ section.document_index }} |
+| Section | {{ section.section_index }}: {{ section.section_title }} |
+| Pages | {{ section.start_page }} to {{ section.end_page }} |
+| Description | {{ section.section_description }} |
 
 ## Page material
 

@@ -1,12 +1,14 @@
 # Chapter request
 
-Language: {{ language }}
-Chapter {{ chapter.index }} of {{ chapter.total }}
-Time: {{ chapter.start_seconds }}s to {{ chapter.end_seconds }}s
-Concepts in this chapter: {{ chapter.concept_count }}
-Earlier chapters: {{ chapter.previous_chapter_count }}
-Earlier concepts: {{ chapter.previous_concept_count }}
-Transcript excerpts: {{ transcript.excerpt_count }}
+| Field | Value |
+| --- | --- |
+| Language | {{ language }} |
+| Chapter | {{ chapter.index }} of {{ chapter.total }} |
+| Time | {{ chapter.start_seconds }}s to {{ chapter.end_seconds }}s |
+| Concepts in this chapter | {{ chapter.concept_count }} |
+| Earlier chapters | {{ chapter.previous_chapter_count }} |
+| Earlier concepts | {{ chapter.previous_concept_count }} |
+| Transcript excerpts | {{ transcript.excerpt_count }} |
 
 {{ mathematics_notation_rules }}
 
