@@ -232,7 +232,7 @@ def _read_units(
 logger = get_logger(__name__)
 
 
-async def finish_transcript(
+async def assemble_transcript(
     state: LessonState, runtime: Runtime[GraphRuntime]
 ) -> dict[str, object]:
     """Orders, deduplicates, and re-chains every batch's units into one whole."""
@@ -304,5 +304,4 @@ def _chain_ends(segments: list[TranscriptSegment]) -> list[TranscriptSegment]:
         )
         for position, segment in enumerate(segments)
     ]
-
 

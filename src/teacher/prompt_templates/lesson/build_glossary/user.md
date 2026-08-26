@@ -3,7 +3,7 @@
 Language: {{ language }}
 Lesson title: {{ lesson_title }}
 
-## Finished lesson
+## Completed lesson
 
 {{ lesson_markdown }}
 
