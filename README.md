@@ -10,12 +10,13 @@ The package follows the graph rather than a generic utilities hierarchy:
 
 ```text
 graph.py              graph wiring, fan-out, barriers, and chapter loop
-transcript/           find terms -> correct batches -> finish transcript
-documents/            load PDFs -> read pages -> map sections -> explain sections
-lesson/               plan -> write chapters -> glossary -> finish lesson
-importers/             transcript and PDF input adapters, including Modal clients
-xml/                   one public XML recovery and schema-validation boundary
-outputs/               Markdown/PDF/JSON export
+transcript.py         find terms -> correct batches -> finish transcript
+documents.py          load PDFs -> read pages -> map sections -> explain sections
+lesson.py             plan -> write chapters -> glossary -> finish lesson
+importers.py          transcript and PDF input adapters, including Modal clients
+xml.py                one public XML recovery and schema-validation boundary
+outputs.py            Markdown/PDF/JSON export
+support.py            shared errors, logging, model calls, and text assembly
 ```
 
 The prompt files contain model-facing instructions only. Prompt fragments that

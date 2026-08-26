@@ -13,7 +13,7 @@ from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from teacher.configuration import GraphConfiguration, GraphRuntime
 from teacher.graph import define_graph
 from teacher.models import DocumentSource, LanguageModelUsage, Lesson, Transcript
-from teacher.serialization import build_serializer
+from teacher.configuration import build_serializer
 
 
 @dataclass(frozen=True, slots=True)
