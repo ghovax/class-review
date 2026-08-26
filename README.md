@@ -13,7 +13,7 @@ Teacher turns a timestamped lecture transcript and optional document bytes into 
 | Inputs | Typed caller values and document reader protocol | `models.py` |
 | Configuration | Model selection, reader injection, and graph limits | `configuration.py` |
 | XML | One recovery and schema-validation boundary | `xml.py` |
-| Shared prompts | Language and notation rules used by nodes | `shared_prompts/` |
+| Shared prompts | Language, notation, and compact XML rules used by nodes | `shared_prompts/` |
 | Outputs | Markdown and the optional Pandoc and Typst PDF path | `outputs.py` |
 
 Prompt files contain only model-facing instructions. The graph owns the flow, and the caller owns transcript and document sourcing.
@@ -59,6 +59,8 @@ class DocumentReader(Protocol):
 ```
 
 The reader may receive bytes loaded from local files, a web client, object storage, or any other application-specific source. Teacher does not care where the bytes came from and does not choose a downloader. `DocumentSource.from_path(...)` is only a convenience for local callers; the value passed to the reader is still `content: bytes`. Teacher parses model XML into typed values immediately; XML is used only at the model boundary.
+
+All XML sent to a model is serialized without indentation or line breaks. The shared XML prompt rule asks models to return the same compact form, while the parser recovers common wrappers, truncation, malformed character data, stray markup, and repeated or singleton elements before schema validation.
 
 ## Graph call
 

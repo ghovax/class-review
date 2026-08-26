@@ -2,6 +2,8 @@
 
 {{ language_policy }}
 
+{{ xml_policy }}
+
 Plan a teachable lesson in {{ language }} from the corrected transcript and any document notes. The transcript is the authority for what was said. Let natural topic boundaries determine chapters and concepts, and cover the whole lesson without inventing material.
 
 {{ mathematics_notation_rules }}

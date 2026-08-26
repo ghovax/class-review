@@ -626,6 +626,7 @@ async def plan_lesson_outline(
         {
             "language": state["output_language"],
             "language_policy": prompts.render("shared_prompts/language_policy"),
+            "xml_policy": prompts.render("shared_prompts/xml_policy"),
             "mathematics_notation_rules": prompts.render(
                 "shared_prompts/mathematics_notation_rules"
             ),
@@ -992,6 +993,7 @@ async def write_lesson_chapter(
                     {
                         "language": state["output_language"],
                         "language_policy": prompts.render("shared_prompts/language_policy"),
+                        "xml_policy": prompts.render("shared_prompts/xml_policy"),
                         "mathematics_notation_rules": prompts.render(
                             "shared_prompts/mathematics_notation_rules"
                         ),
@@ -1267,6 +1269,7 @@ async def build_lesson_glossary(
                     {
                         "language": state["output_language"],
                         "language_policy": prompts.render("shared_prompts/language_policy"),
+                        "xml_policy": prompts.render("shared_prompts/xml_policy"),
                         "mathematics_notation_rules": prompts.render(
                             "shared_prompts/mathematics_notation_rules"
                         ),
