@@ -1,6 +1,6 @@
 # Transcript correction
 
-Language: {{ audio_language }}
+Language: {{ language }}
 Source time range: {{ start_seconds }}s to {{ end_seconds }}s
 
 ## Canonical terminology
@@ -9,7 +9,7 @@ Source time range: {{ start_seconds }}s to {{ end_seconds }}s
 
 ## Source segments
 
-{{ source_segments_xml }}
+{{ transcript_xml }}
 
 Return only this XML shape, with one paragraph per segment:
 

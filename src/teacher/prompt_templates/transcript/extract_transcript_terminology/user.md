@@ -1,6 +1,8 @@
-Audio language: {{ audio_language }}
+# Transcript
 
-Extract the terminology used in this transcript. Return only:
+Language: {{ language }}
+
+Extract the terminology used in the transcript. Return only:
 
 ```xml
 <Terminology>
@@ -12,6 +14,4 @@ Extract the terminology used in this transcript. Return only:
 </Terminology>
 ```
 
-Transcript:
-
-{{ transcript_full }}
+{{ transcript }}
