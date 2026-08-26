@@ -1,7 +1,17 @@
-Audio language: `{{ audio_language }}`
+Audio language: {{ audio_language }}
 
-Extract a canonical-terminology glossary from the full raw ASR transcript below. Follow the protocol from the system prompt strictly.
+Extract the terminology used in this transcript. Return only:
 
-```text
-{{ transcript_full }}
+```xml
+<Glossary>
+  <Term>
+    <Canonical><![CDATA[Preferred spelling]]></Canonical>
+    <Heard><Variant><![CDATA[ASR spelling]]></Variant></Heard>
+    <Kind>Jargon</Kind>
+  </Term>
+</Glossary>
 ```
+
+Transcript:
+
+{{ transcript_full }}

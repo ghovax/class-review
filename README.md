@@ -1,108 +1,119 @@
-# teacher
+# Teacher
 
-`teacher` turns a timestamped lecture transcript and optional PDFs into a
-structured lesson through one resumable graph: transcript cleanup, source
-reading, lesson planning, chapter writing, glossary creation, and export.
+Teacher turns a timestamped lecture transcript and optional document material into a structured lesson through one resumable graph. The graph cleans the transcript, reads supplied document pages, plans chapters, writes the lesson, builds a glossary, and exposes Markdown and PDF output.
 
 ## Code layout
 
-The package follows the graph rather than a generic utilities hierarchy:
+| Area | Responsibility | Main file |
+| --- | --- | --- |
+| Graph | Wiring, fan-out, barriers, and the chapter loop | `graph.py` |
+| Transcript | Terminology, correction batches, and assembly | `transcript.py` |
+| Documents | Page reading, section mapping, and explanations | `documents.py` |
+| Lesson | Planning, chapter writing, glossary, and assembly | `lesson.py` |
+| Inputs | Typed caller values and document reader protocol | `models.py` |
+| Configuration | Model selection, reader injection, and graph limits | `configuration.py` |
+| XML | One recovery and schema-validation boundary | `xml.py` |
+| Outputs | Markdown and the optional Pandoc and Typst PDF path | `outputs.py` |
 
-```text
-graph.py              graph wiring, fan-out, barriers, and chapter loop
-transcript.py         find terms -> correct batches -> finish transcript
-documents.py          load PDFs -> read pages -> map sections -> explain sections
-lesson.py             plan -> write chapters -> glossary -> finish lesson
-importers.py          transcript and PDF input adapters, including Modal clients
-xml.py                one public XML recovery and schema-validation boundary
-outputs.py            Markdown/PDF/JSON export
-support.py            shared errors, logging, model calls, and text assembly
-```
+Prompt files contain only model-facing instructions. The graph owns the flow, and the caller owns transcript and document sourcing.
 
-The prompt files contain model-facing instructions only. Prompt fragments that
-were just one-line formatting wrappers are represented directly at the node or
-rendering boundary, so the execution path does not jump through a second
-prompt-fragment module.
-
-## Explicit API contract
-
-The graph input is:
+## Input contract
 
 ```python
 Transcript(
-    segments: tuple[TranscriptSegment, ...],
-    languages: tuple[str, ...],
+    segments=tuple[TranscriptSegment, ...],
+    languages=tuple[str, ...],
 )
 
 TranscriptSegment(
-    start_seconds: float,
-    end_seconds: float,
-    content: str,
+    start_seconds=float,
+    end_seconds=float,
+    content=str,
 )
 
-DocumentSource(url: str, file_name: str | None = None)
+DocumentSource(url=str, file_name=str | None = None)
 ```
 
-The execution configuration is:
+Teacher validates non-empty URLs and text, non-negative timestamps, and ordered segment timestamps when these values are constructed. `sources` is caller-owned and may be empty. When sources are present, `GraphConfiguration.document_reader` must provide one implementation of the `DocumentReader` protocol:
 
 ```python
-GraphConfiguration(
-    language_model: ModelConfiguration,
-    checkpoint_path: Path,
-    model_provider: ModelProvider,
-    page_language_model: ModelConfiguration | None = None,
-    document_importer: DocumentImporter = WebPdfImporter(),
-    ...bounded graph settings...
-)
+class DocumentReader(Protocol):
+    async def read(
+        self,
+        source: DocumentSource,
+        *,
+        document_index: int,
+    ): ...
 ```
 
-The graph call is:
+The reader may use local files, a web client, a storage service, or any other application-specific source. Teacher does not choose a downloader or PDF adapter for the caller.
+
+## Graph call
 
 ```python
 async with LessonGraph(configuration) as graph:
     result = await graph.generate(
-        transcript: Transcript,
-        output_language: str,
-        run_id: str,
-        sources: Sequence[DocumentSource] = (),
+        transcript=transcript,
+        output_language="en",
+        run_id="cell-biology-2026-08-26",
+        sources=sources,
     )
 ```
 
-`run_id` is the caller-chosen stable key for the SQLite checkpoint. It must be
-provided when starting a run and reused unchanged for
-`LessonGraph.resume(run_id: str)` after an interruption.
+`run_id` is the caller-chosen stable key for the SQLite checkpoint. Reuse it with `LessonGraph.resume(run_id)` after an interruption.
 
-The graph output is:
+## Configuration
 
 ```python
-LessonResult(
-    lesson: Lesson,
-    usage_by_model: dict[str, LanguageModelUsage],
-    run_id: str,
-)
-
-Lesson(
-    title: str,
-    description: str,
-    chapters: tuple[Chapter, ...],
-    glossary: tuple[GlossaryEntry, ...],
-)
-
-Chapter(
-    title: str,
-    content: str,
-    concepts: tuple[Concept, ...],
-    citations: tuple[Citation, ...],
-    glossary_links: tuple[GlossaryLink, ...],
+configuration = GraphConfiguration(
+    language_model=ModelConfiguration(
+        provider="anthropic",
+        model="claude-sonnet-4-5",
+        reasoning_effort="high",
+    ),
+    checkpoint_path=Path("output/lesson.checkpoints.sqlite"),
+    model_provider=provider,
+    page_language_model=page_provider_configuration,
+    document_reader=reader,
 )
 ```
 
-`content` is retained as model-authored text. Teacher does not parse it into a
-custom Markdown tree. `MarkdownExporter` writes the text plus source tables,
-glossary anchors, and citation footnotes; `PdfExporter` converts the same
-export; `save_data` writes the complete typed lesson as JSON.
+`model_provider` is any implementation of the independent Models Provider interface. Teacher does not import or select a concrete provider. `page_language_model` is required when `sources` is non-empty.
 
-In a real caller, the input values are ordinary immutable Python values:
+## Output contract
+
+```python
+LessonResult(
+    lesson=Lesson(
+        title=str,
+        description=str,
+        chapters=tuple[Chapter, ...],
+        glossary=tuple[GlossaryEntry, ...],
+    ),
+    usage_by_model=dict[str, LanguageModelUsage],
+    run_id=str,
+)
+
+Chapter(
+    title=str,
+    content=str,
+    concepts=tuple[Concept, ...],
+    citations=tuple[Citation, ...],
+    glossary_links=tuple[GlossaryLink, ...],
+)
+```
+
+`Chapter.content` remains model-authored text. Teacher does not parse it into a custom Markdown tree. Use `render_export_markdown` for the canonical Markdown representation and `PdfExporter` when a PDF is wanted:
+
+```python
+markdown = render_export_markdown(result.lesson, metadata=metadata)
+Path("output/lesson.md").write_bytes(markdown.encode("utf-8"))
+PdfExporter().save(result.lesson, "output/lesson.pdf", metadata=metadata)
+```
+
+The PDF path delegates to Pandoc and Typst. The surrounding application can persist JSON or any other representation directly from the typed `Lesson` value.
+
+## Example input
 
 ```python
 transcript = Transcript(
@@ -120,61 +131,4 @@ sources = (
 )
 ```
 
-`sources` is caller-owned just like `transcript`: pass zero or more
-`DocumentSource` values to `generate`. Each source is fetched and analyzed by
-the configured document importer. A caller that already has recordings may
-instead use `JsonTranscriptImporter` or `ModalTranscriptImporter` to produce
-the same `Transcript` value.
-
-## Generate a lesson
-
-```python
-import asyncio
-from pathlib import Path
-
-from langmesh.models_provider import LangMeshProvider
-from models_provider import ModelConfiguration
-from teacher import GraphConfiguration, LessonGraph, MarkdownExporter
-from teacher import DocumentSource, Transcript, TranscriptSegment
-
-
-async def main() -> None:
-    output = Path("output/lesson.md")
-    configuration = GraphConfiguration(
-        language_model=ModelConfiguration(
-            provider="anthropic",
-            model="claude-sonnet-4-5",
-            reasoning_effort="high",
-        ),
-        checkpoint_path=Path("output/lesson.checkpoints.sqlite"),
-        model_provider=LangMeshProvider(providers={"anthropic": "sk-ant-..."}),
-    )
-    transcript = Transcript(
-        segments=(
-            TranscriptSegment(0.0, 4.2, "The first idea is ..."),
-            TranscriptSegment(4.2, 9.8, "The second idea is ..."),
-        ),
-        languages=("en",),
-    )
-    sources = (
-        DocumentSource(
-            url="https://example.org/handout.pdf",
-            file_name="handout.pdf",
-        ),
-    )
-    async with LessonGraph(configuration) as graph:
-        result = await graph.generate(
-            transcript=transcript,
-            output_language="en",
-            run_id="cell-biology-2026-08-26",
-            sources=sources,
-        )
-    MarkdownExporter().save(result.lesson, output)
-
-
-asyncio.run(main())
-```
-
-There is deliberately no length option. Structure and depth are derived from
-the material. Optional PDF input requires `page_language_model`; Modal
-transcription backends are available under `teacher.modal_apps`.
+There is no length option. Structure and depth come from the material and the plan. Input sourcing, persistence, and non-PDF exports remain application concerns.

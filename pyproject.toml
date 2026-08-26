@@ -12,14 +12,12 @@ license = { text = "MIT" }
 authors = [{ name = "Giovanni Gravili" }]
 dependencies = [
   "aiosqlite>=0.20",
-  "httpx>=0.28",
   "langchain-core>=1.0",
   "langgraph>=1.0",
   "langgraph-checkpoint-sqlite>=3.0",
   "models-provider @ git+https://github.com/ghovax/models-provider.git@24c3340f2d54fc143618073dba7efd99cfa57e6b",
   "lxml>=5.3",
   "pydantic>=2.11",
-  "pypdfium2>=4.30",
   "segno>=1.6",
   "structlog>=25.1",
 ]
