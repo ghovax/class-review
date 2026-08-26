@@ -1,13 +1,12 @@
 """Consolidated Teacher implementation."""
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from langchain_core.language_models import BaseChatModel
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from models_provider import ModelConfiguration, ModelProvider
 from pathlib import Path
-from teacher.importers import WebPdfImporter
-from teacher.models import DocumentImporter
+from teacher.models import DocumentReader
 from teacher.prompts import Prompts
 from typing import Final
 
@@ -24,8 +23,8 @@ class GraphConfiguration:
     checkpoint_path: Path
     model_provider: ModelProvider
     page_language_model: ModelConfiguration | None = None
-    document_importer: DocumentImporter = field(default_factory=WebPdfImporter)
-    prompts: Prompts = field(default_factory=Prompts)
+    document_reader: DocumentReader | None = None
+    prompts: Prompts = Prompts()
     model_attempts: int = 3
     page_attempts: int = 3
     correction_batch_seconds: float = 1800.0
@@ -53,7 +52,7 @@ class GraphConfiguration:
                 if self.page_language_model is not None
                 else None
             ),
-            document_importer=self.document_importer,
+            document_reader=self.document_reader,
             prompts=self.prompts,
             model_attempts=self.model_attempts,
             page_attempts=self.page_attempts,
@@ -75,7 +74,7 @@ class GraphRuntime:
 
     text_model: BaseChatModel
     page_model: BaseChatModel | None
-    document_importer: DocumentImporter
+    document_reader: DocumentReader | None
     prompts: Prompts
     model_attempts: int
     page_attempts: int

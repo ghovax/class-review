@@ -44,7 +44,9 @@ async def load_document(state: DocumentToLoad, runtime: Runtime[GraphRuntime]) -
     item = state
     if runtime.context.page_model is None:
         raise PipelineError.terminal("page_model is required when documents are supplied")
-    imported = await runtime.context.document_importer.load(
+    if runtime.context.document_reader is None:
+        raise PipelineError.terminal("document_reader is required when documents are supplied")
+    imported = await runtime.context.document_reader.read(
         item.source, document_index=item.document_index
     )
     if not imported.pages:

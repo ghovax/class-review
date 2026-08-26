@@ -1,7 +1,6 @@
 """Consolidated Teacher implementation."""
 from __future__ import annotations
 
-from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any, Protocol, runtime_checkable
@@ -70,6 +69,12 @@ class Recording:
     index: int
     file_name: str | None = None
 
+    def __post_init__(self) -> None:
+        if not self.url.strip():
+            raise ValueError("recording url cannot be empty")
+        if self.index < 0:
+            raise ValueError("recording index cannot be negative")
+
 
 @dataclass(frozen=True, slots=True)
 class DocumentSource:
@@ -77,6 +82,10 @@ class DocumentSource:
 
     url: str
     file_name: str | None = None
+
+    def __post_init__(self) -> None:
+        if not self.url.strip():
+            raise ValueError("document source url cannot be empty")
 
 
 @dataclass(frozen=True, slots=True)
@@ -87,6 +96,14 @@ class TranscriptSegment:
     end_seconds: float
     content: str
 
+    def __post_init__(self) -> None:
+        if self.start_seconds < 0 or self.end_seconds < 0:
+            raise ValueError("transcript timestamps cannot be negative")
+        if self.end_seconds < self.start_seconds:
+            raise ValueError("transcript end timestamp cannot precede its start")
+        if not self.content.strip():
+            raise ValueError("transcript segment content cannot be empty")
+
 
 @normalize_sequence_fields
 @dataclass(frozen=True, slots=True)
@@ -96,37 +113,11 @@ class Transcript:
     segments: tuple[TranscriptSegment, ...]
     languages: tuple[str, ...]
 
-
-@normalize_sequence_fields
-@dataclass(frozen=True, slots=True)
-class TranscribedRecording:
-    """One recording paired with the segments a transcriber produced for it."""
-
-    url: str
-    index: int
-    segments: tuple[TranscriptSegment, ...]
-    file_name: str | None = None
-
-
-@dataclass(frozen=True, slots=True)
-class FetchedSource:
-    """The bytes of a downloaded source, with the metadata the download carried."""
-
-    url: str
-    content: bytes
-    content_type: str | None = None
-    file_name: str | None = None
-
-
-@dataclass(frozen=True, slots=True)
-class SourceProbe:
-    """The outcome of checking a source without downloading its body."""
-
-    url: str
-    is_reachable: bool
-    status_code: int | None = None
-    content_type: str | None = None
-    file_name: str | None = None
+    def __post_init__(self) -> None:
+        if not self.segments:
+            raise ValueError("transcript must contain at least one segment")
+        if not self.languages or any(not language.strip() for language in self.languages):
+            raise ValueError("transcript must contain at least one language")
 
 
 @dataclass(frozen=True, slots=True)
@@ -327,8 +318,8 @@ class LanguageModelUsage:
 
 
 @dataclass(frozen=True, slots=True)
-class ImportedDocument:
-    """A resolved document and its rendered pages."""
+class DocumentPages:
+    """A caller-resolved document and its rendered pages."""
 
     document_index: int
     source_url: str
@@ -337,22 +328,10 @@ class ImportedDocument:
 
 
 @runtime_checkable
-class TranscriptImporter(Protocol):
-    """Loads timestamped speech from recordings."""
+class DocumentReader(Protocol):
+    """Resolves one caller-provided document source into page images."""
 
-    async def load(
-        self,
-        recordings: Sequence[Recording],
-        *,
-        audio_languages: str | Sequence[str],
-    ) -> Transcript: ...
-
-
-@runtime_checkable
-class DocumentImporter(Protocol):
-    """Loads and renders one source document."""
-
-    async def load(self, source: DocumentSource, *, document_index: int) -> ImportedDocument: ...
+    async def read(self, source: DocumentSource, *, document_index: int) -> DocumentPages: ...
 
 """Progress events the graphs emit as they run."""
 

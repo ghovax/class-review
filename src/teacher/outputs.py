@@ -11,9 +11,8 @@ from teacher.models import DocumentSource, Recording, Lesson, Citation
 from teacher.prompts import Prompts
 from teacher.support import PipelineError, apply_glossary_links
 from tempfile import TemporaryDirectory
-from typing import Final, Protocol, runtime_checkable
+from typing import Final
 from urllib.parse import unquote, urlsplit
-import dataclasses
 import json
 import re
 import subprocess
@@ -404,7 +403,7 @@ def _run_pandoc(
         try:
             completed = subprocess.run(
                 command,
-                input=_prepare_markdown_for_typst(markdown),
+                input=_ANCHOR_BEFORE_HEADING.sub(rb"\2 {#\1}", markdown),
                 cwd=working_directory,
                 capture_output=True,
                 check=False,
@@ -430,11 +429,6 @@ def _run_pandoc(
         return rendered
 
 
-def _prepare_markdown_for_typst(markdown: bytes) -> bytes:
-    """Turns portable HTML anchors into labels understood by Typst."""
-    return _ANCHOR_BEFORE_HEADING.sub(rb"\2 {#\1}", markdown)
-
-
 def _pandoc_metadata(metadata: ExportMetadata) -> dict[str, str]:
     """Builds the scalar metadata consumed by the packaged Typst template."""
     labels = export_labels(metadata.language)
@@ -452,35 +446,6 @@ def _pandoc_metadata(metadata: ExportMetadata) -> dict[str, str]:
     return values
 
 """File-oriented output API."""
-
-
-@runtime_checkable
-class Exporter(Protocol):
-    """Writes a completed lesson to a caller-selected location."""
-
-    def save(
-        self,
-        lesson: Lesson,
-        destination: str | Path,
-        *,
-        metadata: ExportMetadata | None = None,
-    ) -> Path: ...
-
-
-class MarkdownExporter:
-    """Writes the bundled Markdown representation."""
-
-    def save(
-        self,
-        lesson: Lesson,
-        destination: str | Path,
-        *,
-        metadata: ExportMetadata | None = None,
-    ) -> Path:
-        path = Path(destination)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(export_to_bytes(lesson, format=ExportFormat.MARKDOWN, metadata=metadata))
-        return path
 
 
 class PdfExporter:
@@ -519,15 +484,3 @@ def export_to_bytes(
     return (
         markdown if selected is ExportFormat.MARKDOWN else render_pdf(markdown, resolved_metadata)
     )
-
-
-def save_data(lesson: Lesson, destination: str | Path) -> Path:
-    """Save the complete lesson data as UTF-8 JSON."""
-
-    path = Path(destination)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(dataclasses.asdict(lesson), ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
-    return path
