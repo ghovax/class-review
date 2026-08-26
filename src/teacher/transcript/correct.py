@@ -10,11 +10,10 @@ from teacher.configuration import GraphRuntime
 from teacher.logging_support import get_logger
 from teacher.model_calls import call_chat_model
 from teacher.models import TranscriptSegment
-from teacher.prompt_fragments import render_language_policy
-from teacher.xml.documents import build_xml_document
-from teacher.xml.schema_definitions import (
+from teacher.xml import (
     OneOrMany,
     RequiredText,
+    build_xml_document,
     parse_xml_with_schema,
 )
 
@@ -87,7 +86,7 @@ async def correct_batch(
                     _SYSTEM_TEMPLATE,
                     {
                         "audio_language": batch.spoken_language,
-                        "language_policy": render_language_policy(prompts),
+                        "language_policy": prompts.render("language_policy"),
                     },
                 )
             ),

@@ -10,10 +10,9 @@ from langgraph.runtime import Runtime
 from teacher.configuration import GraphRuntime
 from teacher.logging_support import get_logger
 from teacher.model_calls import call_chat_model
-from teacher.prompt_fragments import render_language_policy
 from teacher.rendering import render_transcript_text
 from teacher.state import LessonState
-from teacher.xml.recovery import extract_element_text
+from teacher.xml import extract_element_text
 
 __all__ = ["EMPTY_TERMINOLOGY", "find_terms"]
 
@@ -31,7 +30,7 @@ async def find_terms(state: LessonState, runtime: Runtime[GraphRuntime]) -> dict
     """Reads the whole machine transcript and settles its terminology."""
     prompts = runtime.context.prompts
     segments = list(state["transcript"].segments)
-    transcript_text = render_transcript_text(segments, prompts)
+    transcript_text = render_transcript_text(segments)
 
     answer = await call_chat_model(
         runtime.context.text_model,
@@ -41,7 +40,7 @@ async def find_terms(state: LessonState, runtime: Runtime[GraphRuntime]) -> dict
                     _SYSTEM_TEMPLATE,
                     {
                         "audio_language": ", ".join(state["transcript"].languages),
-                        "language_policy": render_language_policy(prompts),
+                        "language_policy": prompts.render("language_policy"),
                     },
                 )
             ),

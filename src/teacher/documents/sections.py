@@ -18,10 +18,9 @@ from teacher.models import (
     DocumentSections,
     SectionMap,
 )
-from teacher.prompt_fragments import render_language_policy
 from teacher.rendering import render_page_summaries
 from teacher.state import LessonState
-from teacher.xml.schema_definitions import (
+from teacher.xml import (
     OneOrMany,
     RequiredText,
     parse_xml_with_schema,
@@ -75,7 +74,7 @@ async def map_sections(state: LessonState, runtime: Runtime[GraphRuntime]) -> di
                 prompts.render(
                     _SYSTEM_TEMPLATE,
                     {
-                        "language_policy": render_language_policy(prompts),
+                        "language_policy": prompts.render("language_policy"),
                         "mathematics_notation_rules": prompts.render(_NOTATION_TEMPLATE),
                     },
                 )
@@ -83,7 +82,7 @@ async def map_sections(state: LessonState, runtime: Runtime[GraphRuntime]) -> di
             HumanMessage(
                 prompts.render(
                     _USER_TEMPLATE,
-                    {"page_list_markdown": render_page_summaries(documents, prompts)},
+                    {"page_list_markdown": render_page_summaries(documents)},
                 )
             ),
         ],
