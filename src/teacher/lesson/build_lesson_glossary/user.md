@@ -1,8 +1,8 @@
 # Glossary request
 
-| Field | Value |
-| --- | --- |
-| Language | {{ language }} |
+| Field        | Value              |
+| ------------ | ------------------ |
+| Language     | {{ language }}     |
 | Lesson title | {{ lesson_title }} |
 
 ## Completed lesson
