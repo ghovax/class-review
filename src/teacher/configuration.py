@@ -27,9 +27,9 @@ class GraphConfiguration:
     prompts: Prompts = Prompts()
     model_attempts: int = 3
     page_attempts: int = 3
-    correction_batch_seconds: float = 1800.0
-    chapter_boundary_seconds: float = 45.0
-    chapter_group_seconds: float = 600.0
+    maximum_transcript_seconds_per_request: float = 1800.0
+    chapter_context_margin_seconds: float = 45.0
+    maximum_chapter_context_seconds: float = 600.0
     zero_duration_seconds: float = 1e-6
     maximum_plan_request_characters: int = 400_000
     maximum_model_index: int = 10_000
@@ -56,9 +56,9 @@ class GraphConfiguration:
             prompts=self.prompts,
             model_attempts=self.model_attempts,
             page_attempts=self.page_attempts,
-            correction_batch_seconds=self.correction_batch_seconds,
-            chapter_boundary_seconds=self.chapter_boundary_seconds,
-            chapter_group_seconds=self.chapter_group_seconds,
+            maximum_transcript_seconds_per_request=self.maximum_transcript_seconds_per_request,
+            chapter_context_margin_seconds=self.chapter_context_margin_seconds,
+            maximum_chapter_context_seconds=self.maximum_chapter_context_seconds,
             zero_duration_seconds=self.zero_duration_seconds,
             maximum_plan_request_characters=self.maximum_plan_request_characters,
             maximum_model_index=self.maximum_model_index,
@@ -78,9 +78,9 @@ class GraphRuntime:
     prompts: Prompts
     model_attempts: int
     page_attempts: int
-    correction_batch_seconds: float
-    chapter_boundary_seconds: float
-    chapter_group_seconds: float
+    maximum_transcript_seconds_per_request: float
+    chapter_context_margin_seconds: float
+    maximum_chapter_context_seconds: float
     zero_duration_seconds: float
     maximum_plan_request_characters: int
     maximum_model_index: int
@@ -122,8 +122,8 @@ PERSISTED_TYPES: Final[tuple[tuple[str, str], ...]] = (
     ("teacher.models", "ProgressionAxis"),
     ("teacher.models", "ExplanationDepth"),
     ("teacher.state", "ChapterDraft"),
-    ("teacher.state", "ChapterExchange"),
-    ("teacher.state", "StagedPage"),
+    ("teacher.state", "ChapterAnswer"),
+    ("teacher.state", "DocumentPageReading"),
 )
 
 

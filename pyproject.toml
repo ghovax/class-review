@@ -52,5 +52,6 @@ select = ["E4", "E7", "E9", "F", "B", "ASYNC", "RUF006", "RUF012", "RUF018", "RU
 
 [tool.basedpyright]
 include = ["src"]
+exclude = ["src/teacher/modal_apps"]
 typeCheckingMode = "basic"
 pythonVersion = "3.13"

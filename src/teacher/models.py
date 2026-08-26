@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
+from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 import dataclasses
 
@@ -83,6 +84,15 @@ class DocumentSource:
     content: bytes
     file_name: str | None = None
 
+    @classmethod
+    def from_path(cls, path: str | Path, *, file_name: str | None = None) -> "DocumentSource":
+        """Read a local document once and keep only its bytes and display name."""
+        source_path = Path(path)
+        return cls(
+            content=source_path.read_bytes(),
+            file_name=source_path.name if file_name is None else file_name,
+        )
+
     def __post_init__(self) -> None:
         if not isinstance(self.content, bytes):
             raise TypeError("document source content must be bytes")
@@ -139,7 +149,7 @@ class TerminologyTerm:
 @normalize_sequence_fields
 @dataclass(frozen=True, slots=True)
 class Terminology:
-    """The parsed terminology shared by transcript correction batches."""
+    """The parsed terminology shared by transcript correction."""
 
     terms: tuple[TerminologyTerm, ...]
 
@@ -371,7 +381,7 @@ class StageChanged:
 
 @dataclass(frozen=True, slots=True)
 class TranscriptAssembled:
-    """Every correction batch settled and the transcript was reassembled."""
+    """All transcript corrections settled and the transcript was reassembled."""
 
     segment_count: int
     duration_seconds: float

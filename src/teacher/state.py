@@ -63,17 +63,16 @@ class ChapterDraft:
 
 
 @dataclass(frozen=True, slots=True)
-class ChapterExchange:
-    """One chapter request and answer retained for continuity."""
+class ChapterAnswer:
+    """One generated chapter answer retained for continuity."""
 
     chapter_index: int
-    request: str
-    answer: str
+    content: str
 
 
 @dataclass(frozen=True, slots=True)
-class StagedPage:
-    """One extracted page before document assembly."""
+class DocumentPageReading:
+    """What one page-reading request produced."""
 
     document_index: int
     page_number: int
@@ -102,12 +101,12 @@ class LessonState(LessonInput, total=False):
     terminology: Terminology
     clean_transcript: Annotated[list[TranscriptSegment], operator.add]
     documents: Annotated[list[Document], upsert_by("document_index")]
-    staged_pages: Annotated[list[StagedPage], operator.add]
+    page_readings: Annotated[list[DocumentPageReading], operator.add]
     section_map: SectionMap | None
     section_notes: list[SectionNotes]
     plan: LessonPlan | None
     chapter_drafts: Annotated[list[ChapterDraft], upsert_by("chapter_index")]
-    chapter_exchanges: Annotated[list[ChapterExchange], upsert_by("chapter_index")]
+    chapter_answers: Annotated[list[ChapterAnswer], upsert_by("chapter_index")]
     glossary: list[GlossaryEntry]
     lesson: Lesson | None
     usage_by_model: Annotated[dict[str, ModelUsage], merge_usage_by_model]

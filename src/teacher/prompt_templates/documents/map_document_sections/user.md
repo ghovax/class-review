@@ -1,4 +1,4 @@
-# Pages to group
+# Organize document pages
 
 {{ page_list_markdown }}
 

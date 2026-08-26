@@ -90,7 +90,7 @@ class ParakeetModel:
 @app.function(image=cpu_image, timeout=3600)
 @modal.fastapi_endpoint(method="POST", requires_proxy_auth=True)
 def transcribe(data: dict):
-    """Transcribe a batch in parallel across GPU containers."""
+    """Transcribe one input set in parallel across GPU containers."""
 
     try:
         items = validate_items(data)
@@ -105,7 +105,7 @@ def transcribe(data: dict):
 
 @app.local_entrypoint()
 def main(url: str) -> None:
-    """Run a comma-separated URL batch from the Modal CLI."""
+    """Run a comma-separated set of URLs from the Modal CLI."""
 
     urls = [item.strip() for item in url.split(",") if item.strip()]
     model = ParakeetModel()
