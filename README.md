@@ -29,7 +29,6 @@ The execution configuration is:
 GraphConfiguration(
     language_model: ModelConfiguration,
     checkpoint_path: Path,
-    working_directory: Path,
     model_provider: ModelProvider,
     page_language_model: ModelConfiguration | None = None,
     document_importer: DocumentImporter = WebPdfImporter(),
@@ -49,8 +48,9 @@ async with LessonGraph(configuration) as graph:
     )
 ```
 
-`LessonGraph.resume(run_id: str)` accepts the stable run identifier and
-continues from `checkpoint_path`.
+`run_id` is the caller-chosen stable key for the SQLite checkpoint. It must be
+provided when starting a run and reused unchanged for
+`LessonGraph.resume(run_id: str)` after an interruption.
 
 The graph output is:
 
@@ -58,6 +58,7 @@ The graph output is:
 LessonResult(
     lesson: Lesson,
     usage_by_model: dict[str, LanguageModelUsage],
+    run_id: str,
 )
 
 Lesson(
@@ -81,16 +82,40 @@ custom Markdown tree. `MarkdownExporter` writes the text plus source tables,
 glossary anchors, and citation footnotes; `PdfExporter` converts the same
 export; `save_data` writes the complete typed lesson as JSON.
 
+In a real caller, the input values are ordinary immutable Python values:
+
+```python
+transcript = Transcript(
+    segments=(
+        TranscriptSegment(0.0, 4.2, "The first idea is ..."),
+        TranscriptSegment(4.2, 9.8, "The second idea is ..."),
+    ),
+    languages=("en",),
+)
+sources = (
+    DocumentSource(
+        url="https://example.org/handout.pdf",
+        file_name="handout.pdf",
+    ),
+)
+```
+
+`sources` is caller-owned just like `transcript`: pass zero or more
+`DocumentSource` values to `generate`. Each source is fetched and analyzed by
+the configured document importer. A caller that already has recordings may
+instead use `JsonTranscriptImporter` or `ModalTranscriptImporter` to produce
+the same `Transcript` value.
+
 ## Generate a lesson
 
 ```python
 import asyncio
 from pathlib import Path
 
-from models_provider import LangMeshProvider, ModelConfiguration
+from langmesh.models_provider import LangMeshProvider
+from models_provider import ModelConfiguration
 from teacher import GraphConfiguration, LessonGraph, MarkdownExporter
-from teacher.importers import JsonTranscriptImporter
-from teacher.models import Recording
+from teacher import DocumentSource, Transcript, TranscriptSegment
 
 
 async def main() -> None:
@@ -102,17 +127,27 @@ async def main() -> None:
             reasoning_effort="high",
         ),
         checkpoint_path=Path("output/lesson.checkpoints.sqlite"),
-        working_directory=Path.cwd(),
         model_provider=LangMeshProvider(providers={"anthropic": "sk-ant-..."}),
     )
-    transcript = await JsonTranscriptImporter().load(
-        [Recording(url="transcript.json", index=0)], audio_languages=["it"]
+    transcript = Transcript(
+        segments=(
+            TranscriptSegment(0.0, 4.2, "The first idea is ..."),
+            TranscriptSegment(4.2, 9.8, "The second idea is ..."),
+        ),
+        languages=("en",),
+    )
+    sources = (
+        DocumentSource(
+            url="https://example.org/handout.pdf",
+            file_name="handout.pdf",
+        ),
     )
     async with LessonGraph(configuration) as graph:
         result = await graph.generate(
             transcript=transcript,
             output_language="en",
             run_id="cell-biology-2026-08-26",
+            sources=sources,
         )
     MarkdownExporter().save(result.lesson, output)
 

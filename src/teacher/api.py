@@ -22,6 +22,7 @@ class LessonResult:
 
     lesson: Lesson
     usage_by_model: dict[str, LanguageModelUsage]
+    run_id: str
 
 
 class LessonGraph:
@@ -65,7 +66,7 @@ class LessonGraph:
                 "sources": list(sources),
                 "output_language": output_language.strip(),
             },
-            run_id,
+            run_id.strip(),
         )
 
     async def resume(self, run_id: str) -> LessonResult:
@@ -74,14 +75,14 @@ class LessonGraph:
         return await self._invoke(None, run_id)
 
     async def _invoke(self, value: dict[str, object] | None, run_id: str) -> LessonResult:
-        runtime = self.configuration.runtime(run_id)
+        runtime = self.configuration.runtime()
         with self._provider_scope():
             result = await self._require_graph().ainvoke(
                 value,
                 context=runtime,
                 config=self._run_configuration(run_id, runtime),
             )
-        return self._result(result)
+        return self._result(result, run_id)
 
     def _provider_scope(self) -> AbstractContextManager[None]:
         """Activate provider-local state for every model call in this graph run."""
@@ -113,11 +114,12 @@ class LessonGraph:
             raise ValueError("run_id cannot be empty")
 
     @staticmethod
-    def _result(result: dict[str, Any]) -> LessonResult:
+    def _result(result: dict[str, Any], run_id: str) -> LessonResult:
         lesson = result.get("lesson")
         if lesson is None:
             raise RuntimeError("the graph completed without a lesson")
         return LessonResult(
             lesson=lesson,
             usage_by_model=dict(result.get("usage_by_model", {})),
+            run_id=run_id,
         )

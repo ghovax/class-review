@@ -16,7 +16,7 @@ dependencies = [
   "langchain-core>=1.0",
   "langgraph>=1.0",
   "langgraph-checkpoint-sqlite>=3.0",
-  "models-provider[langmesh] @ git+https://github.com/ghovax/models-provider.git@bf5a4b6",
+  "models-provider @ git+https://github.com/ghovax/models-provider.git@b8123b6",
   "lxml>=5.3",
   "pydantic>=2.11",
   "pypdfium2>=4.30",

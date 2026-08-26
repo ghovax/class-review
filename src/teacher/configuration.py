@@ -19,7 +19,6 @@ class GraphConfiguration:
 
     language_model: ModelConfiguration
     checkpoint_path: Path
-    working_directory: Path
     model_provider: ModelProvider
     page_language_model: ModelConfiguration | None = None
     document_importer: DocumentImporter = field(default_factory=WebPdfImporter)
@@ -37,20 +36,16 @@ class GraphConfiguration:
     glossary_key_length: int = 10
     recursion_limit: int = 200
 
-    def runtime(self, run_id: str) -> GraphRuntime:
+    def runtime(self) -> GraphRuntime:
         """Resolve provider models and immutable settings for one run."""
 
         return GraphRuntime(
             text_model=self.model_provider.create(
                 self.language_model,
-                working_directory=self.working_directory,
-                session_id=run_id,
             ),
             page_model=(
                 self.model_provider.create(
                     self.page_language_model,
-                    working_directory=self.working_directory,
-                    session_id=run_id,
                 )
                 if self.page_language_model is not None
                 else None
