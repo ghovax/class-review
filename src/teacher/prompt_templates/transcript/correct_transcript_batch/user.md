@@ -5,7 +5,7 @@ Source time range: {{ batch_start_seconds }}s to {{ batch_end_seconds }}s
 
 ## Canonical terminology
 
-{{ glossary_xml }}
+{{ terminology_xml }}
 
 ## Source segments
 

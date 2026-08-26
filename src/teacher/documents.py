@@ -8,7 +8,8 @@ from langgraph.runtime import Runtime
 from langgraph.types import Command, Send, Overwrite
 from pydantic import BaseModel, Field
 from teacher.configuration import GraphRuntime
-from teacher.models import Document, DocumentSource, LanguageModelUsage, DocumentSection, DocumentSections, SectionMap, SectionNotes, DocumentRead, DocumentPage
+from models_provider import ModelUsage
+from teacher.models import Document, DocumentSource, DocumentSection, DocumentSections, SectionMap, SectionNotes, DocumentRead, DocumentPage
 from teacher.state import StagedPage, LessonState
 from teacher.support import PipelineError, classify_retryable, get_logger, call_chat_model, render_page_summaries, render_page_entries
 from teacher.xml import OneOrMany, RequiredText, parse_xml_with_schema
@@ -21,7 +22,7 @@ import re
 """Loading source documents and dispatching their pages."""
 
 
-class DocumentToLoad(BaseModel):
+class DocumentReadRequest(BaseModel):
     """One indexed document source."""
 
     document_index: int
@@ -29,7 +30,7 @@ class DocumentToLoad(BaseModel):
     model_config = {"arbitrary_types_allowed": True}
 
 
-class PageToRead(BaseModel):
+class DocumentPageReadRequest(BaseModel):
     """One rendered document page."""
 
     document_index: int
@@ -38,7 +39,9 @@ class PageToRead(BaseModel):
     image_data_url: str
 
 
-async def load_document(state: DocumentToLoad, runtime: Runtime[GraphRuntime]) -> Command[str]:
+async def load_document_pages(
+    state: DocumentReadRequest, runtime: Runtime[GraphRuntime]
+) -> Command[str]:
     """Load one document and send each rendered page for extraction."""
 
     item = state
@@ -50,19 +53,18 @@ async def load_document(state: DocumentToLoad, runtime: Runtime[GraphRuntime]) -
         item.source, document_index=item.document_index
     )
     if not imported.pages:
-        return Command(update={}, goto=["assemble_documents"])
+        return Command(update={}, goto=["assemble_documents_from_pages"])
     shell = Document(
         document_index=imported.document_index,
         file_name=imported.file_name,
-        source_url=imported.source_url,
         pages=(),
     )
     return Command(
         update={"documents": [shell]},
         goto=[
             Send(
-                "read_page",
-                PageToRead(
+                "extract_document_page",
+                DocumentPageReadRequest(
                     document_index=imported.document_index,
                     file_name=imported.file_name,
                     page_number=page.page_number,
@@ -78,20 +80,14 @@ async def load_document(state: DocumentToLoad, runtime: Runtime[GraphRuntime]) -
 
 logger = get_logger(__name__)
 
-_PAGE_SYSTEM_TEMPLATE = "documents/read_page/system"
-_PAGE_USER_TEMPLATE = "documents/read_page/user"
+_PAGE_SYSTEM_TEMPLATE = "documents/extract_document_page/system"
+_PAGE_USER_TEMPLATE = "documents/extract_document_page/user"
 _PAGE_NOTATION_TEMPLATE = "mathematics_notation_rules"
 
-# What a page that could not be read contributes.
-_UNREADABLE_SUMMARY = "This page could not be read."
-_UNREADABLE_DETAILS = (
-    "No content could be extracted from this page. It is recorded so the page numbering "
-    "stays continuous, and is not drawn on when the lecture is written."
-)
-
-
-async def read_page(state: PageToRead, runtime: Runtime[GraphRuntime]) -> dict[str, object]:
-    """Reads one page, falling back to a placeholder once attempts run out."""
+async def extract_document_page(
+    state: DocumentPageReadRequest, runtime: Runtime[GraphRuntime]
+) -> dict[str, object]:
+    """Reads one page, leaving its content empty when all attempts fail."""
     page = state
     page_model = runtime.context.page_model
     if page_model is None:
@@ -115,7 +111,7 @@ async def read_page(state: PageToRead, runtime: Runtime[GraphRuntime]) -> dict[s
         },
     )
 
-    accumulated_usage: dict[str, LanguageModelUsage] = {}
+    accumulated_usage: dict[str, ModelUsage] = {}
     maximum_attempts = max(1, runtime.context.page_attempts)
 
     for attempt_number in range(1, maximum_attempts + 1):
@@ -146,14 +142,14 @@ async def read_page(state: PageToRead, runtime: Runtime[GraphRuntime]) -> dict[s
             accumulated_usage = _combine(accumulated_usage, getattr(error, "usage_by_model", {}))
             if not classify_retryable(error) or attempt_number == maximum_attempts:
                 logger.warning(
-                    "page could not be read, staging a placeholder",
+                    "page could not be read, staging an empty page",
                     document_index=page.document_index,
                     page_number=page.page_number,
                     attempt_number=attempt_number,
                     error_message=str(error),
                     error_metadata=error.metadata,
                 )
-                return _staged(page, accumulated_usage, was_extracted=False)
+                return _staged(page, accumulated_usage)
             logger.info(
                 "page documents attempt failed, trying again",
                 document_index=page.document_index,
@@ -178,20 +174,17 @@ async def read_page(state: PageToRead, runtime: Runtime[GraphRuntime]) -> dict[s
                     page_number=page.page_number,
                     summary=summary,
                     details=details,
-                    was_extracted=True,
                 )
             ],
             "usage_by_model": accumulated_usage,
         }
 
-    return _staged(page, accumulated_usage, was_extracted=False)
+    return _staged(page, accumulated_usage)
 
 
 def _staged(
-    page: PageToRead,
-    usage: dict[str, LanguageModelUsage],
-    *,
-    was_extracted: bool,
+    page: DocumentPageReadRequest,
+    usage: dict[str, ModelUsage],
 ) -> dict[str, object]:
     """Builds the update for a page that could not be read."""
     return {
@@ -199,9 +192,8 @@ def _staged(
             StagedPage(
                 document_index=page.document_index,
                 page_number=page.page_number,
-                summary=_UNREADABLE_SUMMARY,
-                details=_UNREADABLE_DETAILS,
-                was_extracted=was_extracted,
+                summary=None,
+                details=None,
             )
         ],
         "usage_by_model": usage,
@@ -209,8 +201,8 @@ def _staged(
 
 
 def _combine(
-    accumulated: dict[str, LanguageModelUsage], incoming: Any
-) -> dict[str, LanguageModelUsage]:
+    accumulated: dict[str, ModelUsage], incoming: Any
+) -> dict[str, ModelUsage]:
     """Adds one attempt's usage to what earlier attempts consumed."""
     combined = dict(accumulated)
     for model_name, usage in (incoming or {}).items():
@@ -259,8 +251,8 @@ def _read_sections(answer_text: str) -> tuple[str, str]:
 
 logger = get_logger(__name__)
 
-_SECTIONS_SYSTEM_TEMPLATE = "documents/map_sections/system"
-_SECTIONS_USER_TEMPLATE = "documents/map_sections/user"
+_SECTIONS_SYSTEM_TEMPLATE = "documents/map_document_sections/system"
+_SECTIONS_USER_TEMPLATE = "documents/map_document_sections/user"
 _SECTIONS_NOTATION_TEMPLATE = "mathematics_notation_rules"
 _SECTIONS_ROOT_TAG = "DocumentSections"
 
@@ -288,7 +280,9 @@ class _SectionMapSchema(BaseModel):
     documents: OneOrMany[_DocumentSchema] = Field(alias="Document")
 
 
-async def map_sections(state: LessonState, runtime: Runtime[GraphRuntime]) -> dict[str, object]:
+async def map_document_sections(
+    state: LessonState, runtime: Runtime[GraphRuntime]
+) -> dict[str, object]:
     """Divides every document into sections."""
     prompts = runtime.context.prompts
     documents = state.get("documents", [])
@@ -384,12 +378,14 @@ def _read_section_map(answer_text: str, documents: Sequence[Document]) -> Sectio
 
 logger = get_logger(__name__)
 
-_NOTES_SYSTEM_TEMPLATE = "documents/explain_sections/system"
-_NOTES_USER_TEMPLATE = "documents/explain_sections/user"
+_NOTES_SYSTEM_TEMPLATE = "documents/explain_document_sections/system"
+_NOTES_USER_TEMPLATE = "documents/explain_document_sections/user"
 _NOTES_NOTATION_TEMPLATE = "mathematics_notation_rules"
 
 
-async def explain_sections(state: LessonState, runtime: Runtime[GraphRuntime]) -> dict[str, object]:
+async def explain_document_sections(
+    state: LessonState, runtime: Runtime[GraphRuntime]
+) -> dict[str, object]:
     """Narrates every section of every document."""
     section_map = state.get("section_map")
     documents = state.get("documents", [])
@@ -434,7 +430,7 @@ async def explain_sections(state: LessonState, runtime: Runtime[GraphRuntime]) -
         ]
 
     notes: list[SectionNotes] = []
-    accumulated_usage: dict[str, LanguageModelUsage] = {}
+    accumulated_usage: dict[str, ModelUsage] = {}
     for task in tasks:
         explanation, usage = task.result()
         notes.append(explanation)
@@ -464,7 +460,7 @@ async def _explain_one(
     section: DocumentSection,
     system_prompt: str,
     runtime: Runtime[GraphRuntime],
-) -> tuple[SectionNotes, dict[str, LanguageModelUsage]]:
+) -> tuple[SectionNotes, dict[str, ModelUsage]]:
     """Narrates one section."""
     pages_markdown = render_page_entries(document, section)
     answer = await call_chat_model(
@@ -510,7 +506,9 @@ async def _explain_one(
 logger = get_logger(__name__)
 
 
-async def assemble_documents(state: LessonState, runtime: Runtime[GraphRuntime]) -> dict[str, object]:
+async def assemble_documents_from_pages(
+    state: LessonState, runtime: Runtime[GraphRuntime]
+) -> dict[str, object]:
     """Merges the staged pages into their documents, in page order."""
     del runtime
     documents = state.get("documents", [])
@@ -537,12 +535,13 @@ async def assemble_documents(state: LessonState, runtime: Runtime[GraphRuntime])
             ),
             key=lambda staged: staged.page_number,
         )
-        unreadable_count = sum(1 for staged in pages_for_document if not staged.was_extracted)
+        unreadable_count = sum(
+            1 for staged in pages_for_document if staged.summary is None or staged.details is None
+        )
         assembled.append(
             Document(
                 document_index=document.document_index,
                 file_name=document.file_name,
-                source_url=document.source_url,
                 pages=tuple(
                     DocumentPage(
                         page_number=staged.page_number,
@@ -580,6 +579,10 @@ def _choose_best_documents(
     for staged in staged_pages:
         key = (staged.document_index, staged.page_number)
         present = chosen.get(key)
-        if present is None or (not present.was_extracted and staged.was_extracted):
+        present_is_empty = present is not None and (
+            present.summary is None or present.details is None
+        )
+        staged_is_read = staged.summary is not None and staged.details is not None
+        if present is None or (present_is_empty and staged_is_read):
             chosen[key] = staged
     return chosen

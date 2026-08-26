@@ -1128,7 +1128,7 @@ wheels = [
 [[package]]
 name = "models-provider"
 version = "0.1.0"
-source = { git = "https://github.com/ghovax/models-provider.git?rev=24c3340f2d54fc143618073dba7efd99cfa57e6b#24c3340f2d54fc143618073dba7efd99cfa57e6b" }
+source = { git = "https://github.com/ghovax/models-provider.git?rev=9141f4b7fe9cea28ea29a9d60cb2b91e91ca67b3#9141f4b7fe9cea28ea29a9d60cb2b91e91ca67b3" }
 dependencies = [
     { name = "httpx" },
     { name = "langchain-core" },
@@ -1953,7 +1953,7 @@ requires-dist = [
     { name = "langgraph-checkpoint-sqlite", specifier = ">=3.0" },
     { name = "lxml", specifier = ">=5.3" },
     { name = "modal", marker = "extra == 'modal'", specifier = ">=1.0" },
-    { name = "models-provider", git = "https://github.com/ghovax/models-provider.git?rev=24c3340f2d54fc143618073dba7efd99cfa57e6b" },
+    { name = "models-provider", git = "https://github.com/ghovax/models-provider.git?rev=9141f4b7fe9cea28ea29a9d60cb2b91e91ca67b3" },
     { name = "pydantic", specifier = ">=2.11" },
     { name = "segno", specifier = ">=1.6" },
     { name = "structlog", specifier = ">=25.1" },

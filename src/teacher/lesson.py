@@ -491,8 +491,8 @@ def _child_integer(element: etree._Element, name: str) -> int | None:
 
 logger = get_logger(__name__)
 
-_PLAN_SYSTEM_TEMPLATE = "lesson/plan_lesson/system"
-_PLAN_USER_TEMPLATE = "lesson/plan_lesson/user"
+_PLAN_SYSTEM_TEMPLATE = "lesson/plan_lesson_outline/system"
+_PLAN_USER_TEMPLATE = "lesson/plan_lesson_outline/user"
 _PLAN_NOTATION_TEMPLATE = "mathematics_notation_rules"
 _PLAN_ROOT_TAG = "LessonOutline"
 
@@ -551,7 +551,9 @@ class _OutlineSchema(BaseModel):
     chapters: OneOrMany[_ChapterSchema] = Field(alias="Chapter")
 
 
-async def plan_lesson(state: LessonState, runtime: Runtime[GraphRuntime]) -> dict[str, object]:
+async def plan_lesson_outline(
+    state: LessonState, runtime: Runtime[GraphRuntime]
+) -> dict[str, object]:
     """Drafts the plan the chapters will be written against."""
     segments = state.get("clean_transcript", [])
     if not segments:
@@ -851,12 +853,14 @@ def _check_asserted_values(parsed: _OutlineSchema, policy: GraphRuntime) -> None
 
 logger = get_logger(__name__)
 
-_CHAPTER_SYSTEM_TEMPLATE = "lesson/write_chapter/system"
-_CHAPTER_USER_TEMPLATE = "lesson/write_chapter/user"
+_CHAPTER_SYSTEM_TEMPLATE = "lesson/write_lesson_chapter/system"
+_CHAPTER_USER_TEMPLATE = "lesson/write_lesson_chapter/user"
 _CHAPTER_NOTATION_TEMPLATE = "mathematics_notation_rules"
 
 
-async def write_chapter(state: LessonState, runtime: Runtime[GraphRuntime]) -> dict[str, object]:
+async def write_lesson_chapter(
+    state: LessonState, runtime: Runtime[GraphRuntime]
+) -> dict[str, object]:
     """Writes the next chapter that has not been written yet."""
     plan = state.get("plan")
     if plan is None:
@@ -1169,8 +1173,8 @@ def _render_groups(window: ChapterWindow) -> str:
 
 logger = get_logger(__name__)
 
-_GLOSSARY_SYSTEM_TEMPLATE = "lesson/build_glossary/system"
-_GLOSSARY_USER_TEMPLATE = "lesson/build_glossary/user"
+_GLOSSARY_SYSTEM_TEMPLATE = "lesson/build_lesson_glossary/system"
+_GLOSSARY_USER_TEMPLATE = "lesson/build_lesson_glossary/user"
 _GLOSSARY_NOTATION_TEMPLATE = "mathematics_notation_rules"
 _GLOSSARY_ROOT_TAG = "Glossary"
 
@@ -1194,7 +1198,9 @@ class _GlossarySchema(BaseModel):
     terms: OneOrMany[_TermSchema] = Field(alias="Term", default_factory=list)
 
 
-async def build_glossary(state: LessonState, runtime: Runtime[GraphRuntime]) -> dict[str, object]:
+async def build_lesson_glossary(
+    state: LessonState, runtime: Runtime[GraphRuntime]
+) -> dict[str, object]:
     """Distils the lecture's key terms from its completed chapters."""
     plan = state.get("plan")
     drafts = state.get("chapter_drafts", [])
@@ -1277,7 +1283,9 @@ def _mint_key(key_length: int) -> str:
 logger = get_logger(__name__)
 
 
-async def assemble_lesson(state: LessonState, runtime: Runtime[GraphRuntime]) -> dict[str, object]:
+async def assemble_completed_lesson(
+    state: LessonState, runtime: Runtime[GraphRuntime]
+) -> dict[str, object]:
     """Assembles the lesson from everything written."""
     del runtime
     plan = state.get("plan")

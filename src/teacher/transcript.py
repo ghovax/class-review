@@ -7,10 +7,16 @@ from langgraph.runtime import Runtime
 from langgraph.types import Overwrite
 from pydantic import BaseModel, Field
 from teacher.configuration import GraphRuntime
-from teacher.models import TranscriptSegment, TranscriptAssembled
+from teacher.models import (
+    Terminology,
+    TerminologyHeard,
+    TerminologyTerm,
+    TranscriptAssembled,
+    TranscriptSegment,
+)
 from teacher.state import LessonState
 from teacher.support import get_logger, call_chat_model, render_transcript_text, PipelineError
-from teacher.xml import extract_element_text, OneOrMany, RequiredText, build_xml_document, parse_xml_with_schema
+from teacher.xml import OneOrMany, RequiredText, build_xml_document, parse_xml_with_schema
 from typing import Final
 
 """Transcript graph nodes: terminology, correction fan-out, and transcript assembly."""
@@ -21,14 +27,15 @@ from typing import Final
 logger = get_logger(__name__)
 
 # What every batch is given when no terminology could be established.
-EMPTY_TERMINOLOGY: Final[str] = "<Glossary></Glossary>"
+EMPTY_TERMINOLOGY: Final[Terminology] = Terminology(terms=())
 
-_SYSTEM_TEMPLATE = "transcript/find_terms/system"
-_USER_TEMPLATE = "transcript/find_terms/user"
-_ROOT_TAG = "Glossary"
+_SYSTEM_TEMPLATE = "transcript/extract_transcript_terminology/system"
+_USER_TEMPLATE = "transcript/extract_transcript_terminology/user"
 
 
-async def find_terms(state: LessonState, runtime: Runtime[GraphRuntime]) -> dict[str, object]:
+async def extract_transcript_terminology(
+    state: LessonState, runtime: Runtime[GraphRuntime]
+) -> dict[str, object]:
     """Reads the whole machine transcript and settles its terminology."""
     prompts = runtime.context.prompts
     segments = list(state["transcript"].segments)
@@ -63,17 +70,45 @@ async def find_terms(state: LessonState, runtime: Runtime[GraphRuntime]) -> dict
     logger.info(
         "terminology extracted",
         segment_count=len(segments),
-        terminology_character_count=len(terminology),
+        terminology_term_count=len(terminology.terms),
         was_established=terminology != EMPTY_TERMINOLOGY,
     )
 
     return {"terminology": terminology, "usage_by_model": answer.usage_by_model}
 
 
-def _read_terminology(answer_text: str) -> str:
-    """Isolates the terminology element, falling back to the empty set."""
+class _HeardTerminologySchema(BaseModel):
+    variants: OneOrMany[RequiredText] = Field(alias="Variant")
+
+
+class _TerminologyTermSchema(BaseModel):
+    canonical: RequiredText = Field(alias="Canonical")
+    heard: _HeardTerminologySchema = Field(alias="Heard")
+    kind: RequiredText = Field(alias="Kind")
+
+
+class _TerminologySchema(BaseModel):
+    terms: OneOrMany[_TerminologyTermSchema] = Field(alias="Term")
+
+
+def _read_terminology(answer_text: str) -> Terminology:
+    """Parses the model's terminology XML into the typed graph value."""
     try:
-        return extract_element_text(answer_text, _ROOT_TAG)
+        parsed = parse_xml_with_schema(
+            content=answer_text,
+            root_tag="Terminology",
+            schema=_TerminologySchema,
+        )
+        return Terminology(
+            terms=tuple(
+                TerminologyTerm(
+                    canonical=term.canonical,
+                    heard=TerminologyHeard(variants=tuple(term.heard.variants)),
+                    kind=term.kind,
+                )
+                for term in parsed.terms
+            )
+        )
     except Exception:  # noqa: BLE001 - any unusable answer degrades identically
         logger.warning(
             "terminology answer was unusable, correcting without it",
@@ -81,14 +116,31 @@ def _read_terminology(answer_text: str) -> str:
         )
         return EMPTY_TERMINOLOGY
 
+
+def render_terminology_xml(terminology: Terminology) -> str:
+    """Render typed terminology only at the prompt boundary."""
+    return build_xml_document(
+        "Terminology",
+        {
+            "Term": [
+                {
+                    "Canonical": term.canonical,
+                    "Heard": {"Variant": list(term.heard.variants)},
+                    "Kind": term.kind,
+                }
+                for term in terminology.terms
+            ]
+        },
+    )
+
 """Correcting one batch of the machine transcript."""
 
 
 logger = get_logger(__name__)
 
-_SYSTEM_TEMPLATE = "transcript/correct_batch/system"
-_USER_TEMPLATE = "transcript/correct_batch/user"
-_ROOT_TAG = "CorrectedTranscript"
+_SYSTEM_TEMPLATE = "transcript/correct_transcript_batch/system"
+_USER_TEMPLATE = "transcript/correct_transcript_batch/user"
+_CORRECTED_ROOT_TAG = "CorrectedTranscript"
 
 
 class CorrectionBatch(BaseModel):
@@ -98,7 +150,7 @@ class CorrectionBatch(BaseModel):
     total_batches: int
     segments: list[TranscriptSegment]
     spoken_language: str
-    terminology: str
+    terminology: Terminology
 
     model_config = {"arbitrary_types_allowed": True}
 
@@ -116,7 +168,7 @@ class _CorrectedTranscript(BaseModel):
     segments: OneOrMany[_CorrectedUnit] = Field(alias="Segment")
 
 
-async def correct_batch(
+async def correct_transcript_batch(
     state: CorrectionBatch, runtime: Runtime[GraphRuntime]
 ) -> dict[str, object]:
     """Corrects one batch and commits its units to the shared channel."""
@@ -163,7 +215,7 @@ async def correct_batch(
                         "audio_language": batch.spoken_language,
                         "batch_start_seconds": batch_start_seconds,
                         "batch_end_seconds": batch_end_seconds,
-                        "glossary_xml": batch.terminology,
+                        "terminology_xml": render_terminology_xml(batch.terminology),
                         "source_segments_xml": source_document,
                     },
                 )
@@ -199,7 +251,7 @@ def _read_units(
     """Reads the corrected units, healing timestamps that fall out of order."""
     parsed = parse_xml_with_schema(
         content=answer_text,
-        root_tag=_ROOT_TAG,
+        root_tag=_CORRECTED_ROOT_TAG,
         schema=_CorrectedTranscript,
         metadata={"batch_index": batch_index},
     )
@@ -232,7 +284,7 @@ def _read_units(
 logger = get_logger(__name__)
 
 
-async def assemble_transcript(
+async def assemble_corrected_transcript(
     state: LessonState, runtime: Runtime[GraphRuntime]
 ) -> dict[str, object]:
     """Orders, deduplicates, and re-chains every batch's units into one whole."""
@@ -304,4 +356,3 @@ def _chain_ends(segments: list[TranscriptSegment]) -> list[TranscriptSegment]:
         )
         for position, segment in enumerate(segments)
     ]
-

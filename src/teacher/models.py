@@ -78,14 +78,18 @@ class Recording:
 
 @dataclass(frozen=True, slots=True)
 class DocumentSource:
-    """One supplementary document supplied by the caller."""
+    """One supplementary document supplied as bytes by the caller."""
 
-    url: str
+    content: bytes
     file_name: str | None = None
 
     def __post_init__(self) -> None:
-        if not self.url.strip():
-            raise ValueError("document source url cannot be empty")
+        if not isinstance(self.content, bytes):
+            raise TypeError("document source content must be bytes")
+        if not self.content:
+            raise ValueError("document source content cannot be empty")
+        if self.file_name is not None and not self.file_name.strip():
+            raise ValueError("document source file name cannot be empty when provided")
 
 
 @dataclass(frozen=True, slots=True)
@@ -103,6 +107,41 @@ class TranscriptSegment:
             raise ValueError("transcript end timestamp cannot precede its start")
         if not self.content.strip():
             raise ValueError("transcript segment content cannot be empty")
+
+
+@normalize_sequence_fields
+@dataclass(frozen=True, slots=True)
+class TerminologyHeard:
+    """Recognized forms associated with one canonical term."""
+
+    variants: tuple[str, ...]
+
+    def __post_init__(self) -> None:
+        if not self.variants or any(not variant.strip() for variant in self.variants):
+            raise ValueError("terminology variants cannot be empty")
+
+
+@dataclass(frozen=True, slots=True)
+class TerminologyTerm:
+    """One canonical term and the forms heard in the transcript."""
+
+    canonical: str
+    heard: TerminologyHeard
+    kind: str
+
+    def __post_init__(self) -> None:
+        if not self.canonical.strip():
+            raise ValueError("canonical terminology cannot be empty")
+        if not self.kind.strip():
+            raise ValueError("terminology kind cannot be empty")
+
+
+@normalize_sequence_fields
+@dataclass(frozen=True, slots=True)
+class Terminology:
+    """The parsed terminology shared by transcript correction batches."""
+
+    terms: tuple[TerminologyTerm, ...]
 
 
 @normalize_sequence_fields
@@ -133,8 +172,8 @@ class DocumentPage:
     """What was read from one page of a document."""
 
     page_number: int
-    summary: str
-    details: str
+    summary: str | None
+    details: str | None
 
 
 @normalize_sequence_fields
@@ -144,7 +183,6 @@ class Document:
 
     document_index: int
     file_name: str
-    source_url: str
     pages: tuple[DocumentPage, ...]
 
 
@@ -292,44 +330,21 @@ class Lesson:
     glossary: tuple[GlossaryEntry, ...] = ()
 
 
-@dataclass(frozen=True, slots=True)
-class LanguageModelUsage:
-    """Token counts and spend for one model, summed across a run."""
-
-    prompt_tokens: int = 0
-    completion_tokens: int = 0
-    total_tokens: int = 0
-    cached_tokens: int = 0
-    cache_write_tokens: int = 0
-    cost_usd: float = 0.0
-
-    def combined_with(self, other: LanguageModelUsage) -> LanguageModelUsage:
-        """Adds another usage record to this one."""
-        return LanguageModelUsage(
-            prompt_tokens=self.prompt_tokens + other.prompt_tokens,
-            completion_tokens=self.completion_tokens + other.completion_tokens,
-            total_tokens=self.total_tokens + other.total_tokens,
-            cached_tokens=self.cached_tokens + other.cached_tokens,
-            cache_write_tokens=self.cache_write_tokens + other.cache_write_tokens,
-            cost_usd=self.cost_usd + other.cost_usd,
-        )
-
 """Interfaces for transcript and document input."""
 
 
 @dataclass(frozen=True, slots=True)
 class DocumentPages:
-    """A caller-resolved document and its rendered pages."""
+    """A document reader's rendered pages, identified by caller metadata."""
 
     document_index: int
-    source_url: str
     file_name: str
     pages: tuple[RenderedPage, ...]
 
 
 @runtime_checkable
 class DocumentReader(Protocol):
-    """Resolves one caller-provided document source into page images."""
+    """Turns caller-provided document bytes into page images."""
 
     async def read(self, source: DocumentSource, *, document_index: int) -> DocumentPages: ...
 

@@ -195,7 +195,7 @@ def build_source_tables(lecture: Lesson, metadata: ExportMetadata) -> list[str]:
 
 def source_document_name(document: DocumentSource, document_index: int) -> str:
     """Resolves a stable display name for one reference document."""
-    return document.file_name or _url_file_name(document.url) or f"Document {document_index + 1}"
+    return document.file_name or f"Document {document_index + 1}"
 
 
 def _recording_name(recording: Recording, recording_index: int) -> str:

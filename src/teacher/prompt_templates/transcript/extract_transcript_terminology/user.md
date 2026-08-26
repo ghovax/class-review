@@ -3,13 +3,13 @@ Audio language: {{ audio_language }}
 Extract the terminology used in this transcript. Return only:
 
 ```xml
-<Glossary>
+<Terminology>
   <Term>
     <Canonical><![CDATA[Preferred spelling]]></Canonical>
     <Heard><Variant><![CDATA[ASR spelling]]></Variant></Heard>
     <Kind>Jargon</Kind>
   </Term>
-</Glossary>
+</Terminology>
 ```
 
 Transcript:
