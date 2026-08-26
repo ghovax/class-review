@@ -7,7 +7,7 @@ import re
 from collections.abc import Mapping
 from importlib import resources
 
-from teacher.errors import PipelineError
+from teacher.support import PipelineError
 
 _PLACEHOLDER = re.compile(r"\{\{\s+([A-Za-z0-9_.-]+)\s+\}\}")
 

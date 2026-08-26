@@ -1,0 +1,284 @@
+"""Consolidated Teacher implementation."""
+from __future__ import annotations
+
+from collections.abc import Sequence
+from dataclasses import dataclass
+from langchain_core.callbacks import get_usage_metadata_callback
+from langchain_core.language_models import BaseChatModel
+from langchain_core.messages import BaseMessage
+from teacher.models import LanguageModelUsage, GlossaryEntry, GlossaryLink, Document, DocumentSection, TranscriptSegment
+from typing import Any, Final, Self, Literal
+import logging
+import re
+import traceback
+
+import structlog
+
+"""Shared errors, logging, model calls, and graph material rendering."""
+
+"""Error types and retry classification shared by every graph node."""
+
+
+class PipelineError(Exception):
+    """A failure raised by a graph node."""
+
+    def __init__(
+        self,
+        message: str,
+        metadata: dict[str, Any] | None = None,
+        cause: BaseException | None = None,
+    ) -> None:
+        """Builds a pipeline error carrying structured context."""
+        super().__init__(message)
+        self.metadata: dict[str, Any] = dict(metadata or {})
+        if cause is not None:
+            self.__cause__ = cause
+
+    @classmethod
+    def retryable(
+        cls,
+        message: str,
+        metadata: dict[str, Any] | None = None,
+        cause: BaseException | None = None,
+    ) -> Self:
+        """Builds an error the retry predicate will schedule another attempt for."""
+        return cls(message, {**(metadata or {}), "retryable": True}, cause)
+
+    @classmethod
+    def terminal(
+        cls,
+        message: str,
+        metadata: dict[str, Any] | None = None,
+        cause: BaseException | None = None,
+    ) -> Self:
+        """Builds an error that short-circuits retries and aborts the run."""
+        return cls(message, {**(metadata or {}), "retryable": False}, cause)
+
+    @property
+    def is_retryable(self) -> bool:
+        """Whether this error was explicitly flagged as transient."""
+        return bool(self.metadata.get("retryable", False))
+
+
+# Deliberately not suffixed "Error": a cancellation is an outcome the caller asked
+# for, not a fault, and callers distinguish the two by type.
+class GenerationCancelled(PipelineError):  # noqa: N818
+    """Raised when a caller aborts a run in progress."""
+
+    def __init__(self, message: str = "cancelled by the caller") -> None:
+        """Builds a cancellation signal."""
+        super().__init__(message, {"retryable": False})
+
+
+# Transport-level error codes that indicate a transient fault rather than a
+# contract violation.
+TRANSIENT_ERROR_CODES: Final[frozenset[str]] = frozenset(
+    {"ETIMEDOUT", "ECONNRESET", "ECONNREFUSED", "EAI_AGAIN"}
+)
+
+
+def classify_retryable(error: BaseException) -> bool:
+    """Decides whether a failed node attempt should be retried."""
+    if isinstance(error, GenerationCancelled):
+        return False
+    if isinstance(error, PipelineError):
+        return error.is_retryable
+
+    status_code = _read_status_code(error)
+    if status_code is not None:
+        if status_code == 429:
+            return True
+        return 500 <= status_code < 600
+
+    error_code = getattr(error, "code", None)
+    if isinstance(error_code, str) and error_code in TRANSIENT_ERROR_CODES:
+        return True
+    return True
+
+
+def describe_error(error: BaseException) -> dict[str, Any]:
+    """Renders an exception as a structured payload for logging."""
+    described: dict[str, Any] = {
+        "error_type": type(error).__name__,
+        "error_message": str(error),
+        "traceback_frames": [
+            {
+                "file_name": frame.filename,
+                "line_number": frame.lineno,
+                "function_name": frame.name,
+            }
+            for frame in traceback.extract_tb(error.__traceback__)
+        ],
+    }
+    if isinstance(error, PipelineError) and error.metadata:
+        described["error_metadata"] = error.metadata
+    cause = error.__cause__
+    if cause is not None:
+        described["error_cause"] = describe_error(cause)
+    return described
+
+
+def _read_status_code(error: BaseException) -> int | None:
+    """Extracts an HTTP status code from an exception, when it carries one."""
+    for attribute_name in ("status_code", "status"):
+        candidate = getattr(error, attribute_name, None)
+        if isinstance(candidate, int) and candidate > 0:
+            return candidate
+    response = getattr(error, "response", None)
+    candidate = getattr(response, "status_code", None)
+    if isinstance(candidate, int) and candidate > 0:
+        return candidate
+    return None
+
+"""Structured logging conventions used throughout the pipeline."""
+
+
+RenderingStyle = Literal["console", "json"]
+
+
+def get_logger(name: str) -> structlog.stdlib.BoundLogger:
+    """Returns the logger a module should bind its records to."""
+    return structlog.stdlib.get_logger(name)
+
+
+def configure_logging(
+    *,
+    level: int = logging.INFO,
+    rendering: RenderingStyle = "console",
+) -> None:
+    """Configures structlog and the standard library logging bridge."""
+    timestamper = structlog.processors.TimeStamper(fmt="iso", utc=True)
+    shared_processors: list[Any] = [
+        structlog.contextvars.merge_contextvars,
+        structlog.stdlib.add_logger_name,
+        structlog.stdlib.add_log_level,
+        timestamper,
+        structlog.processors.StackInfoRenderer(),
+    ]
+    renderer: Any = (
+        structlog.dev.ConsoleRenderer()
+        if rendering == "console"
+        else structlog.processors.JSONRenderer()
+    )
+
+    structlog.configure(
+        processors=[*shared_processors, renderer],
+        wrapper_class=structlog.make_filtering_bound_logger(level),
+        logger_factory=structlog.stdlib.LoggerFactory(),
+        cache_logger_on_first_use=True,
+    )
+    logging.basicConfig(format="%(message)s", level=level)
+
+"""Calling a chat model and reporting what the call consumed."""
+
+
+@dataclass(frozen=True, slots=True)
+class ModelAnswer:
+    """One model answer with the usage the call consumed."""
+
+    text: str
+    usage_by_model: dict[str, LanguageModelUsage]
+
+
+async def call_chat_model(
+    chat_model: BaseChatModel,
+    messages: Sequence[BaseMessage],
+    *,
+    metadata: dict[str, Any] | None = None,
+) -> ModelAnswer:
+    """Calls a chat model and reports its answer with the usage it consumed."""
+    with get_usage_metadata_callback() as usage_callback:
+        response = await chat_model.ainvoke(list(messages))
+
+    # `text` is a property returning a string subclass.
+    trimmed = response.text.strip()
+    if not trimmed:
+        raise PipelineError.retryable("the model returned an empty answer", dict(metadata or {}))
+
+    return ModelAnswer(text=trimmed, usage_by_model=_read_usage(usage_callback.usage_metadata))
+
+
+def _read_usage(usage_metadata: Any) -> dict[str, LanguageModelUsage]:  # noqa: ANN401
+    """Converts collected usage metadata into the channel's shape."""
+    converted: dict[str, LanguageModelUsage] = {}
+    for model_name, counts in (usage_metadata or {}).items():
+        input_details = counts.get("input_token_details") or {}
+        converted[str(model_name)] = LanguageModelUsage(
+            prompt_tokens=int(counts.get("input_tokens", 0)),
+            completion_tokens=int(counts.get("output_tokens", 0)),
+            total_tokens=int(counts.get("total_tokens", 0)),
+            cached_tokens=int(input_details.get("cache_read", 0)),
+            cache_write_tokens=int(input_details.get("cache_creation", 0)),
+        )
+    return converted
+
+"""Find and render glossary links with plain text operations."""
+
+
+def compute_glossary_links(
+    chapter_contents: Sequence[str], glossary_entries: Sequence[GlossaryEntry]
+) -> list[tuple[GlossaryLink, ...]]:
+    """Link the first plain-text occurrence of each glossary term."""
+    remaining = {entry.key for entry in glossary_entries if entry.short_form.strip()}
+    links_per_chapter: list[tuple[GlossaryLink, ...]] = []
+    for content in chapter_contents:
+        chapter_links: list[GlossaryLink] = []
+        for entry in glossary_entries:
+            if entry.key not in remaining:
+                continue
+            phrase = entry.short_form.strip()
+            match = re.search(rf"(?<!\w){re.escape(phrase)}(?!\w)", content, re.IGNORECASE)
+            if match is None:
+                continue
+            chapter_links.append(
+                GlossaryLink(key=entry.key, start=match.start(), end=match.end())
+            )
+            remaining.remove(entry.key)
+        links_per_chapter.append(tuple(sorted(chapter_links, key=lambda link: link.start)))
+    return links_per_chapter
+
+
+def apply_glossary_links(content: str, links: Sequence[GlossaryLink]) -> str:
+    """Wrap stored character ranges in ordinary Markdown links."""
+    result = content
+    for link in sorted(links, key=lambda item: item.start, reverse=True):
+        if not 0 <= link.start < link.end <= len(result):
+            continue
+        text = result[link.start : link.end]
+        result = f"{result[:link.start]}[{text}](#glossary-{link.key}){result[link.end:]}"
+    return result
+
+"""Rendering the material a prompt is shown."""
+
+
+def render_transcript_text(segments: Sequence[TranscriptSegment]) -> str:
+    """Renders segments as one timestamped line each."""
+    return "\n".join(f"[{segment.start_seconds:.2f}] {segment.content}" for segment in segments)
+
+
+def render_page_summaries(documents: Sequence[Document]) -> str:
+    """Renders every document's pages by summary alone."""
+    blocks: list[str] = []
+    for document in sorted(documents, key=lambda item: item.document_index):
+        blocks.append(f"## Document {document.document_index}: {document.file_name}")
+        blocks.extend(
+            f"### Page {page.page_number}\n\n{page.summary.strip()}".strip()
+            for page in document.pages
+        )
+    return "\n\n".join(block for block in blocks if block)
+
+
+def render_page_entries(
+    document: Document | None,
+    section: DocumentSection,
+) -> str:
+    """Renders the pages one section covers, in full."""
+    if document is None:
+        return ""
+
+    return "\n\n".join(
+        f"### Page {page.page_number}\n\n{page.summary.strip()}\n\n{page.details.strip()}".strip()
+        for page in document.pages
+        if section.start_page <= page.page_number <= section.end_page
+    )
+

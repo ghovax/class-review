@@ -9,22 +9,19 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.types import RetryPolicy, Send
 
 from teacher.configuration import GraphRuntime
-from teacher.documents.finish import finish_documents
-from teacher.documents.load import DocumentToLoad, load_document
-from teacher.documents.notes import explain_sections
-from teacher.documents.read_page import read_page
-from teacher.documents.sections import map_sections
-from teacher.errors import PipelineError, classify_retryable
-from teacher.lesson.chapter import write_chapter
-from teacher.lesson.finish import finish_lesson
-from teacher.lesson.glossary import build_glossary
-from teacher.lesson.plan import plan_lesson
-from teacher.logging_support import get_logger
+from teacher.documents import (
+    DocumentToLoad,
+    explain_sections,
+    finish_documents,
+    load_document,
+    map_sections,
+    read_page,
+)
+from teacher.lesson import build_glossary, finish_lesson, plan_lesson, write_chapter
+from teacher.support import PipelineError, classify_retryable, get_logger
 from teacher.models import TranscriptSegment
 from teacher.state import LessonInput, LessonOutput, LessonState
-from teacher.transcript.correct import CorrectionBatch, correct_batch
-from teacher.transcript.finish import finish_transcript
-from teacher.transcript.terms import EMPTY_TERMINOLOGY, find_terms
+from teacher.transcript import CorrectionBatch, EMPTY_TERMINOLOGY, correct_batch, finish_transcript, find_terms
 
 logger = get_logger(__name__)
 
