@@ -7,12 +7,13 @@ Teacher turns a timestamped lecture transcript and optional document bytes into 
 | Area | Responsibility | Main file |
 | --- | --- | --- |
 | Graph | Flow, parallel work, joins, and the chapter loop | `graph.py` |
-| Transcript | Terminology, correction, and assembly | `transcript.py` |
-| Documents | Page reading, section mapping, and explanations | `documents.py` |
-| Lesson | Planning, chapter writing, glossary, and assembly | `lesson.py` |
+| Transcript | Terminology, correction, assembly, and local prompts | `transcript/` |
+| Documents | Page reading, section mapping, explanations, and local prompts | `documents/` |
+| Lesson | Planning, chapter writing, glossary, assembly, and local prompts | `lesson/` |
 | Inputs | Typed caller values and document reader protocol | `models.py` |
 | Configuration | Model selection, reader injection, and graph limits | `configuration.py` |
 | XML | One recovery and schema-validation boundary | `xml.py` |
+| Shared prompts | Language and notation rules used by nodes | `shared_prompts/` |
 | Outputs | Markdown and the optional Pandoc and Typst PDF path | `outputs.py` |
 
 Prompt files contain only model-facing instructions. The graph owns the flow, and the caller owns transcript and document sourcing.
@@ -114,7 +115,7 @@ Chapter(
 )
 ```
 
-`Chapter.content` remains model-authored text. Teacher does not parse it into a custom Markdown tree. Use `render_export_markdown` for the canonical Markdown representation and `PdfExporter` when a PDF is wanted:
+`Chapter.content` remains model-authored Markdown. Teacher uses Wenmode's Markdown AST and serializer only when it must compose generated blocks. Use `render_export_markdown` for the canonical Markdown representation and `PdfExporter` when a PDF is wanted:
 
 ```python
 markdown = render_export_markdown(result.lesson, metadata=metadata)

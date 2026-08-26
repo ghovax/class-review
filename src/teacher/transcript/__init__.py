@@ -1,6 +1,8 @@
 """Consolidated Teacher implementation."""
+
 from __future__ import annotations
 
+from collections.abc import Sequence
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.config import get_stream_writer
 from langgraph.runtime import Runtime
@@ -14,8 +16,10 @@ from teacher.models import (
     TranscriptAssembled,
     TranscriptSegment,
 )
+from teacher.markdown import compose_markdown
+from teacher.prompts import Prompts
 from teacher.state import LessonState
-from teacher.support import get_logger, call_chat_model, render_transcript_text, PipelineError
+from teacher.support import get_logger, call_chat_model, PipelineError
 from teacher.xml import OneOrMany, RequiredText, build_xml_document, parse_xml_with_schema
 from typing import Final
 
@@ -33,13 +37,28 @@ _SYSTEM_TEMPLATE = "transcript/extract_transcript_terminology/system"
 _USER_TEMPLATE = "transcript/extract_transcript_terminology/user"
 
 
+def render_transcript_input(segments: Sequence[TranscriptSegment], prompts: Prompts) -> str:
+    """Render transcript lines through the terminology node's local template."""
+    rendered_segments = [
+        prompts.render(
+            "transcript/extract_transcript_terminology/segment",
+            {
+                "timestamp": f"{segment.start_seconds:.2f}",
+                "content": segment.content,
+            },
+        )
+        for segment in segments
+    ]
+    return compose_markdown(rendered_segments)
+
+
 async def extract_transcript_terminology(
     state: LessonState, runtime: Runtime[GraphRuntime]
 ) -> dict[str, object]:
     """Reads the whole machine transcript and settles its terminology."""
     prompts = runtime.context.prompts
     segments = list(state["transcript"].segments)
-    transcript_text = render_transcript_text(segments)
+    transcript_text = render_transcript_input(segments, prompts)
 
     answer = await call_chat_model(
         runtime.context.text_model,
@@ -49,7 +68,7 @@ async def extract_transcript_terminology(
                     _SYSTEM_TEMPLATE,
                     {
                         "language": ", ".join(state["transcript"].languages),
-                        "language_policy": prompts.render("language_policy"),
+                        "language_policy": prompts.render("shared_prompts/language_policy"),
                     },
                 )
             ),
@@ -132,6 +151,7 @@ def render_terminology_xml(terminology: Terminology) -> str:
         },
     )
 
+
 """Correcting one part of the machine transcript."""
 
 
@@ -198,7 +218,7 @@ async def correct_transcript(
                     _SYSTEM_TEMPLATE,
                     {
                         "language": correction.spoken_language,
-                        "language_policy": prompts.render("language_policy"),
+                        "language_policy": prompts.render("shared_prompts/language_policy"),
                     },
                 )
             ),
@@ -261,13 +281,12 @@ def _read_units(
     return [
         TranscriptSegment(
             start_seconds=timestamp,
-            end_seconds=(
-                clamped[position + 1][0] if position < len(clamped) - 1 else end_seconds
-            ),
+            end_seconds=(clamped[position + 1][0] if position < len(clamped) - 1 else end_seconds),
             content=content,
         )
         for position, (timestamp, content) in enumerate(clamped)
     ]
+
 
 """Joining correction results into one transcript."""
 

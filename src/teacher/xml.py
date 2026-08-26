@@ -1,4 +1,5 @@
 """Consolidated Teacher implementation."""
+
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
@@ -145,6 +146,7 @@ def _escape_stray_markup_characters(element_text: str) -> str:
         segments[index] = _STRAY_LESS_THAN.sub("&lt;", escaped)
     return "".join(segments)
 
+
 """Validating recovered XML against a schema, and the coercions it needs."""
 
 
@@ -264,6 +266,7 @@ def _format_field_path(location: Sequence[Any]) -> str:
             rendered += f".{segment}" if rendered else str(segment)
     return rendered
 
+
 """Building the XML documents that carry structured content into a prompt."""
 
 
@@ -334,4 +337,3 @@ def _render_scalar(value: Any) -> str:
     if isinstance(value, datetime):
         return value.isoformat()
     return str(value)
-

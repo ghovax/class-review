@@ -1,4 +1,5 @@
 """Consolidated Teacher implementation."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -357,6 +358,7 @@ class DocumentReader(Protocol):
     """Turns caller-provided document bytes into page images."""
 
     async def read(self, source: DocumentSource, *, document_index: int) -> DocumentPages: ...
+
 
 """Progress events the graphs emit as they run."""
 

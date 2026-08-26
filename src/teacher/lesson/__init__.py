@@ -1,4 +1,5 @@
 """Consolidated Teacher implementation."""
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -9,11 +10,42 @@ from langgraph.runtime import Runtime
 from lxml import etree
 from pydantic import BaseModel, Field
 from teacher.configuration import GraphRuntime
-from teacher.models import Concept, PlannedChapter, TranscriptSegment, Citation, PipelineStage, PlanCreated, StageChanged, ConceptDocumentSpan, ConceptIntent, ExplanationDepth, LessonPlan, ProgressionAxis, TimeSpan, ChapterCompleted, ChapterStarted, Document, SectionMap, GlossaryDistilled, GlossaryEntry, LessonAssembled, Chapter, Lesson
+from teacher.models import (
+    Concept,
+    PlannedChapter,
+    TranscriptSegment,
+    Citation,
+    PipelineStage,
+    PlanCreated,
+    StageChanged,
+    ConceptDocumentSpan,
+    ConceptIntent,
+    ExplanationDepth,
+    LessonPlan,
+    ProgressionAxis,
+    TimeSpan,
+    ChapterCompleted,
+    ChapterStarted,
+    Document,
+    SectionMap,
+    GlossaryDistilled,
+    GlossaryEntry,
+    LessonAssembled,
+    Chapter,
+    Lesson,
+)
+from teacher.markdown import compose_markdown
 from teacher.prompts import Prompts
 from teacher.state import ChapterAnswer, ChapterDraft, LessonState
-from teacher.support import PipelineError, get_logger, call_chat_model, render_page_entries, compute_glossary_links
-from teacher.xml import OneOrMany, RequiredText, build_xml_document, case_insensitive_with_fallback, parse_xml_with_schema
+from teacher.documents import render_section_pages
+from teacher.support import PipelineError, get_logger, call_chat_model, compute_glossary_links
+from teacher.xml import (
+    OneOrMany,
+    RequiredText,
+    build_xml_document,
+    case_insensitive_with_fallback,
+    parse_xml_with_schema,
+)
 from typing import Final, Annotated
 import re
 import secrets
@@ -322,7 +354,10 @@ def _build_transcript_excerpts(
             )
             continue
         current = excerpts[-1]
-        if sentence.end_seconds - current.start_seconds <= configuration.maximum_chapter_context_seconds:
+        if (
+            sentence.end_seconds - current.start_seconds
+            <= configuration.maximum_chapter_context_seconds
+        ):
             excerpts[-1] = TranscriptExcerpt(
                 start_seconds=current.start_seconds,
                 end_seconds=sentence.end_seconds,
@@ -391,6 +426,7 @@ def _first_start(chapters: Sequence[PlannedChapter], index: int) -> float | None
         return None
     return min(concept.transcript_span.start_seconds for concept in chapters[index].concepts)
 
+
 """Extracting the small structured envelope around a generated chapter."""
 
 
@@ -442,7 +478,9 @@ def read_chapter_output(
         title = headings[0].group(2).strip() or None
         content = content[headings[0].end() :].lstrip()
 
-    section_count = sum(1 for match in _HEADING_PATTERN.finditer(content) if len(match.group(1)) == 2)
+    section_count = sum(
+        1 for match in _HEADING_PATTERN.finditer(content) if len(match.group(1)) == 2
+    )
     return ChapterOutput(
         title=title,
         content=content.strip(),
@@ -486,6 +524,7 @@ def _child_integer(element: etree._Element, name: str) -> int | None:
     except ValueError:
         return None
 
+
 """Drafting the plan every chapter is then written against."""
 
 
@@ -493,7 +532,6 @@ logger = get_logger(__name__)
 
 _PLAN_SYSTEM_TEMPLATE = "lesson/plan_lesson_outline/system"
 _PLAN_USER_TEMPLATE = "lesson/plan_lesson_outline/user"
-_PLAN_NOTATION_TEMPLATE = "mathematics_notation_rules"
 _PLAN_ROOT_TAG = "LessonOutline"
 
 
@@ -581,8 +619,10 @@ async def plan_lesson_outline(
         _PLAN_SYSTEM_TEMPLATE,
         {
             "language": state["output_language"],
-            "language_policy": prompts.render("language_policy"),
-            "mathematics_notation_rules": prompts.render(_PLAN_NOTATION_TEMPLATE),
+            "language_policy": prompts.render("shared_prompts/language_policy"),
+            "mathematics_notation_rules": prompts.render(
+                "shared_prompts/mathematics_notation_rules"
+            ),
         },
     )
     user_prompt = prompts.render(
@@ -720,7 +760,9 @@ def _read_plan(
     policy: GraphRuntime,
 ) -> LessonPlan:
     """Read the answer into a plan, held to the transcript that exists."""
-    parsed = parse_xml_with_schema(content=answer_text, root_tag=_PLAN_ROOT_TAG, schema=_OutlineSchema)
+    parsed = parse_xml_with_schema(
+        content=answer_text, root_tag=_PLAN_ROOT_TAG, schema=_OutlineSchema
+    )
     if not parsed.chapters:
         raise PipelineError.retryable("the plan declares no chapters")
     _check_asserted_values(parsed, policy)
@@ -847,6 +889,7 @@ def _check_asserted_values(parsed: _OutlineSchema, policy: GraphRuntime) -> None
                         },
                     )
 
+
 """Writing one chapter, with every chapter written before it in view."""
 
 
@@ -854,7 +897,6 @@ logger = get_logger(__name__)
 
 _CHAPTER_SYSTEM_TEMPLATE = "lesson/write_lesson_chapter/system"
 _CHAPTER_USER_TEMPLATE = "lesson/write_lesson_chapter/user"
-_CHAPTER_NOTATION_TEMPLATE = "mathematics_notation_rules"
 
 
 async def write_lesson_chapter(
@@ -916,7 +958,9 @@ async def write_lesson_chapter(
         _CHAPTER_USER_TEMPLATE,
         {
             "language": state["output_language"],
-                    "mathematics_notation_rules": prompts.render(_CHAPTER_NOTATION_TEMPLATE),
+            "mathematics_notation_rules": prompts.render(
+                "shared_prompts/mathematics_notation_rules"
+            ),
             "chapter": _build_chapter_variables(
                 plan=plan,
                 chapter_index=chapter_index,
@@ -940,8 +984,10 @@ async def write_lesson_chapter(
                     _CHAPTER_SYSTEM_TEMPLATE,
                     {
                         "language": state["output_language"],
-                        "language_policy": prompts.render("language_policy"),
-                        "mathematics_notation_rules": prompts.render(_CHAPTER_NOTATION_TEMPLATE),
+                        "language_policy": prompts.render("shared_prompts/language_policy"),
+                        "mathematics_notation_rules": prompts.render(
+                            "shared_prompts/mathematics_notation_rules"
+                        ),
                     },
                 )
             ),
@@ -983,9 +1029,7 @@ async def write_lesson_chapter(
                 citations=parsed.citations,
             )
         ],
-        "chapter_answers": [
-            ChapterAnswer(chapter_index=chapter_index, content=answer.text)
-        ],
+        "chapter_answers": [ChapterAnswer(chapter_index=chapter_index, content=answer.text)],
         "usage_by_model": answer.usage_by_model,
     }
 
@@ -995,8 +1039,7 @@ def _thread_prior_answers(
 ) -> list[AIMessage]:
     """Threads every earlier chapter's answer forward, and nothing else."""
     return [
-        AIMessage(answer.content)
-        for answer in sorted(answers, key=lambda item: item.chapter_index)
+        AIMessage(answer.content) for answer in sorted(answers, key=lambda item: item.chapter_index)
     ]
 
 
@@ -1137,11 +1180,11 @@ def _render_document_material(
                 section = sections.get(section_index)
                 if section is None:
                     continue
-                entry = render_page_entries(document, section)
+                entry = render_section_pages(document, section, prompts)
                 if entry and entry not in rendered:
                     rendered.append(entry)
 
-    return "\n\n".join(rendered)
+    return compose_markdown(rendered)
 
 
 def _render_excerpts(context: ChapterContext) -> str:
@@ -1167,6 +1210,7 @@ def _render_excerpts(context: ChapterContext) -> str:
         },
     )
 
+
 """Distilling the lecture's key terms once every chapter is written."""
 
 
@@ -1174,7 +1218,6 @@ logger = get_logger(__name__)
 
 _GLOSSARY_SYSTEM_TEMPLATE = "lesson/build_lesson_glossary/system"
 _GLOSSARY_USER_TEMPLATE = "lesson/build_lesson_glossary/user"
-_GLOSSARY_NOTATION_TEMPLATE = "mathematics_notation_rules"
 _GLOSSARY_ROOT_TAG = "Glossary"
 
 # Keys are built from this alphabet alone, so a key is always safe to write into a
@@ -1216,8 +1259,10 @@ async def build_lesson_glossary(
                     _GLOSSARY_SYSTEM_TEMPLATE,
                     {
                         "language": state["output_language"],
-                        "language_policy": prompts.render("language_policy"),
-                        "mathematics_notation_rules": prompts.render(_GLOSSARY_NOTATION_TEMPLATE),
+                        "language_policy": prompts.render("shared_prompts/language_policy"),
+                        "mathematics_notation_rules": prompts.render(
+                            "shared_prompts/mathematics_notation_rules"
+                        ),
                     },
                 )
             ),
@@ -1227,8 +1272,21 @@ async def build_lesson_glossary(
                     {
                         "language": state["output_language"],
                         "lesson_title": plan.title,
-                        "lesson_markdown": "\n\n".join(
-                            f"## {(draft.title or (plan.chapters[draft.chapter_index].title if draft.chapter_index < len(plan.chapters) else '')).strip()}\n\n{draft.content.strip()}".strip()
+                        "lesson_markdown": compose_markdown(
+                            prompts.render(
+                                "lesson/build_lesson_glossary/chapter",
+                                {
+                                    "title": (
+                                        draft.title
+                                        or (
+                                            plan.chapters[draft.chapter_index].title
+                                            if draft.chapter_index < len(plan.chapters)
+                                            else ""
+                                        )
+                                    ).strip(),
+                                    "content": draft.content.strip(),
+                                },
+                            )
                             for draft in sorted(drafts, key=lambda item: item.chapter_index)
                         ),
                     },
@@ -1249,7 +1307,9 @@ async def build_lesson_glossary(
 
 def _read_glossary(answer_text: str, key_length: int) -> list[GlossaryEntry]:
     """Reads the answer into glossary entries, minting a key for each."""
-    parsed = parse_xml_with_schema(content=answer_text, root_tag=_GLOSSARY_ROOT_TAG, schema=_GlossarySchema)
+    parsed = parse_xml_with_schema(
+        content=answer_text, root_tag=_GLOSSARY_ROOT_TAG, schema=_GlossarySchema
+    )
 
     entries: list[GlossaryEntry] = []
     seen_short_forms: set[str] = set()
@@ -1275,6 +1335,7 @@ def _mint_key(key_length: int) -> str:
     """Mints a key that is safe as a link destination and as a match target."""
     suffix = "".join(secrets.choice(_KEY_ALPHABET) for _ in range(key_length))
     return f"{_KEY_PREFIX}{suffix}"
+
 
 """Assembling the lesson, and deciding where its terms are linked."""
 

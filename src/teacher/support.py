@@ -1,4 +1,5 @@
 """Consolidated Teacher implementation."""
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -7,7 +8,7 @@ from langchain_core.callbacks import get_usage_metadata_callback
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage
 from models_provider import ModelUsage
-from teacher.models import GlossaryEntry, GlossaryLink, Document, DocumentSection, TranscriptSegment
+from teacher.models import GlossaryEntry, GlossaryLink
 from typing import Any, Final, Self, Literal
 import logging
 import re
@@ -131,6 +132,7 @@ def _read_status_code(error: BaseException) -> int | None:
         return candidate
     return None
 
+
 """Structured logging conventions used throughout the pipeline."""
 
 
@@ -169,6 +171,7 @@ def configure_logging(
         cache_logger_on_first_use=True,
     )
     logging.basicConfig(format="%(message)s", level=level)
+
 
 """Calling a chat model and reporting what the call consumed."""
 
@@ -213,6 +216,7 @@ def _read_usage(usage_metadata: Any) -> dict[str, ModelUsage]:  # noqa: ANN401
         )
     return converted
 
+
 """Find and render glossary links with plain text operations."""
 
 
@@ -231,9 +235,7 @@ def compute_glossary_links(
             match = re.search(rf"(?<!\w){re.escape(phrase)}(?!\w)", content, re.IGNORECASE)
             if match is None:
                 continue
-            chapter_links.append(
-                GlossaryLink(key=entry.key, start=match.start(), end=match.end())
-            )
+            chapter_links.append(GlossaryLink(key=entry.key, start=match.start(), end=match.end()))
             remaining.remove(entry.key)
         links_per_chapter.append(tuple(sorted(chapter_links, key=lambda link: link.start)))
     return links_per_chapter
@@ -246,39 +248,5 @@ def apply_glossary_links(content: str, links: Sequence[GlossaryLink]) -> str:
         if not 0 <= link.start < link.end <= len(result):
             continue
         text = result[link.start : link.end]
-        result = f"{result[:link.start]}[{text}](#glossary-{link.key}){result[link.end:]}"
+        result = f"{result[: link.start]}[{text}](#glossary-{link.key}){result[link.end :]}"
     return result
-
-"""Rendering the material a prompt is shown."""
-
-
-def render_transcript_text(segments: Sequence[TranscriptSegment]) -> str:
-    """Renders segments as one timestamped line each."""
-    return "\n".join(f"[{segment.start_seconds:.2f}] {segment.content}" for segment in segments)
-
-
-def render_page_summaries(documents: Sequence[Document]) -> str:
-    """Renders every document's pages by summary alone."""
-    blocks: list[str] = []
-    for document in sorted(documents, key=lambda item: item.document_index):
-        blocks.append(f"## Document {document.document_index}: {document.file_name}")
-        blocks.extend(
-            f"### Page {page.page_number}\n\n{(page.summary or 'Page content unavailable.').strip()}".strip()
-            for page in document.pages
-        )
-    return "\n\n".join(block for block in blocks if block)
-
-
-def render_page_entries(
-    document: Document | None,
-    section: DocumentSection,
-) -> str:
-    """Renders the pages one section covers, in full."""
-    if document is None:
-        return ""
-
-    return "\n\n".join(
-        f"### Page {page.page_number}\n\n{(page.summary or 'Page content unavailable.').strip()}\n\n{(page.details or 'No details were extracted.').strip()}".strip()
-        for page in document.pages
-        if section.start_page <= page.page_number <= section.end_page
-    )

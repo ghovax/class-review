@@ -1,4 +1,5 @@
 """Consolidated Teacher implementation."""
+
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -8,6 +9,7 @@ from enum import StrEnum
 from importlib import resources
 from pathlib import PurePosixPath, Path
 from teacher.models import DocumentSource, Recording, Lesson, Citation
+from teacher.markdown import compose_markdown, render_table, shift_headings
 from teacher.prompts import Prompts
 from teacher.support import PipelineError, apply_glossary_links
 from tempfile import TemporaryDirectory
@@ -47,6 +49,7 @@ class ExportMetadata:
 
 class ExportError(RuntimeError):
     """Reports that a requested representation could not be rendered."""
+
 
 """Localized labels and dates used by exported documents."""
 
@@ -160,6 +163,7 @@ def format_lesson_date(lesson_date: date, language: str | None) -> str:
         return f"{month} {lesson_date.day}, {lesson_date.year}"
     return f"{lesson_date.day} {month} {lesson_date.year}"
 
+
 """Building the source-listing tables used by lesson outputs."""
 
 
@@ -174,7 +178,8 @@ def build_source_tables(lecture: Lesson, metadata: ExportMetadata) -> list[str]:
             (
                 _recording_name(recording, recording_index),
                 _format_duration(total_duration)
-                if recording_index == len(recordings) - 1 and total_duration > 0 else "",
+                if recording_index == len(recordings) - 1 and total_duration > 0
+                else "",
             )
             for recording_index, recording in enumerate(recordings)
         ]
@@ -184,9 +189,12 @@ def build_source_tables(lecture: Lesson, metadata: ExportMetadata) -> list[str]:
     if documents:
         page_counts = _citation_page_counts(lecture)
         document_rows = [
-            (source_document_name(document, document_index),
-             f"{page_counts[document_index]} {labels.page_abbreviation}"
-             if document_index in page_counts else "")
+            (
+                source_document_name(document, document_index),
+                f"{page_counts[document_index]} {labels.page_abbreviation}"
+                if document_index in page_counts
+                else "",
+            )
             for document_index, document in enumerate(documents)
         ]
         blocks.append(_table((labels.reference_documents, labels.pages), document_rows))
@@ -246,10 +254,9 @@ def _format_duration(total_seconds: int) -> str:
 
 
 def _table(headers: tuple[str, str], rows: list[tuple[str, str]]) -> str:
-    """Render a two-column source table without an intermediate document tree."""
-    lines = [f"| {headers[0]} | {headers[1]} |", "| --- | ---: |"]
-    lines.extend(f"| {left.replace('|', '\\|')} | {right} |" for left, right in rows)
-    return "\n".join(lines)
+    """Render a two-column source table through the Markdown library."""
+    return render_table(headers, rows)
+
 
 """Building structured citation footnote bodies for lecture outputs."""
 
@@ -278,6 +285,7 @@ def _citation_definition(
         document_name = f"Document {citation.document_index + 1}"
     return f"{citation.content.strip()} (`{document_name}`, p. {citation.page_number})"
 
+
 """Building the canonical Markdown export from plain lesson data."""
 
 
@@ -294,17 +302,23 @@ def render_export_template(name: str, variables: Mapping[str, object]) -> str:
 
 
 def render_export_markdown(lesson: Lesson, metadata: ExportMetadata) -> str:
-    """Renders a complete lesson by joining packaged text blocks."""
-    blocks = [render_export_template("lesson", {
-        "title": lesson.title.strip() or "Untitled",
-        "description": lesson.description.strip(),
-    }).strip(), *build_source_tables(lesson, metadata)]
+    """Render a complete lesson from packaged blocks."""
+    blocks = [
+        render_export_template(
+            "lesson",
+            {
+                "title": lesson.title.strip() or "Untitled",
+                "description": lesson.description.strip(),
+            },
+        ).strip(),
+        *build_source_tables(lesson, metadata),
+    ]
     blocks.extend(_chapter_blocks(lesson))
     blocks.extend(_glossary_blocks(lesson, metadata))
     definitions = build_citation_definitions(lesson, metadata)
     if definitions:
-        blocks.append("\n\n".join(f"[^{number}]: {body}" for number, body in definitions.items()))
-    return "\n\n".join(block for block in blocks if block).strip() + "\n"
+        blocks.extend(f"[^{number}]: {body}" for number, body in definitions.items())
+    return compose_markdown(blocks)
 
 
 def _chapter_blocks(lecture: Lesson) -> list[str]:
@@ -312,10 +326,15 @@ def _chapter_blocks(lecture: Lesson) -> list[str]:
     blocks: list[str] = []
     for chapter_index, chapter in enumerate(lecture.chapters):
         linked_content = apply_glossary_links(chapter.content, chapter.glossary_links)
-        blocks.append(render_export_template("chapter", {
-            "title": chapter.title.strip() or f"Chapter {chapter_index + 1}",
-            "content": _shift_headings(linked_content, 1),
-        }).strip())
+        blocks.append(
+            render_export_template(
+                "chapter",
+                {
+                    "title": chapter.title.strip() or f"Chapter {chapter_index + 1}",
+                    "content": _shift_headings(linked_content, 1),
+                },
+            ).strip()
+        )
     return blocks
 
 
@@ -329,21 +348,23 @@ def _glossary_blocks(lecture: Lesson, metadata: ExportMetadata) -> list[str]:
         display_name = (
             f"{entry.short_form} ({entry.long_form})" if entry.long_form else entry.short_form
         )
-        blocks.append(render_export_template("glossary_entry", {
-            "key": entry.key,
-            "title": display_name,
-            "description": entry.description,
-        }).strip())
+        blocks.append(
+            render_export_template(
+                "glossary_entry",
+                {
+                    "key": entry.key,
+                    "title": display_name,
+                    "description": entry.description,
+                },
+            ).strip()
+        )
     return blocks
 
 
 def _shift_headings(markdown: str, levels: int) -> str:
     """Moves every heading in a chapter by a fixed number of levels."""
-    def shift(match: re.Match[str]) -> str:
-        level = min(6, max(1, len(match.group(1)) + levels))
-        return f"{'#' * level} {match.group(2)}"
+    return shift_headings(markdown, levels)
 
-    return re.sub(r"^(#{1,6})[ \t]+(.+?)[ \t]*$", shift, markdown, flags=re.MULTILINE).strip()
 
 """Converting canonical lecture Markdown into PDF bytes with Pandoc and Typst."""
 
@@ -351,13 +372,15 @@ def _shift_headings(markdown: str, levels: int) -> str:
 _PANDOC_TIMEOUT_SECONDS: Final[int] = 40
 _PANDOC_INPUT_FORMAT: Final[str] = "markdown+smart+footnotes+raw_html+header_attributes"
 _ANCHOR_BEFORE_HEADING: Final[re.Pattern[bytes]] = re.compile(
-    rb'^<a id="([^"]+)"></a>\n\n(#{1,6} .+)$', re.MULTILINE
+    rb'^<a id="([^"]+)"></a>\s*(#{1,6} .+)$', re.MULTILINE
 )
 
 
 def render_pdf(markdown: bytes, metadata: ExportMetadata) -> bytes:
     """Converts canonical Markdown into PDF bytes."""
-    template_resource = resources.files("teacher.output_templates").joinpath("pandoc-typst.template")
+    template_resource = resources.files("teacher.output_templates").joinpath(
+        "pandoc-typst.template"
+    )
     with resources.as_file(template_resource) as template_path:
         return _run_pandoc(markdown, metadata, template_path)
 
@@ -444,6 +467,7 @@ def _pandoc_metadata(metadata: ExportMetadata) -> dict[str, str]:
             else labels.generated_notice
         )
     return values
+
 
 """File-oriented output API."""
 
