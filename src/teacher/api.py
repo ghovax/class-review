@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from contextlib import AbstractContextManager
 from dataclasses import dataclass
+from models_provider import ModelUsage
 from typing import Any
 
 import aiosqlite
@@ -12,7 +13,7 @@ from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 
 from teacher.configuration import GraphConfiguration, GraphRuntime
 from teacher.graph import define_graph
-from teacher.models import DocumentSource, LanguageModelUsage, Lesson, Transcript
+from teacher.models import DocumentSource, Lesson, Transcript
 from teacher.configuration import build_serializer
 
 
@@ -21,7 +22,7 @@ class LessonResult:
     """A completed lesson and its model usage."""
 
     lesson: Lesson
-    usage_by_model: dict[str, LanguageModelUsage]
+    usage_by_model: dict[str, ModelUsage]
     run_id: str
 
 

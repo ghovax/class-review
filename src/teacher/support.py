@@ -6,7 +6,8 @@ from dataclasses import dataclass
 from langchain_core.callbacks import get_usage_metadata_callback
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage
-from teacher.models import LanguageModelUsage, GlossaryEntry, GlossaryLink, Document, DocumentSection, TranscriptSegment
+from models_provider import ModelUsage
+from teacher.models import GlossaryEntry, GlossaryLink, Document, DocumentSection, TranscriptSegment
 from typing import Any, Final, Self, Literal
 import logging
 import re
@@ -177,7 +178,7 @@ class ModelAnswer:
     """One model answer with the usage the call consumed."""
 
     text: str
-    usage_by_model: dict[str, LanguageModelUsage]
+    usage_by_model: dict[str, ModelUsage]
 
 
 async def call_chat_model(
@@ -198,12 +199,12 @@ async def call_chat_model(
     return ModelAnswer(text=trimmed, usage_by_model=_read_usage(usage_callback.usage_metadata))
 
 
-def _read_usage(usage_metadata: Any) -> dict[str, LanguageModelUsage]:  # noqa: ANN401
+def _read_usage(usage_metadata: Any) -> dict[str, ModelUsage]:  # noqa: ANN401
     """Converts collected usage metadata into the channel's shape."""
-    converted: dict[str, LanguageModelUsage] = {}
+    converted: dict[str, ModelUsage] = {}
     for model_name, counts in (usage_metadata or {}).items():
         input_details = counts.get("input_token_details") or {}
-        converted[str(model_name)] = LanguageModelUsage(
+        converted[str(model_name)] = ModelUsage(
             prompt_tokens=int(counts.get("input_tokens", 0)),
             completion_tokens=int(counts.get("output_tokens", 0)),
             total_tokens=int(counts.get("total_tokens", 0)),
@@ -262,7 +263,7 @@ def render_page_summaries(documents: Sequence[Document]) -> str:
     for document in sorted(documents, key=lambda item: item.document_index):
         blocks.append(f"## Document {document.document_index}: {document.file_name}")
         blocks.extend(
-            f"### Page {page.page_number}\n\n{page.summary.strip()}".strip()
+            f"### Page {page.page_number}\n\n{(page.summary or 'Page content unavailable.').strip()}".strip()
             for page in document.pages
         )
     return "\n\n".join(block for block in blocks if block)
@@ -277,8 +278,7 @@ def render_page_entries(
         return ""
 
     return "\n\n".join(
-        f"### Page {page.page_number}\n\n{page.summary.strip()}\n\n{page.details.strip()}".strip()
+        f"### Page {page.page_number}\n\n{(page.summary or 'Page content unavailable.').strip()}\n\n{(page.details or 'No details were extracted.').strip()}".strip()
         for page in document.pages
         if section.start_page <= page.page_number <= section.end_page
     )
-

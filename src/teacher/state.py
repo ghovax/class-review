@@ -5,6 +5,7 @@ from __future__ import annotations
 import operator
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
+from models_provider import ModelUsage
 from typing import Annotated, TypedDict
 
 from teacher.models import (
@@ -12,11 +13,11 @@ from teacher.models import (
     Document,
     DocumentSource,
     GlossaryEntry,
-    LanguageModelUsage,
     Lesson,
     LessonPlan,
     SectionMap,
     SectionNotes,
+    Terminology,
     Transcript,
     TranscriptSegment,
     normalize_sequence_fields,
@@ -38,9 +39,9 @@ def upsert_by[ItemType](
 
 
 def merge_usage_by_model(
-    existing: Mapping[str, LanguageModelUsage],
-    incoming: Mapping[str, LanguageModelUsage],
-) -> dict[str, LanguageModelUsage]:
+    existing: Mapping[str, ModelUsage],
+    incoming: Mapping[str, ModelUsage],
+) -> dict[str, ModelUsage]:
     """Add usage emitted by parallel model calls."""
 
     merged = dict(existing)
@@ -76,9 +77,8 @@ class StagedPage:
 
     document_index: int
     page_number: int
-    summary: str
-    details: str
-    was_extracted: bool
+    summary: str | None
+    details: str | None
 
 
 class LessonInput(TypedDict):
@@ -93,13 +93,13 @@ class LessonOutput(TypedDict):
     """The generated lesson and measured model usage."""
 
     lesson: Lesson | None
-    usage_by_model: Annotated[dict[str, LanguageModelUsage], merge_usage_by_model]
+    usage_by_model: Annotated[dict[str, ModelUsage], merge_usage_by_model]
 
 
 class LessonState(LessonInput, total=False):
     """Every value persisted while the graph runs."""
 
-    terminology: str
+    terminology: Terminology
     clean_transcript: Annotated[list[TranscriptSegment], operator.add]
     documents: Annotated[list[Document], upsert_by("document_index")]
     staged_pages: Annotated[list[StagedPage], operator.add]
@@ -110,4 +110,4 @@ class LessonState(LessonInput, total=False):
     chapter_exchanges: Annotated[list[ChapterExchange], upsert_by("chapter_index")]
     glossary: list[GlossaryEntry]
     lesson: Lesson | None
-    usage_by_model: Annotated[dict[str, LanguageModelUsage], merge_usage_by_model]
+    usage_by_model: Annotated[dict[str, ModelUsage], merge_usage_by_model]

@@ -1,6 +1,6 @@
 # Teacher
 
-Teacher turns a timestamped lecture transcript and optional document material into a structured lesson through one resumable graph. The graph cleans the transcript, reads supplied document pages, plans chapters, writes the lesson, builds a glossary, and exposes Markdown and PDF output.
+Teacher turns a timestamped lecture transcript and optional document bytes into a structured lesson through one resumable graph. The graph cleans the transcript, reads supplied document pages, plans chapters, writes the lesson, builds a glossary, and exposes Markdown and PDF output.
 
 ## Code layout
 
@@ -31,10 +31,20 @@ TranscriptSegment(
     content=str,
 )
 
-DocumentSource(url=str, file_name=str | None = None)
+DocumentSource(content=bytes, file_name=str | None = None)
+
+Terminology(
+    terms=tuple[TerminologyTerm, ...],
+)
+
+TerminologyTerm(
+    canonical=str,
+    heard=TerminologyHeard(variants=tuple[str, ...]),
+    kind=str,
+)
 ```
 
-Teacher validates non-empty URLs and text, non-negative timestamps, and ordered segment timestamps when these values are constructed. `sources` is caller-owned and may be empty. When sources are present, `GraphConfiguration.document_reader` must provide one implementation of the `DocumentReader` protocol:
+Teacher validates non-empty document bytes and text, non-negative timestamps, and ordered segment timestamps when these values are constructed. `sources` is caller-owned and may be empty. When sources are present, `GraphConfiguration.document_reader` must provide one implementation of the `DocumentReader` protocol:
 
 ```python
 class DocumentReader(Protocol):
@@ -43,10 +53,10 @@ class DocumentReader(Protocol):
         source: DocumentSource,
         *,
         document_index: int,
-    ): ...
+    ) -> DocumentPages: ...
 ```
 
-The reader may use local files, a web client, a storage service, or any other application-specific source. Teacher does not choose a downloader or PDF adapter for the caller.
+The reader may receive bytes loaded from local files, a web client, object storage, or any other application-specific source. Teacher does not care where the bytes came from and does not choose a downloader. Teacher parses model XML into typed values immediately; XML is used only at the model boundary.
 
 ## Graph call
 
@@ -90,7 +100,7 @@ LessonResult(
         chapters=tuple[Chapter, ...],
         glossary=tuple[GlossaryEntry, ...],
     ),
-    usage_by_model=dict[str, LanguageModelUsage],
+    usage_by_model=dict[str, ModelUsage],
     run_id=str,
 )
 
@@ -125,10 +135,10 @@ transcript = Transcript(
 )
 sources = (
     DocumentSource(
-        url="https://example.org/handout.pdf",
+        content=Path("handout.pdf").read_bytes(),
         file_name="handout.pdf",
     ),
 )
 ```
 
-There is no length option. Structure and depth come from the material and the plan. Input sourcing, persistence, and non-PDF exports remain application concerns.
+There is no length option. Structure and depth come from the material and the plan. Input sourcing, persistence, and non-PDF exports remain application concerns. `ModelUsage` is defined by the independent Models Provider library.
