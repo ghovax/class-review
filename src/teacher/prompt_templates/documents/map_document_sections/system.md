@@ -2,7 +2,7 @@
 
 {{ language_policy }}
 
-Group the pages of one document into coherent, contiguous sections. Base boundaries and descriptions only on the supplied page summaries. Cover every page, allowing only small useful overlaps. Use short titles and plain prose descriptions.
+Organize the pages of one document into coherent, contiguous sections. Base boundaries and descriptions only on the supplied page summaries. Cover every page, allowing only small useful overlaps. Use short titles and plain prose descriptions.
 
 {{ mathematics_notation_rules }}
 

@@ -10,16 +10,16 @@ from pydantic import BaseModel, Field
 from teacher.configuration import GraphRuntime
 from models_provider import ModelUsage
 from teacher.models import Document, DocumentSource, DocumentSection, DocumentSections, SectionMap, SectionNotes, DocumentRead, DocumentPage
-from teacher.state import StagedPage, LessonState
+from teacher.state import DocumentPageReading, LessonState
 from teacher.support import PipelineError, classify_retryable, get_logger, call_chat_model, render_page_summaries, render_page_entries
 from teacher.xml import OneOrMany, RequiredText, parse_xml_with_schema
 from typing import Any
 import asyncio
 import re
 
-"""Document graph nodes: PDF loading, page reading, section mapping, notes, and assembly."""
+"""Document graph nodes: page reading, section mapping, notes, and assembly."""
 
-"""Loading source documents and dispatching their pages."""
+"""Loading source documents and routing their pages."""
 
 
 class DocumentReadRequest(BaseModel):
@@ -149,7 +149,7 @@ async def extract_document_page(
                     error_message=str(error),
                     error_metadata=error.metadata,
                 )
-                return _staged(page, accumulated_usage)
+                return _page_reading_update(page, accumulated_usage)
             logger.info(
                 "page documents attempt failed, trying again",
                 document_index=page.document_index,
@@ -168,8 +168,8 @@ async def extract_document_page(
             details_character_count=len(details),
         )
         return {
-            "staged_pages": [
-                StagedPage(
+            "page_readings": [
+                DocumentPageReading(
                     document_index=page.document_index,
                     page_number=page.page_number,
                     summary=summary,
@@ -179,17 +179,17 @@ async def extract_document_page(
             "usage_by_model": accumulated_usage,
         }
 
-    return _staged(page, accumulated_usage)
+    return _page_reading_update(page, accumulated_usage)
 
 
-def _staged(
+def _page_reading_update(
     page: DocumentPageReadRequest,
     usage: dict[str, ModelUsage],
 ) -> dict[str, object]:
-    """Builds the update for a page that could not be read."""
+    """Build the empty reading recorded when a page could not be read."""
     return {
-        "staged_pages": [
-            StagedPage(
+        "page_readings": [
+            DocumentPageReading(
                 document_index=page.document_index,
                 page_number=page.page_number,
                 summary=None,
@@ -246,7 +246,7 @@ def _read_sections(answer_text: str) -> tuple[str, str]:
         raise PipelineError.retryable("the page documents has empty details")
     return summary, details
 
-"""Grouping every document's pages into the sections they actually form."""
+"""Organizing every document's pages into the sections they actually form."""
 
 
 logger = get_logger(__name__)
@@ -414,9 +414,9 @@ async def explain_document_sections(
 
     logger.info("section explanation started", section_count=len(requests))
 
-    async with asyncio.TaskGroup() as task_group:
+    async with asyncio.TaskGroup() as task_scope:
         tasks = [
-            task_group.create_task(
+            task_scope.create_task(
                 _explain_one(
                     document=documents_by_index.get(document_index),
                     document_index=document_index,
@@ -500,7 +500,7 @@ async def _explain_one(
         answer.usage_by_model,
     )
 
-"""The barrier that folds every page's documents back into its document."""
+"""Assembling every page reading back into its document."""
 
 
 logger = get_logger(__name__)
@@ -509,12 +509,12 @@ logger = get_logger(__name__)
 async def assemble_documents_from_pages(
     state: LessonState, runtime: Runtime[GraphRuntime]
 ) -> dict[str, object]:
-    """Merges the staged pages into their documents, in page order."""
+    """Merge page readings into their documents, in page order."""
     del runtime
     documents = state.get("documents", [])
-    staged_pages = state.get("staged_pages", [])
+    page_readings = state.get("page_readings", [])
 
-    chosen = _choose_best_documents(staged_pages)
+    chosen = _select_page_readings(page_readings)
     known_indices = {document.document_index for document in documents}
     orphaned = sorted({document_index for document_index, _ in chosen} - known_indices)
     if orphaned:
@@ -529,14 +529,14 @@ async def assemble_documents_from_pages(
     for document in sorted(documents, key=lambda item: item.document_index):
         pages_for_document = sorted(
             (
-                staged
-                for (document_index, _), staged in chosen.items()
+                reading
+                for (document_index, _), reading in chosen.items()
                 if document_index == document.document_index
             ),
-            key=lambda staged: staged.page_number,
+            key=lambda reading: reading.page_number,
         )
         unreadable_count = sum(
-            1 for staged in pages_for_document if staged.summary is None or staged.details is None
+            1 for reading in pages_for_document if reading.summary is None or reading.details is None
         )
         assembled.append(
             Document(
@@ -544,11 +544,11 @@ async def assemble_documents_from_pages(
                 file_name=document.file_name,
                 pages=tuple(
                     DocumentPage(
-                        page_number=staged.page_number,
-                        summary=staged.summary,
-                        details=staged.details,
+                        page_number=reading.page_number,
+                        summary=reading.summary,
+                        details=reading.details,
                     )
-                    for staged in pages_for_document
+                    for reading in pages_for_document
                 ),
             )
         )
@@ -571,18 +571,18 @@ async def assemble_documents_from_pages(
     return {"documents": Overwrite(value=assembled)}
 
 
-def _choose_best_documents(
-    staged_pages: list[StagedPage],
-) -> dict[tuple[int, int], StagedPage]:
-    """Picks one documents per page, preferring a real one over a placeholder."""
-    chosen: dict[tuple[int, int], StagedPage] = {}
-    for staged in staged_pages:
-        key = (staged.document_index, staged.page_number)
+def _select_page_readings(
+    page_readings: list[DocumentPageReading],
+) -> dict[tuple[int, int], DocumentPageReading]:
+    """Pick one reading per page, preferring a complete one over an empty one."""
+    chosen: dict[tuple[int, int], DocumentPageReading] = {}
+    for reading in page_readings:
+        key = (reading.document_index, reading.page_number)
         present = chosen.get(key)
         present_is_empty = present is not None and (
             present.summary is None or present.details is None
         )
-        staged_is_read = staged.summary is not None and staged.details is not None
-        if present is None or (present_is_empty and staged_is_read):
-            chosen[key] = staged
+        reading_is_complete = reading.summary is not None and reading.details is not None
+        if present is None or (present_is_empty and reading_is_complete):
+            chosen[key] = reading
     return chosen

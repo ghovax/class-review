@@ -6,8 +6,8 @@ Teacher turns a timestamped lecture transcript and optional document bytes into 
 
 | Area | Responsibility | Main file |
 | --- | --- | --- |
-| Graph | Wiring, fan-out, barriers, and the chapter loop | `graph.py` |
-| Transcript | Terminology, correction batches, and assembly | `transcript.py` |
+| Graph | Flow, parallel work, joins, and the chapter loop | `graph.py` |
+| Transcript | Terminology, correction, and assembly | `transcript.py` |
 | Documents | Page reading, section mapping, and explanations | `documents.py` |
 | Lesson | Planning, chapter writing, glossary, and assembly | `lesson.py` |
 | Inputs | Typed caller values and document reader protocol | `models.py` |
@@ -53,10 +53,11 @@ class DocumentReader(Protocol):
         source: DocumentSource,
         *,
         document_index: int,
-    ) -> DocumentPages: ...
+    ):
+        """Return DocumentPages for the supplied bytes."""
 ```
 
-The reader may receive bytes loaded from local files, a web client, object storage, or any other application-specific source. Teacher does not care where the bytes came from and does not choose a downloader. Teacher parses model XML into typed values immediately; XML is used only at the model boundary.
+The reader may receive bytes loaded from local files, a web client, object storage, or any other application-specific source. Teacher does not care where the bytes came from and does not choose a downloader. `DocumentSource.from_path(...)` is only a convenience for local callers; the value passed to the reader is still `content: bytes`. Teacher parses model XML into typed values immediately; XML is used only at the model boundary.
 
 ## Graph call
 
@@ -134,10 +135,7 @@ transcript = Transcript(
     languages=("en",),
 )
 sources = (
-    DocumentSource(
-        content=Path("handout.pdf").read_bytes(),
-        file_name="handout.pdf",
-    ),
+    DocumentSource.from_path("handout.pdf"),
 )
 ```
 

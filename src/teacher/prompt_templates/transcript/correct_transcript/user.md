@@ -1,7 +1,7 @@
-# Transcript batch {{ index }}
+# Transcript correction
 
 Language: {{ audio_language }}
-Source time range: {{ batch_start_seconds }}s to {{ batch_end_seconds }}s
+Source time range: {{ start_seconds }}s to {{ end_seconds }}s
 
 ## Canonical terminology
 
@@ -16,7 +16,7 @@ Return only this XML shape, with one paragraph per segment:
 ```xml
 <CorrectedTranscript>
   <Segment>
-    <Timestamp>{{ batch_start_seconds }}</Timestamp>
+    <Timestamp>{{ start_seconds }}</Timestamp>
     <Content><![CDATA[Clean prose for one coherent topic.]]></Content>
   </Segment>
 </CorrectedTranscript>

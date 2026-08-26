@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 from teacher.configuration import GraphRuntime
 from teacher.models import Concept, PlannedChapter, TranscriptSegment, Citation, PipelineStage, PlanCreated, StageChanged, ConceptDocumentSpan, ConceptIntent, ExplanationDepth, LessonPlan, ProgressionAxis, TimeSpan, ChapterCompleted, ChapterStarted, Document, SectionMap, GlossaryDistilled, GlossaryEntry, LessonAssembled, Chapter, Lesson
 from teacher.prompts import Prompts
-from teacher.state import LessonState, ChapterDraft, ChapterExchange
+from teacher.state import ChapterAnswer, ChapterDraft, LessonState
 from teacher.support import PipelineError, get_logger, call_chat_model, render_page_entries, compute_glossary_links
 from teacher.xml import OneOrMany, RequiredText, build_xml_document, case_insensitive_with_fallback, parse_xml_with_schema
 from typing import Final, Annotated
@@ -92,8 +92,8 @@ class TimedSentence:
 
 
 @dataclass(frozen=True, slots=True)
-class TranscriptGroup:
-    """A run of consecutive sentences shown to a model as one block."""
+class TranscriptExcerpt:
+    """A run of consecutive sentences shown to a model as one passage."""
 
     start_seconds: float
     end_seconds: float
@@ -102,16 +102,16 @@ class TranscriptGroup:
 
 @dataclass(frozen=True, slots=True)
 class ConceptSlice:
-    """The transcript one concept may draw from."""
+    """The transcript excerpts one concept may draw from."""
 
     concept_index: int
     topic_title: str
-    groups: tuple[TranscriptGroup, ...]
+    excerpts: tuple[TranscriptExcerpt, ...]
 
 
 @dataclass(frozen=True, slots=True)
-class ChapterWindow:
-    """The stretch of transcript one chapter may draw from."""
+class ChapterContext:
+    """The transcript material one chapter may draw from."""
 
     start_seconds: float
     end_seconds: float
@@ -162,31 +162,31 @@ def split_into_sentences(
     return timed
 
 
-def build_chapter_window(
+def build_chapter_context(
     *,
     chapters: Sequence[PlannedChapter],
     chapter_index: int,
     segments: Sequence[TranscriptSegment],
     configuration: GraphRuntime,
-) -> ChapterWindow:
+) -> ChapterContext:
     """Works out what one chapter may draw from, and divides it by concept."""
     if not 0 <= chapter_index < len(chapters):
-        return ChapterWindow(start_seconds=0.0, end_seconds=0.0, concept_slices=())
+        return ChapterContext(start_seconds=0.0, end_seconds=0.0, concept_slices=())
 
     chapter = chapters[chapter_index]
     if not chapter.concepts:
-        return ChapterWindow(start_seconds=0.0, end_seconds=0.0, concept_slices=())
+        return ChapterContext(start_seconds=0.0, end_seconds=0.0, concept_slices=())
 
     start_seconds, end_seconds = _resolve_bounds(chapters, chapter_index, configuration)
-    sentences = _clip_to_window(segments, start_seconds, end_seconds, configuration)
+    sentences = _select_sentences_in_context(segments, start_seconds, end_seconds, configuration)
     concept_slices = _divide_among_concepts(
         concepts=chapter.concepts,
         sentences=sentences,
-        window_start=start_seconds,
-        window_end=end_seconds,
+        context_start=start_seconds,
+        context_end=end_seconds,
         configuration=configuration,
     )
-    return ChapterWindow(
+    return ChapterContext(
         start_seconds=start_seconds,
         end_seconds=end_seconds,
         concept_slices=concept_slices,
@@ -211,7 +211,7 @@ def _resolve_bounds(
     )
     right_cut = _midpoint(requested_end, next_start) if next_start is not None else float("inf")
 
-    margin = configuration.chapter_boundary_seconds
+    margin = configuration.chapter_context_margin_seconds
     start_seconds = max(0.0, requested_start - margin, left_cut)
     end_seconds = max(start_seconds, min(requested_end + margin, right_cut))
     return start_seconds, end_seconds
@@ -221,11 +221,11 @@ def _divide_among_concepts(
     *,
     concepts: Sequence[Concept],
     sentences: Sequence[TimedSentence],
-    window_start: float,
-    window_end: float,
+    context_start: float,
+    context_end: float,
     configuration: GraphRuntime,
 ) -> tuple[ConceptSlice, ...]:
-    """Divides a chapter's window among its concepts."""
+    """Divides a chapter's transcript context among its concepts."""
     ordered = sorted(
         enumerate(concepts),
         key=lambda entry: (entry[1].transcript_span.start_seconds, entry[0]),
@@ -236,7 +236,7 @@ def _divide_among_concepts(
         is_first = position == 0
         is_last = position == len(ordered) - 1
         slice_start = (
-            window_start
+            context_start
             if is_first
             else _midpoint(
                 ordered[position - 1][1].transcript_span.end_seconds,
@@ -244,7 +244,7 @@ def _divide_among_concepts(
             )
         )
         slice_end = (
-            window_end
+            context_end
             if is_last
             else _midpoint(
                 concept.transcript_span.end_seconds,
@@ -260,7 +260,7 @@ def _divide_among_concepts(
                 ConceptSlice(
                     concept_index=concept.concept_index,
                     topic_title=concept.topic_title,
-                    groups=_group_sentences(covered, configuration),
+                    excerpts=_build_transcript_excerpts(covered, configuration),
                 ),
             )
         )
@@ -268,18 +268,18 @@ def _divide_among_concepts(
     return tuple(entry[1] for entry in sorted(slices, key=lambda entry: entry[0]))
 
 
-def _clip_to_window(
+def _select_sentences_in_context(
     segments: Sequence[TranscriptSegment],
-    window_start: float,
-    window_end: float,
+    context_start: float,
+    context_end: float,
     configuration: GraphRuntime,
 ) -> list[TimedSentence]:
-    """Divides the transcript into sentences and keeps those inside a window."""
+    """Divide the transcript into sentences and keep those in the chapter context."""
     overlapping = [
         segment
         for segment in segments
-        if max(segment.start_seconds, segment.end_seconds) > window_start
-        and min(segment.start_seconds, segment.end_seconds) < window_end
+        if max(segment.start_seconds, segment.end_seconds) > context_start
+        and min(segment.start_seconds, segment.end_seconds) < context_end
     ]
     sentences = [
         sentence
@@ -296,7 +296,7 @@ def _clip_to_window(
     kept = [
         sentence
         for sentence in sentences
-        if window_start <= _midpoint_of(sentence) < window_end
+        if context_start <= _midpoint_of(sentence) < context_end
         and sentence.end_seconds > sentence.start_seconds
         and sentence.content.strip()
     ]
@@ -306,37 +306,37 @@ def _clip_to_window(
     )
 
 
-def _group_sentences(
+def _build_transcript_excerpts(
     sentences: Sequence[TimedSentence], configuration: GraphRuntime
-) -> tuple[TranscriptGroup, ...]:
-    """Runs consecutive sentences together into blocks of bounded span."""
-    groups: list[TranscriptGroup] = []
+) -> tuple[TranscriptExcerpt, ...]:
+    """Join consecutive sentences into passages within the model context limit."""
+    excerpts: list[TranscriptExcerpt] = []
     for sentence in sentences:
-        if not groups:
-            groups.append(
-                TranscriptGroup(
+        if not excerpts:
+            excerpts.append(
+                TranscriptExcerpt(
                     start_seconds=sentence.start_seconds,
                     end_seconds=sentence.end_seconds,
                     content=sentence.content,
                 )
             )
             continue
-        current = groups[-1]
-        if sentence.end_seconds - current.start_seconds <= configuration.chapter_group_seconds:
-            groups[-1] = TranscriptGroup(
+        current = excerpts[-1]
+        if sentence.end_seconds - current.start_seconds <= configuration.maximum_chapter_context_seconds:
+            excerpts[-1] = TranscriptExcerpt(
                 start_seconds=current.start_seconds,
                 end_seconds=sentence.end_seconds,
                 content=re.sub(r"[ \t]{2,}", " ", f"{current.content} {sentence.content}").strip(),
             )
         else:
-            groups.append(
-                TranscriptGroup(
+            excerpts.append(
+                TranscriptExcerpt(
                     start_seconds=sentence.start_seconds,
                     end_seconds=sentence.end_seconds,
                     content=sentence.content,
                 )
             )
-    return tuple(groups)
+    return tuple(excerpts)
 
 
 def _split_text(text: str) -> list[str]:
@@ -369,12 +369,12 @@ def _count_words(text: str) -> int:
 
 
 def _midpoint(left_end: float, right_start: float) -> float:
-    """Returns the instant two adjacent windows agree to meet at."""
+    """Return the instant two adjacent transcript contexts meet at."""
     return (left_end + right_start) / 2
 
 
 def _midpoint_of(sentence: TimedSentence) -> float:
-    """Returns a sentence's midpoint, which decides the window it belongs to."""
+    """Return a sentence's midpoint for context selection."""
     return (sentence.start_seconds + sentence.end_seconds) / 2
 
 
@@ -477,7 +477,7 @@ def _read_citation(element_text: str, number: int) -> Citation | None:
 
 def _child_text(element: etree._Element, name: str) -> str:
     child = element.find(name)
-    return "" if child is None else "".join(child.itertext()).strip()
+    return "" if child is None else "".join(str(text) for text in child.itertext()).strip()
 
 
 def _child_integer(element: etree._Element, name: str) -> int | None:
@@ -505,7 +505,7 @@ class _DocumentSpanSchema(BaseModel):
 
 
 class _DurationSchema(BaseModel):
-    """The transcript window selected for one concept."""
+    """The transcript context selected for one concept."""
 
     start_seconds: float = Field(alias="Beginning", ge=0)
     end_seconds: float = Field(alias="End", ge=0)
@@ -886,19 +886,19 @@ async def write_lesson_chapter(
         )
     )
 
-    window = build_chapter_window(
+    context = build_chapter_context(
         chapters=plan.chapters,
         chapter_index=chapter_index,
         segments=state.get("clean_transcript", []),
         configuration=runtime.context,
     )
-    if not any(slice_.groups for slice_ in window.concept_slices):
+    if not any(slice_.excerpts for slice_ in context.concept_slices):
         logger.warning(
-            "the chapter window holds no transcript",
+            "the chapter context holds no transcript",
             chapter_index=chapter_index,
             chapter_title=chapter.title,
-            window_start_seconds=window.start_seconds,
-            window_end_seconds=window.end_seconds,
+            context_start_seconds=context.start_seconds,
+            context_end_seconds=context.end_seconds,
         )
 
     logger.info(
@@ -908,8 +908,8 @@ async def write_lesson_chapter(
         total_chapters=len(plan.chapters),
         concept_count=len(chapter.concepts),
         prior_chapter_count=len(drafts),
-        window_start_seconds=window.start_seconds,
-        window_end_seconds=window.end_seconds,
+        context_start_seconds=context.start_seconds,
+        context_end_seconds=context.end_seconds,
     )
 
     prompts = runtime.context.prompts
@@ -921,14 +921,14 @@ async def write_lesson_chapter(
             "chapter": _build_chapter_variables(
                 plan=plan,
                 chapter_index=chapter_index,
-                window=window,
+                context=context,
                 documents=state.get("documents", []),
                 section_map=state.get("section_map"),
                 prompts=prompts,
             ),
             "transcript": {
-                "group_count": sum(len(slice_.groups) for slice_ in window.concept_slices),
-                "groups_xml": _render_groups(window),
+                "excerpt_count": sum(len(slice_.excerpts) for slice_ in context.concept_slices),
+                "excerpts_xml": _render_excerpts(context),
             },
         },
     )
@@ -946,7 +946,7 @@ async def write_lesson_chapter(
                     },
                 )
             ),
-            *_thread_prior_answers(state.get("chapter_exchanges", [])),
+            *_thread_prior_answers(state.get("chapter_answers", [])),
             HumanMessage(request),
         ],
         metadata={"chapter_index": chapter_index},
@@ -984,20 +984,20 @@ async def write_lesson_chapter(
                 citations=parsed.citations,
             )
         ],
-        "chapter_exchanges": [
-            ChapterExchange(chapter_index=chapter_index, request=request, answer=answer.text)
+        "chapter_answers": [
+            ChapterAnswer(chapter_index=chapter_index, content=answer.text)
         ],
         "usage_by_model": answer.usage_by_model,
     }
 
 
 def _thread_prior_answers(
-    exchanges: Sequence[ChapterExchange],
+    answers: Sequence[ChapterAnswer],
 ) -> list[AIMessage]:
     """Threads every earlier chapter's answer forward, and nothing else."""
     return [
-        AIMessage(exchange.answer)
-        for exchange in sorted(exchanges, key=lambda item: item.chapter_index)
+        AIMessage(answer.content)
+        for answer in sorted(answers, key=lambda item: item.chapter_index)
     ]
 
 
@@ -1010,7 +1010,7 @@ def _build_chapter_variables(
     *,
     plan: LessonPlan,
     chapter_index: int,
-    window: ChapterWindow,
+    context: ChapterContext,
     documents: Sequence[Document],
     section_map: SectionMap | None,
     prompts: Prompts,
@@ -1023,8 +1023,8 @@ def _build_chapter_variables(
     return {
         "index": chapter_index,
         "total": len(plan.chapters),
-        "start_seconds": round(window.start_seconds, 1),
-        "end_seconds": round(window.end_seconds, 1),
+        "start_seconds": round(context.start_seconds, 1),
+        "end_seconds": round(context.end_seconds, 1),
         "concept_count": len(chapter.concepts),
         "previous_chapter_count": len(earlier_chapters),
         "previous_concept_count": len(earlier_concepts),
@@ -1145,25 +1145,25 @@ def _render_document_material(
     return "\n\n".join(rendered)
 
 
-def _render_groups(window: ChapterWindow) -> str:
-    """Renders the transcript this chapter may draw from, grouped by concept."""
+def _render_excerpts(context: ChapterContext) -> str:
+    """Render the transcript this chapter may draw from, arranged by concept."""
     return build_xml_document(
-        "ConceptWindows",
+        "ConceptContexts",
         {
-            "ConceptWindow": [
+            "ConceptContext": [
                 {
                     "ConceptIndex": concept_slice.concept_index,
                     "TopicTitle": concept_slice.topic_title,
-                    "Group": [
+                    "Excerpt": [
                         {
-                            "Beginning": round(group.start_seconds, 1),
-                            "End": round(group.end_seconds, 1),
-                            "Content": group.content,
+                            "Beginning": round(excerpt.start_seconds, 1),
+                            "End": round(excerpt.end_seconds, 1),
+                            "Content": excerpt.content,
                         }
-                        for group in concept_slice.groups
+                        for excerpt in concept_slice.excerpts
                     ],
                 }
-                for concept_slice in window.concept_slices
+                for concept_slice in context.concept_slices
             ]
         },
     )

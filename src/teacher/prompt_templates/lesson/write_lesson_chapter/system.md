@@ -2,7 +2,7 @@
 
 {{ language_policy }}
 
-Write chapter {{ chapter.index }} of {{ chapter.total }} in {{ language }}. Use the transcript groups as the primary source and use document pages only for the concepts that name them. Explain the reasoning, evidence, examples, and limitations present in the material. Follow each concept's intent and depth.
+Write chapter {{ chapter.index }} of {{ chapter.total }} in {{ language }}. Use the transcript excerpts as the primary source and use document pages only for the concepts that name them. Explain the reasoning, evidence, examples, and limitations present in the material. Follow each concept's intent and depth.
 
 Avoid repeating material already covered by earlier chapters or earlier concepts. Use prose for connected reasoning, lists for real parallel items, and tables for genuine comparisons. Keep the chapter readable and do not add unsupported claims.
 

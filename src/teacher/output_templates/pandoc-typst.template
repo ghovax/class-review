@@ -231,12 +231,12 @@ $endfor$)
 $endif$
 $if(toc)$
 // Table of contents: chapter (level 1) entries bold with breathing room
-// above each group; concept (level 2) entries lighter, muted and smaller;
+// above each entry; concept (level 2) entries lighter, muted and smaller;
 // a subtle light-grey dotted leader replaces the dense default so the
 // columns read as a calm two-column list rather than a wall of dots.
 #show outline.entry.where(level: 1): it => {
   // Non-weak leading space so it does not collapse against the "Indice"
-  // divider above the first entry — every chapter group, including the
+  // divider above the first entry — every chapter section, including the
   // first, gets the same clear gap.
   set text(weight: "bold", fill: accent-blue)
   it

@@ -6,7 +6,7 @@ Time: {{ chapter.start_seconds }}s to {{ chapter.end_seconds }}s
 Concepts in this chapter: {{ chapter.concept_count }}
 Earlier chapters: {{ chapter.previous_chapter_count }}
 Earlier concepts: {{ chapter.previous_concept_count }}
-Transcript groups: {{ transcript.group_count }}
+Transcript excerpts: {{ transcript.excerpt_count }}
 
 {{ mathematics_notation_rules }}
 
@@ -26,8 +26,8 @@ Transcript groups: {{ transcript.group_count }}
 
 {{ chapter.document_pages_markdown }}
 
-## Transcript groups
+## Transcript excerpts
 
-{{ transcript.groups_xml }}
+{{ transcript.excerpts_xml }}
 
-Write this chapter in {{ language }}. Use every relevant group, preserve the source's reasoning, and keep new material distinct from the repetition ledger. Use the notation rules supplied above where mathematical notation is genuinely needed.
+Write this chapter in {{ language }}. Use every relevant excerpt, preserve the source's reasoning, and keep new material distinct from the repetition ledger. Use the notation rules supplied above where mathematical notation is genuinely needed.
