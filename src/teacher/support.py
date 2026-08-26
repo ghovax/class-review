@@ -208,10 +208,10 @@ def _read_usage(usage_metadata: Any) -> dict[str, ModelUsage]:  # noqa: ANN401
     for model_name, counts in (usage_metadata or {}).items():
         input_details = counts.get("input_token_details") or {}
         converted[str(model_name)] = ModelUsage(
-            prompt_tokens=int(counts.get("input_tokens", 0)),
-            completion_tokens=int(counts.get("output_tokens", 0)),
+            input_tokens=int(counts.get("input_tokens", 0)),
+            output_tokens=int(counts.get("output_tokens", 0)),
             total_tokens=int(counts.get("total_tokens", 0)),
-            cached_tokens=int(input_details.get("cache_read", 0)),
+            cache_read_tokens=int(input_details.get("cache_read", 0)),
             cache_write_tokens=int(input_details.get("cache_creation", 0)),
         )
     return converted
