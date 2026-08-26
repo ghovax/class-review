@@ -19,7 +19,14 @@ import re
 logger = get_logger(__name__)
 
 # A closing marker a model sometimes writes as though it were an element.
-_MALFORMED_CHARACTER_DATA_CLOSE: Final[re.Pattern[str]] = re.compile(r"</CDATA>", re.IGNORECASE)
+_MALFORMED_CHARACTER_DATA_CLOSE: Final[re.Pattern[str]] = re.compile(
+    r"</\s*CDATA\s*>", re.IGNORECASE
+)
+
+# A CDATA section whose terminator was omitted before a normal closing tag.
+_UNCLOSED_CHARACTER_DATA: Final[re.Pattern[str]] = re.compile(
+    r"<!\[CDATA\[((?:(?!\]\]>).)*?)(</[A-Za-z_][\w:.\-]*\s*>)", re.DOTALL
+)
 
 # A closing tag immediately repeated with only tag-free content between, which
 # models emit when they lose track of what they have already closed.
@@ -34,6 +41,9 @@ _BARE_AMPERSAND: Final[re.Pattern[str]] = re.compile(
 # character-data section.
 _STRAY_LESS_THAN: Final[re.Pattern[str]] = re.compile(r"<(?![/!?]|[A-Za-z_])")
 
+# XML 1.0 forbids these controls even when the model puts them in text.
+_INVALID_XML_CONTROL: Final[re.Pattern[str]] = re.compile(r"[\x00-\x08\x0B\x0C\x0E-\x1F]")
+
 
 def extract_element_text(
     content: str, root_tag: str, metadata: dict[str, Any] | None = None
@@ -47,7 +57,7 @@ def extract_element_text(
             {**(metadata or {}), "error_code": "xml_parse", "root_tag": root_tag},
         )
 
-    closing = re.compile(rf"</{re.escape(root_tag)}>")
+    closing = re.compile(rf"</{re.escape(root_tag)}\s*>")
     closing_match = closing.search(content, opening_match.end())
     if closing_match is not None:
         return content[opening_match.start() : closing_match.end()].strip()
@@ -130,8 +140,10 @@ def read_element_tree(element: etree._Element) -> Any:  # noqa: ANN401
 
 
 def _repair(element_text: str) -> str:
-    """Applies the three repairs the parser's own recovery does not cover."""
-    repaired = _MALFORMED_CHARACTER_DATA_CLOSE.sub("]]>", element_text)
+    """Apply bounded repairs that preserve the model's intended element data."""
+    repaired = _INVALID_XML_CONTROL.sub(" ", element_text)
+    repaired = _MALFORMED_CHARACTER_DATA_CLOSE.sub("]]>", repaired)
+    repaired = _UNCLOSED_CHARACTER_DATA.sub(r"<![CDATA[\1]]>\2", repaired)
     repaired = _DUPLICATE_CLOSING_TAG.sub(r"\1", repaired)
     return _escape_stray_markup_characters(repaired)
 
@@ -143,6 +155,7 @@ def _escape_stray_markup_characters(element_text: str) -> str:
         if segment.startswith("<![CDATA["):
             continue
         escaped = _BARE_AMPERSAND.sub("&amp;", segment)
+        escaped = escaped.replace("]]>", "]]&gt;")
         segments[index] = _STRAY_LESS_THAN.sub("&lt;", escaped)
     return "".join(segments)
 
@@ -270,32 +283,26 @@ def _format_field_path(location: Sequence[Any]) -> str:
 """Building the XML documents that carry structured content into a prompt."""
 
 
-# Two spaces, matching the indentation the prompts are written with.
-_INDENTATION = "  "
-
-
 def build_xml_document(
     root_tag: str,
     payload: Mapping[str, Any] | Sequence[Mapping[str, Any]],
     *,
     raw_text_tags: Sequence[str] = (),
 ) -> str:
-    """Renders a payload as an indented XML document."""
+    """Render a compact XML document for a model prompt."""
     raw_tags = frozenset(raw_text_tags)
 
     if isinstance(payload, Mapping):
         root = etree.Element(root_tag)
         _fill_element(root, payload, raw_tags)
-        etree.indent(root, space=_INDENTATION)
-        return etree.tostring(root, encoding="unicode") + "\n"
+        return etree.tostring(root, encoding="unicode", with_tail=False)
 
-    rendered_siblings = []
+    rendered_siblings: list[str] = []
     for item in payload:
         sibling = etree.Element(root_tag)
         _fill_element(sibling, item, raw_tags)
-        etree.indent(sibling, space=_INDENTATION)
         rendered_siblings.append(etree.tostring(sibling, encoding="unicode"))
-    return "\n".join(rendered_siblings) + "\n"
+    return "".join(rendered_siblings)
 
 
 def _fill_element(

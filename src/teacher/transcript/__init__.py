@@ -33,8 +33,8 @@ logger = get_logger(__name__)
 # What every correction receives when no terminology could be established.
 EMPTY_TERMINOLOGY: Final[Terminology] = Terminology(terms=())
 
-_SYSTEM_TEMPLATE = "transcript/extract_transcript_terminology/system"
-_USER_TEMPLATE = "transcript/extract_transcript_terminology/user"
+_TERMINOLOGY_SYSTEM_TEMPLATE = "transcript/extract_transcript_terminology/system"
+_TERMINOLOGY_USER_TEMPLATE = "transcript/extract_transcript_terminology/user"
 
 
 def render_transcript_input(segments: Sequence[TranscriptSegment], prompts: Prompts) -> str:
@@ -65,16 +65,17 @@ async def extract_transcript_terminology(
         [
             SystemMessage(
                 prompts.render(
-                    _SYSTEM_TEMPLATE,
+                    _TERMINOLOGY_SYSTEM_TEMPLATE,
                     {
                         "language": ", ".join(state["transcript"].languages),
                         "language_policy": prompts.render("shared_prompts/language_policy"),
+                        "xml_policy": prompts.render("shared_prompts/xml_policy"),
                     },
                 )
             ),
             HumanMessage(
                 prompts.render(
-                    _USER_TEMPLATE,
+                    _TERMINOLOGY_USER_TEMPLATE,
                     {
                         "language": ", ".join(state["transcript"].languages),
                         "transcript": transcript_text,
@@ -157,8 +158,8 @@ def render_terminology_xml(terminology: Terminology) -> str:
 
 logger = get_logger(__name__)
 
-_SYSTEM_TEMPLATE = "transcript/correct_transcript/system"
-_USER_TEMPLATE = "transcript/correct_transcript/user"
+_CORRECTION_SYSTEM_TEMPLATE = "transcript/correct_transcript/system"
+_CORRECTION_USER_TEMPLATE = "transcript/correct_transcript/user"
 _CORRECTED_ROOT_TAG = "CorrectedTranscript"
 
 
@@ -215,16 +216,17 @@ async def correct_transcript(
         [
             SystemMessage(
                 prompts.render(
-                    _SYSTEM_TEMPLATE,
+                    _CORRECTION_SYSTEM_TEMPLATE,
                     {
                         "language": correction.spoken_language,
                         "language_policy": prompts.render("shared_prompts/language_policy"),
+                        "xml_policy": prompts.render("shared_prompts/xml_policy"),
                     },
                 )
             ),
             HumanMessage(
                 prompts.render(
-                    _USER_TEMPLATE,
+                    _CORRECTION_USER_TEMPLATE,
                     {
                         "language": correction.spoken_language,
                         "start_seconds": start_seconds,

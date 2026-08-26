@@ -2,6 +2,8 @@
 
 {{ language_policy }}
 
+{{ xml_policy }}
+
 Read the completed lesson in {{ language }} and select the terms a student needs to understand it. Keep only load-bearing technical terms, acronyms, and abbreviations that the lesson explains or relies on. Do not create an exhaustive index or pad the list.
 
 {{ mathematics_notation_rules }}

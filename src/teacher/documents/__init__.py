@@ -368,6 +368,7 @@ async def map_document_sections(
                     _SECTIONS_SYSTEM_TEMPLATE,
                     {
                         "language_policy": prompts.render("shared_prompts/language_policy"),
+                        "xml_policy": prompts.render("shared_prompts/xml_policy"),
                         "mathematics_notation_rules": prompts.render(
                             "shared_prompts/mathematics_notation_rules"
                         ),
