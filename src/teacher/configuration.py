@@ -1,4 +1,5 @@
 """Consolidated Teacher implementation."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -68,6 +69,7 @@ class GraphConfiguration:
             recursion_limit=self.recursion_limit,
         )
 
+
 @dataclass(frozen=True, slots=True)
 class GraphRuntime:
     """Resolved models and settings passed between graph nodes."""
@@ -88,6 +90,7 @@ class GraphRuntime:
     transcript_timestamp_decimals: int
     glossary_key_length: int
     recursion_limit: int
+
 
 """Checkpoint serialization for teacher's persisted values."""
 

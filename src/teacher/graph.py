@@ -116,8 +116,15 @@ def define_graph(
         output_schema=LessonOutput,
         context_schema=GraphRuntime,
     )
-    graph.add_node("extract_transcript_terminology", extract_transcript_terminology, retry_policy=retry)
-    graph.add_node("correct_transcript", correct_transcript, input_schema=TranscriptCorrectionInput, retry_policy=retry)
+    graph.add_node(
+        "extract_transcript_terminology", extract_transcript_terminology, retry_policy=retry
+    )
+    graph.add_node(
+        "correct_transcript",
+        correct_transcript,
+        input_schema=TranscriptCorrectionInput,
+        retry_policy=retry,
+    )
     graph.add_node("assemble_corrected_transcript", assemble_corrected_transcript, defer=True)
     graph.add_node(
         "load_document_pages",
@@ -126,7 +133,9 @@ def define_graph(
         retry_policy=retry,
         destinations=("extract_document_page", "assemble_documents_from_pages"),
     )
-    graph.add_node("extract_document_page", extract_document_page, input_schema=DocumentPageReadRequest)
+    graph.add_node(
+        "extract_document_page", extract_document_page, input_schema=DocumentPageReadRequest
+    )
     graph.add_node("assemble_documents_from_pages", assemble_documents_from_pages, defer=True)
     graph.add_node("map_document_sections", map_document_sections, retry_policy=retry)
     graph.add_node("explain_document_sections", explain_document_sections, retry_policy=retry)
@@ -136,16 +145,24 @@ def define_graph(
     graph.add_node("assemble_completed_lesson", assemble_completed_lesson)
 
     graph.add_edge(START, "extract_transcript_terminology")
-    graph.add_conditional_edges(START, route_document_sources, ["load_document_pages", "assemble_documents_from_pages"])
-    graph.add_conditional_edges("extract_transcript_terminology", route_transcript_corrections, ["correct_transcript"])
+    graph.add_conditional_edges(
+        START, route_document_sources, ["load_document_pages", "assemble_documents_from_pages"]
+    )
+    graph.add_conditional_edges(
+        "extract_transcript_terminology", route_transcript_corrections, ["correct_transcript"]
+    )
     graph.add_edge("correct_transcript", "assemble_corrected_transcript")
     graph.add_edge("extract_document_page", "assemble_documents_from_pages")
     graph.add_edge("assemble_documents_from_pages", "map_document_sections")
     graph.add_edge("map_document_sections", "explain_document_sections")
-    graph.add_edge(["assemble_corrected_transcript", "explain_document_sections"], "plan_lesson_outline")
+    graph.add_edge(
+        ["assemble_corrected_transcript", "explain_document_sections"], "plan_lesson_outline"
+    )
     graph.add_edge("plan_lesson_outline", "write_lesson_chapter")
     graph.add_conditional_edges(
-        "write_lesson_chapter", route_after_chapter_writing, ["write_lesson_chapter", "build_lesson_glossary"]
+        "write_lesson_chapter",
+        route_after_chapter_writing,
+        ["write_lesson_chapter", "build_lesson_glossary"],
     )
     graph.add_edge("build_lesson_glossary", "assemble_completed_lesson")
     graph.add_edge("assemble_completed_lesson", END)

@@ -1,4 +1,5 @@
 """Consolidated Teacher implementation."""
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -8,10 +9,21 @@ from langgraph.runtime import Runtime
 from langgraph.types import Command, Send, Overwrite
 from pydantic import BaseModel, Field
 from teacher.configuration import GraphRuntime
+from teacher.markdown import compose_markdown
 from models_provider import ModelUsage
-from teacher.models import Document, DocumentSource, DocumentSection, DocumentSections, SectionMap, SectionNotes, DocumentRead, DocumentPage
+from teacher.prompts import Prompts
+from teacher.models import (
+    Document,
+    DocumentSource,
+    DocumentSection,
+    DocumentSections,
+    SectionMap,
+    SectionNotes,
+    DocumentRead,
+    DocumentPage,
+)
 from teacher.state import DocumentPageReading, LessonState
-from teacher.support import PipelineError, classify_retryable, get_logger, call_chat_model, render_page_summaries, render_page_entries
+from teacher.support import PipelineError, classify_retryable, get_logger, call_chat_model
 from teacher.xml import OneOrMany, RequiredText, parse_xml_with_schema
 from typing import Any
 import asyncio
@@ -20,6 +32,61 @@ import re
 """Document graph nodes: page reading, section mapping, notes, and assembly."""
 
 """Loading source documents and routing their pages."""
+
+
+def render_document_summaries(documents: Sequence[Document], prompts: Prompts) -> str:
+    """Render document summaries for section mapping through local templates."""
+    document_blocks: list[str] = []
+    for document in sorted(documents, key=lambda item: item.document_index):
+        page_blocks = tuple(
+            prompts.render(
+                "documents/map_document_sections/page",
+                {
+                    "page": {
+                        "number": page.page_number,
+                        "summary": (page.summary or "Page content unavailable.").strip(),
+                    }
+                },
+            )
+            for page in document.pages
+        )
+        document_blocks.append(
+            prompts.render(
+                "documents/map_document_sections/document",
+                {
+                    "document": {
+                        "index": document.document_index,
+                        "file_name": document.file_name,
+                        "pages": compose_markdown(page_blocks),
+                    }
+                },
+            )
+        )
+    return compose_markdown(document_blocks)
+
+
+def render_section_pages(
+    document: Document | None,
+    section: DocumentSection,
+    prompts: Prompts,
+) -> str:
+    """Render the pages covered by one section through its local template."""
+    if document is None:
+        return ""
+    return compose_markdown(
+        prompts.render(
+            "documents/explain_document_sections/page",
+            {
+                "page": {
+                    "number": page.page_number,
+                    "summary": (page.summary or "Page content unavailable.").strip(),
+                    "details": (page.details or "No details were extracted.").strip(),
+                }
+            },
+        )
+        for page in document.pages
+        if section.start_page <= page.page_number <= section.end_page
+    )
 
 
 class DocumentReadRequest(BaseModel):
@@ -75,6 +142,7 @@ async def load_document_pages(
         ],
     )
 
+
 """Reading one rendered page."""
 
 
@@ -82,7 +150,7 @@ logger = get_logger(__name__)
 
 _PAGE_SYSTEM_TEMPLATE = "documents/extract_document_page/system"
 _PAGE_USER_TEMPLATE = "documents/extract_document_page/user"
-_PAGE_NOTATION_TEMPLATE = "mathematics_notation_rules"
+
 
 async def extract_document_page(
     state: DocumentPageReadRequest, runtime: Runtime[GraphRuntime]
@@ -96,8 +164,10 @@ async def extract_document_page(
     system_prompt = prompts.render(
         _PAGE_SYSTEM_TEMPLATE,
         {
-            "language_policy": prompts.render("language_policy"),
-            "mathematics_notation_rules": prompts.render(_PAGE_NOTATION_TEMPLATE),
+            "language_policy": prompts.render("shared_prompts/language_policy"),
+            "mathematics_notation_rules": prompts.render(
+                "shared_prompts/mathematics_notation_rules"
+            ),
         },
     )
     user_prompt = prompts.render(
@@ -200,9 +270,7 @@ def _page_reading_update(
     }
 
 
-def _combine(
-    accumulated: dict[str, ModelUsage], incoming: Any
-) -> dict[str, ModelUsage]:
+def _combine(accumulated: dict[str, ModelUsage], incoming: Any) -> dict[str, ModelUsage]:
     """Adds one attempt's usage to what earlier attempts consumed."""
     combined = dict(accumulated)
     for model_name, usage in (incoming or {}).items():
@@ -226,7 +294,9 @@ def _read_sections(answer_text: str) -> tuple[str, str]:
 
     depths = [len(match.group(1)) for match in headings]
     shallowest_depth = min(depths)
-    section_positions = [match for match, depth in zip(headings, depths, strict=True) if depth == shallowest_depth]
+    section_positions = [
+        match for match, depth in zip(headings, depths, strict=True) if depth == shallowest_depth
+    ]
     if len(section_positions) != 2:
         raise PipelineError.retryable(
             "the page reading does not carry exactly two sections",
@@ -246,6 +316,7 @@ def _read_sections(answer_text: str) -> tuple[str, str]:
         raise PipelineError.retryable("the page reading has empty details")
     return summary, details
 
+
 """Organizing every document's pages into the sections they actually form."""
 
 
@@ -253,7 +324,6 @@ logger = get_logger(__name__)
 
 _SECTIONS_SYSTEM_TEMPLATE = "documents/map_document_sections/system"
 _SECTIONS_USER_TEMPLATE = "documents/map_document_sections/user"
-_SECTIONS_NOTATION_TEMPLATE = "mathematics_notation_rules"
 _SECTIONS_ROOT_TAG = "DocumentSections"
 
 
@@ -297,15 +367,17 @@ async def map_document_sections(
                 prompts.render(
                     _SECTIONS_SYSTEM_TEMPLATE,
                     {
-                        "language_policy": prompts.render("language_policy"),
-                        "mathematics_notation_rules": prompts.render(_SECTIONS_NOTATION_TEMPLATE),
+                        "language_policy": prompts.render("shared_prompts/language_policy"),
+                        "mathematics_notation_rules": prompts.render(
+                            "shared_prompts/mathematics_notation_rules"
+                        ),
                     },
                 )
             ),
             HumanMessage(
                 prompts.render(
                     _SECTIONS_USER_TEMPLATE,
-                    {"page_list_markdown": render_page_summaries(documents)},
+                    {"page_list_markdown": render_document_summaries(documents, prompts)},
                 )
             ),
         ],
@@ -371,7 +443,12 @@ def _read_section_map(answer_text: str, documents: Sequence[Document]) -> Sectio
             )
         )
 
-    return SectionMap(documents=tuple(sorted(entries, key=lambda e: e.document_index)))
+    return SectionMap(
+        documents=tuple(
+            sorted(entries, key=lambda document_sections: document_sections.document_index)
+        )
+    )
+
 
 """Turning each section's pages into one continuous explanation."""
 
@@ -380,7 +457,6 @@ logger = get_logger(__name__)
 
 _NOTES_SYSTEM_TEMPLATE = "documents/explain_document_sections/system"
 _NOTES_USER_TEMPLATE = "documents/explain_document_sections/user"
-_NOTES_NOTATION_TEMPLATE = "mathematics_notation_rules"
 
 
 async def explain_document_sections(
@@ -397,8 +473,10 @@ async def explain_document_sections(
     system_prompt = prompts.render(
         _NOTES_SYSTEM_TEMPLATE,
         {
-            "language_policy": prompts.render("language_policy"),
-            "mathematics_notation_rules": prompts.render(_NOTES_NOTATION_TEMPLATE),
+            "language_policy": prompts.render("shared_prompts/language_policy"),
+            "mathematics_notation_rules": prompts.render(
+                "shared_prompts/mathematics_notation_rules"
+            ),
         },
     )
     documents_by_index = {document.document_index: document for document in documents}
@@ -462,7 +540,7 @@ async def _explain_one(
     runtime: Runtime[GraphRuntime],
 ) -> tuple[SectionNotes, dict[str, ModelUsage]]:
     """Narrates one section."""
-    pages_markdown = render_page_entries(document, section)
+    pages_markdown = render_section_pages(document, section, runtime.context.prompts)
     answer = await call_chat_model(
         runtime.context.text_model,
         [
@@ -500,6 +578,7 @@ async def _explain_one(
         answer.usage_by_model,
     )
 
+
 """Assembling every page reading back into its document."""
 
 
@@ -536,7 +615,9 @@ async def assemble_documents_from_pages(
             key=lambda reading: reading.page_number,
         )
         unreadable_count = sum(
-            1 for reading in pages_for_document if reading.summary is None or reading.details is None
+            1
+            for reading in pages_for_document
+            if reading.summary is None or reading.details is None
         )
         assembled.append(
             Document(

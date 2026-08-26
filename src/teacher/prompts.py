@@ -15,7 +15,7 @@ _PLACEHOLDER = re.compile(r"\{\{\s+([A-Za-z0-9_.-]+)\s+\}\}")
 class Prompts:
     """Reads packaged prompts and rejects missing or unused values."""
 
-    def __init__(self, package: str = "teacher.prompt_templates") -> None:
+    def __init__(self, package: str = "teacher") -> None:
         self.package = package
 
     def render(self, name: str, variables: Mapping[str, object] | None = None) -> str:

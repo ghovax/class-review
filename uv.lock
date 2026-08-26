@@ -1929,6 +1929,7 @@ dependencies = [
     { name = "pydantic" },
     { name = "segno" },
     { name = "structlog" },
+    { name = "wenmode" },
 ]
 
 [package.optional-dependencies]
@@ -1957,6 +1958,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.11" },
     { name = "segno", specifier = ">=1.6" },
     { name = "structlog", specifier = ">=25.1" },
+    { name = "wenmode", specifier = ">=0.14.1" },
 ]
 provides-extras = ["modal"]
 
@@ -2303,6 +2305,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/49/b2/b6987faf330f5af5c787a2610124c2e8403d51724f9001ec4fff6311fe7a/websockets-16.1.1-cp314-cp314t-win32.whl", hash = "sha256:8483c2096363120eea8b07c06ae7304d520f686665fffd4811fad423930a65d7", size = 179729, upload-time = "2026-07-17T22:50:53.269Z" },
     { url = "https://files.pythonhosted.org/packages/a2/6e/fbac6ed878dd362fbad7d415fa4f84d38e3e33fed8cde45c64e783acf826/websockets-16.1.1-cp314-cp314t-win_amd64.whl", hash = "sha256:bcce07e23e5769375158f5efdcdafa8d5cd014b93c6683865b840ed65b96f231", size = 180072, upload-time = "2026-07-17T22:50:54.969Z" },
     { url = "https://files.pythonhosted.org/packages/be/4d/2d0d67834092e354d2b0498f014a41249a89556bc406cf86f3e1557bb463/websockets-16.1.1-py3-none-any.whl", hash = "sha256:6abbd3e82c731c8e531714466acd5d87b5e88ac3243465337ba71d68e23ae7e3", size = 173814, upload-time = "2026-07-17T22:51:04.184Z" },
+]
+
+[[package]]
+name = "wenmode"
+version = "0.14.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/19/30/5c3f195bbc8585bbf448fa770fd69a3d9b1cf9b94af3d49df292b31374d2/wenmode-0.14.1.tar.gz", hash = "sha256:3bb8061709a601889ded009e734c77198d43d633d8e86463dac4d2e277d7a9f6", size = 91173, upload-time = "2026-08-24T13:34:45.17Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0b/c1/83a8e77d591076bf94b56c9f1d9db041b3be0ebe68247391f54e44a9d85f/wenmode-0.14.1-py3-none-any.whl", hash = "sha256:f671f93651127a2c194dfc25cd8617b2b3123c0a94c3922ff63b0e8025dead76", size = 137708, upload-time = "2026-08-24T13:34:43.91Z" },
 ]
 
 [[package]]
