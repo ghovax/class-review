@@ -252,7 +252,7 @@ class Citation:
 
 @dataclass(frozen=True, slots=True)
 class GlossaryEntry:
-    """One term distilled from the finished lecture."""
+    """One term distilled from the completed lecture."""
 
     key: str
     short_form: str
@@ -272,7 +272,7 @@ class GlossaryLink:
 @normalize_sequence_fields
 @dataclass(frozen=True, slots=True)
 class Chapter:
-    """One finished chapter."""
+    """One completed chapter."""
 
     title: str
     content: str
@@ -284,7 +284,7 @@ class Chapter:
 @normalize_sequence_fields
 @dataclass(frozen=True, slots=True)
 class Lesson:
-    """The finished artifact."""
+    """The completed artifact."""
 
     title: str
     description: str
@@ -344,7 +344,7 @@ class PipelineStage(StrEnum):
     READING_DOCUMENTS = "reading_documents"
     PLANNING_LESSON = "planning_lesson"
     WRITING_CHAPTERS = "writing_chapters"
-    FINISHING_LESSON = "finishing_lesson"
+    ASSEMBLING_LESSON = "assembling_lesson"
 
 
 @dataclass(frozen=True, slots=True)
@@ -364,7 +364,7 @@ class TranscriptAssembled:
 
 @dataclass(frozen=True, slots=True)
 class DocumentRead:
-    """One source document finished being read."""
+    """One source document after reading."""
 
     document_index: int
     file_name: str
@@ -400,14 +400,14 @@ class ChapterCompleted:
 
 @dataclass(frozen=True, slots=True)
 class GlossaryDistilled:
-    """The glossary was distilled from the finished chapters."""
+    """The glossary was distilled from the completed chapters."""
 
     term_count: int
 
 
 @dataclass(frozen=True, slots=True)
 class LessonAssembled:
-    """The lecture was assembled and the run is finished."""
+    """The lecture was assembled and the run is complete."""
 
     title: str
     chapters: tuple[Chapter, ...]

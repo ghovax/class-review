@@ -12,16 +12,22 @@ from teacher.configuration import GraphRuntime
 from teacher.documents import (
     DocumentToLoad,
     explain_sections,
-    finish_documents,
+    assemble_documents,
     load_document,
     map_sections,
     read_page,
 )
-from teacher.lesson import build_glossary, finish_lesson, plan_lesson, write_chapter
+from teacher.lesson import assemble_lesson, build_glossary, plan_lesson, write_chapter
 from teacher.support import PipelineError, classify_retryable, get_logger
 from teacher.models import TranscriptSegment
 from teacher.state import LessonInput, LessonOutput, LessonState
-from teacher.transcript import CorrectionBatch, EMPTY_TERMINOLOGY, correct_batch, finish_transcript, find_terms
+from teacher.transcript import (
+    CorrectionBatch,
+    EMPTY_TERMINOLOGY,
+    assemble_transcript,
+    correct_batch,
+    find_terms,
+)
 
 logger = get_logger(__name__)
 
@@ -61,7 +67,7 @@ def dispatch_documents(state: LessonState) -> list[Send] | str:
 
     sources = state.get("sources", [])
     if not sources:
-        return "finish_documents"
+        return "assemble_documents"
     return [
         Send(
             "load_document",
@@ -106,35 +112,35 @@ def define_graph(
     )
     graph.add_node("find_terms", find_terms, retry_policy=retry)
     graph.add_node("correct_batch", correct_batch, input_schema=CorrectionBatch, retry_policy=retry)
-    graph.add_node("finish_transcript", finish_transcript, defer=True)
+    graph.add_node("assemble_transcript", assemble_transcript, defer=True)
     graph.add_node(
         "load_document",
         load_document,
         input_schema=DocumentToLoad,
         retry_policy=retry,
-        destinations=("read_page", "finish_documents"),
+        destinations=("read_page", "assemble_documents"),
     )
     graph.add_node("read_page", read_page)
-    graph.add_node("finish_documents", finish_documents, defer=True)
+    graph.add_node("assemble_documents", assemble_documents, defer=True)
     graph.add_node("map_sections", map_sections, retry_policy=retry)
     graph.add_node("explain_sections", explain_sections, retry_policy=retry)
     graph.add_node("plan_lesson", plan_lesson, retry_policy=retry, defer=True)
     graph.add_node("write_chapter", write_chapter, retry_policy=retry)
     graph.add_node("build_glossary", build_glossary, retry_policy=retry)
-    graph.add_node("finish_lesson", finish_lesson)
+    graph.add_node("assemble_lesson", assemble_lesson)
 
     graph.add_edge(START, "find_terms")
-    graph.add_conditional_edges(START, dispatch_documents, ["load_document", "finish_documents"])
+    graph.add_conditional_edges(START, dispatch_documents, ["load_document", "assemble_documents"])
     graph.add_conditional_edges("find_terms", dispatch_batches, ["correct_batch"])
-    graph.add_edge("correct_batch", "finish_transcript")
-    graph.add_edge("read_page", "finish_documents")
-    graph.add_edge("finish_documents", "map_sections")
+    graph.add_edge("correct_batch", "assemble_transcript")
+    graph.add_edge("read_page", "assemble_documents")
+    graph.add_edge("assemble_documents", "map_sections")
     graph.add_edge("map_sections", "explain_sections")
-    graph.add_edge(["finish_transcript", "explain_sections"], "plan_lesson")
+    graph.add_edge(["assemble_transcript", "explain_sections"], "plan_lesson")
     graph.add_edge("plan_lesson", "write_chapter")
     graph.add_conditional_edges(
         "write_chapter", route_after_chapter, ["write_chapter", "build_glossary"]
     )
-    graph.add_edge("build_glossary", "finish_lesson")
-    graph.add_edge("finish_lesson", END)
+    graph.add_edge("build_glossary", "assemble_lesson")
+    graph.add_edge("assemble_lesson", END)
     return graph

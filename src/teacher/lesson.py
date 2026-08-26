@@ -1195,7 +1195,7 @@ class _GlossarySchema(BaseModel):
 
 
 async def build_glossary(state: LessonState, runtime: Runtime[GraphRuntime]) -> dict[str, object]:
-    """Distils the lecture's key terms from its finished chapters."""
+    """Distils the lecture's key terms from its completed chapters."""
     plan = state.get("plan")
     drafts = state.get("chapter_drafts", [])
     if plan is None or not drafts:
@@ -1271,21 +1271,21 @@ def _mint_key(key_length: int) -> str:
     suffix = "".join(secrets.choice(_KEY_ALPHABET) for _ in range(key_length))
     return f"{_KEY_PREFIX}{suffix}"
 
-"""Assembling the finished lecture, and deciding where its terms are linked."""
+"""Assembling the lesson, and deciding where its terms are linked."""
 
 
 logger = get_logger(__name__)
 
 
-async def finish_lesson(state: LessonState, runtime: Runtime[GraphRuntime]) -> dict[str, object]:
-    """Assembles the finished lecture from everything written."""
+async def assemble_lesson(state: LessonState, runtime: Runtime[GraphRuntime]) -> dict[str, object]:
+    """Assembles the lesson from everything written."""
     del runtime
     plan = state.get("plan")
     if plan is None:
-        raise PipelineError.terminal("there is no plan to finish a lesson from")
+        raise PipelineError.terminal("there is no plan to assemble a lesson from")
 
     stream_writer = get_stream_writer()
-    stream_writer(StageChanged(stage=PipelineStage.FINISHING_LESSON))
+    stream_writer(StageChanged(stage=PipelineStage.ASSEMBLING_LESSON))
 
     drafts_by_index = {draft.chapter_index: draft for draft in state.get("chapter_drafts", [])}
     missing = sorted(index for index in range(len(plan.chapters)) if index not in drafts_by_index)
@@ -1329,7 +1329,7 @@ async def finish_lesson(state: LessonState, runtime: Runtime[GraphRuntime]) -> d
     )
 
     logger.info(
-        "lesson finished",
+        "lesson assembled",
         lesson_title=lesson.title,
         chapter_count=len(lesson.chapters),
         citation_count=sum(len(chapter.citations) for chapter in lesson.chapters),

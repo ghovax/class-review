@@ -50,7 +50,7 @@ async def load_document(state: DocumentToLoad, runtime: Runtime[GraphRuntime]) -
         item.source, document_index=item.document_index
     )
     if not imported.pages:
-        return Command(update={}, goto=["finish_documents"])
+        return Command(update={}, goto=["assemble_documents"])
     shell = Document(
         document_index=imported.document_index,
         file_name=imported.file_name,
@@ -510,7 +510,7 @@ async def _explain_one(
 logger = get_logger(__name__)
 
 
-async def finish_documents(state: LessonState, runtime: Runtime[GraphRuntime]) -> dict[str, object]:
+async def assemble_documents(state: LessonState, runtime: Runtime[GraphRuntime]) -> dict[str, object]:
     """Merges the staged pages into their documents, in page order."""
     del runtime
     documents = state.get("documents", [])
