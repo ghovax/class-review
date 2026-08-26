@@ -45,7 +45,7 @@ TerminologyTerm(
 )
 ```
 
-Teacher validates non-empty document bytes and text, non-negative timestamps, and ordered segment timestamps when these values are constructed. `sources` is caller-owned and may be empty. When sources are present, `GraphConfiguration.document_reader` must provide one implementation of the `DocumentReader` protocol:
+Teacher validates non-empty document bytes and text, non-negative timestamps, and ordered segment timestamps when these values are constructed. `sources` is caller-owned and may be empty. When sources are present, `GraphInputs.document_reader` must provide one implementation of the `DocumentReader` protocol:
 
 ```python
 class DocumentReader(Protocol):
@@ -78,19 +78,23 @@ async with LessonGraph(configuration) as graph:
 
 ```python
 configuration = GraphConfiguration(
-    language_model=ModelConfiguration(
-        provider="anthropic",
-        model="claude-sonnet-4-5",
-        reasoning_effort="high",
+    models=GraphModels(
+        language=ModelConfiguration(
+            provider="anthropic",
+            model="claude-sonnet-4-5",
+            reasoning_effort="high",
+        ),
+        provider=provider,
+        page=page_provider_configuration,
     ),
-    checkpoint_path=Path("output/lesson.checkpoints.sqlite"),
-    model_provider=provider,
-    page_language_model=page_provider_configuration,
-    document_reader=reader,
+    storage=GraphStorage(
+        checkpoint_path=Path("output/lesson.checkpoints.sqlite"),
+    ),
+    inputs=GraphInputs(document_reader=reader),
 )
 ```
 
-`model_provider` is any implementation of the independent Models Provider interface. Teacher does not import or select a concrete provider. `page_language_model` is required when `sources` is non-empty.
+`GraphModels.provider` is any implementation of the independent Models Provider interface. Teacher does not import or select a concrete provider. `GraphModels.page` is required when `sources` is non-empty.
 
 ## Output contract
 

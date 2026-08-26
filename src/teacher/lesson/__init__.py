@@ -9,7 +9,7 @@ from langgraph.config import get_stream_writer
 from langgraph.runtime import Runtime
 from lxml import etree
 from pydantic import BaseModel, Field
-from teacher.configuration import GraphRuntime
+from teacher.configuration import GraphRuntime, LessonPolicy, TranscriptPolicy
 from teacher.models import (
     Concept,
     PlannedChapter,
@@ -199,7 +199,8 @@ def build_chapter_context(
     chapters: Sequence[PlannedChapter],
     chapter_index: int,
     segments: Sequence[TranscriptSegment],
-    configuration: GraphRuntime,
+    lesson_policy: LessonPolicy,
+    transcript_policy: TranscriptPolicy,
 ) -> ChapterContext:
     """Works out what one chapter may draw from, and divides it by concept."""
     if not 0 <= chapter_index < len(chapters):
@@ -209,14 +210,19 @@ def build_chapter_context(
     if not chapter.concepts:
         return ChapterContext(start_seconds=0.0, end_seconds=0.0, concept_slices=())
 
-    start_seconds, end_seconds = _resolve_bounds(chapters, chapter_index, configuration)
-    sentences = _select_sentences_in_context(segments, start_seconds, end_seconds, configuration)
+    start_seconds, end_seconds = _resolve_bounds(chapters, chapter_index, lesson_policy)
+    sentences = _select_sentences_in_context(
+        segments,
+        start_seconds,
+        end_seconds,
+        transcript_policy,
+    )
     concept_slices = _divide_among_concepts(
         concepts=chapter.concepts,
         sentences=sentences,
         context_start=start_seconds,
         context_end=end_seconds,
-        configuration=configuration,
+        lesson_policy=lesson_policy,
     )
     return ChapterContext(
         start_seconds=start_seconds,
@@ -228,7 +234,7 @@ def build_chapter_context(
 def _resolve_bounds(
     chapters: Sequence[PlannedChapter],
     chapter_index: int,
-    configuration: GraphRuntime,
+    lesson_policy: LessonPolicy,
 ) -> tuple[float, float]:
     """Settles a chapter's bounds against its neighbours."""
     concepts = chapters[chapter_index].concepts
@@ -243,7 +249,7 @@ def _resolve_bounds(
     )
     right_cut = _midpoint(requested_end, next_start) if next_start is not None else float("inf")
 
-    margin = configuration.chapter_context_margin_seconds
+    margin = lesson_policy.chapter_context_margin_seconds
     start_seconds = max(0.0, requested_start - margin, left_cut)
     end_seconds = max(start_seconds, min(requested_end + margin, right_cut))
     return start_seconds, end_seconds
@@ -255,7 +261,7 @@ def _divide_among_concepts(
     sentences: Sequence[TimedSentence],
     context_start: float,
     context_end: float,
-    configuration: GraphRuntime,
+    lesson_policy: LessonPolicy,
 ) -> tuple[ConceptSlice, ...]:
     """Divides a chapter's transcript context among its concepts."""
     ordered = sorted(
@@ -292,7 +298,7 @@ def _divide_among_concepts(
                 ConceptSlice(
                     concept_index=concept.concept_index,
                     topic_title=concept.topic_title,
-                    excerpts=_build_transcript_excerpts(covered, configuration),
+                    excerpts=_build_transcript_excerpts(covered, lesson_policy),
                 ),
             )
         )
@@ -304,7 +310,7 @@ def _select_sentences_in_context(
     segments: Sequence[TranscriptSegment],
     context_start: float,
     context_end: float,
-    configuration: GraphRuntime,
+    transcript_policy: TranscriptPolicy,
 ) -> list[TimedSentence]:
     """Divide the transcript into sentences and keep those in the chapter context."""
     overlapping = [
@@ -323,7 +329,7 @@ def _select_sentences_in_context(
                 item.content,
             ),
         )
-        for sentence in split_into_sentences(segment, configuration.zero_duration_seconds)
+        for sentence in split_into_sentences(segment, transcript_policy.zero_duration_seconds)
     ]
     kept = [
         sentence
@@ -339,7 +345,7 @@ def _select_sentences_in_context(
 
 
 def _build_transcript_excerpts(
-    sentences: Sequence[TimedSentence], configuration: GraphRuntime
+    sentences: Sequence[TimedSentence], lesson_policy: LessonPolicy
 ) -> tuple[TranscriptExcerpt, ...]:
     """Join consecutive sentences into passages within the model context limit."""
     excerpts: list[TranscriptExcerpt] = []
@@ -356,7 +362,7 @@ def _build_transcript_excerpts(
         current = excerpts[-1]
         if (
             sentence.end_seconds - current.start_seconds
-            <= configuration.maximum_chapter_context_seconds
+            <= lesson_policy.maximum_chapter_context_seconds
         ):
             excerpts[-1] = TranscriptExcerpt(
                 start_seconds=current.start_seconds,
@@ -602,7 +608,7 @@ async def plan_lesson_outline(
     stream_writer = get_stream_writer()
     stream_writer(StageChanged(stage=PipelineStage.PLANNING_LESSON))
 
-    prompts = runtime.context.prompts
+    prompts = runtime.context.inputs.prompts
     start_seconds = min(segment.start_seconds for segment in segments)
     end_seconds = max(segment.end_seconds for segment in segments)
     duration_seconds = max(0.0, end_seconds - start_seconds)
@@ -635,7 +641,7 @@ async def plan_lesson_outline(
                 "lesson_end_seconds": round(end_seconds, 1),
                 "lesson_duration_seconds": round(duration_seconds, 1),
             },
-            "transcript_segments_xml": _render_transcript(state, runtime.context),
+            "transcript_segments_xml": _render_transcript(state, runtime.context.transcript),
             "document_section_map_xml": _render_section_map(state),
             "section_explanations_xml": _render_notes(state),
         },
@@ -644,11 +650,11 @@ async def plan_lesson_outline(
         character_count=len(system_prompt) + len(user_prompt),
         segment_count=len(segments),
         duration_seconds=duration_seconds,
-        policy=runtime.context,
+        policy=runtime.context.lesson,
     )
 
     answer = await call_chat_model(
-        runtime.context.text_model,
+        runtime.context.models.text,
         [SystemMessage(system_prompt), HumanMessage(user_prompt)],
         metadata={"segment_count": len(segments)},
     )
@@ -657,7 +663,7 @@ async def plan_lesson_outline(
         answer.text,
         transcript_start_seconds=start_seconds,
         transcript_end_seconds=end_seconds,
-        policy=runtime.context,
+        policy=runtime.context.lesson,
     )
     logger.info(
         "plan drafted",
@@ -670,7 +676,7 @@ async def plan_lesson_outline(
     return {"plan": plan, "usage_by_model": answer.usage_by_model}
 
 
-def _render_transcript(state: LessonState, policy: GraphRuntime) -> str:
+def _render_transcript(state: LessonState, policy: TranscriptPolicy) -> str:
     """Renders the transcript with its sentences, for the plan to plan over."""
     clean_transcript = state.get("clean_transcript")
     if clean_transcript is None:
@@ -680,17 +686,17 @@ def _render_transcript(state: LessonState, policy: GraphRuntime) -> str:
         {
             "Segment": [
                 {
-                    "Beginning": round(segment.start_seconds, policy.transcript_timestamp_decimals),
-                    "End": round(segment.end_seconds, policy.transcript_timestamp_decimals),
+                    "Beginning": round(segment.start_seconds, policy.timestamp_decimals),
+                    "End": round(segment.end_seconds, policy.timestamp_decimals),
                     "Sentence": [
                         {
                             "Beginning": round(
                                 sentence.start_seconds,
-                                policy.transcript_timestamp_decimals,
+                                policy.timestamp_decimals,
                             ),
                             "End": round(
                                 sentence.end_seconds,
-                                policy.transcript_timestamp_decimals,
+                                policy.timestamp_decimals,
                             ),
                             "Text": sentence.content,
                         }
@@ -757,7 +763,7 @@ def _read_plan(
     *,
     transcript_start_seconds: float,
     transcript_end_seconds: float,
-    policy: GraphRuntime,
+    policy: LessonPolicy,
 ) -> LessonPlan:
     """Read the answer into a plan, held to the transcript that exists."""
     parsed = parse_xml_with_schema(
@@ -830,7 +836,7 @@ def _check_request_size(
     character_count: int,
     segment_count: int,
     duration_seconds: float,
-    policy: GraphRuntime,
+    policy: LessonPolicy,
 ) -> None:
     """Refuses a request no provider will accept, naming why it grew."""
     logger.info(
@@ -853,7 +859,7 @@ def _check_request_size(
     )
 
 
-def _check_asserted_values(parsed: _OutlineSchema, policy: GraphRuntime) -> None:
+def _check_asserted_values(parsed: _OutlineSchema, policy: LessonPolicy) -> None:
     """Holds every number the answer states to a plausible range."""
     for chapter in parsed.chapters:
         for concept in chapter.concepts:
@@ -931,7 +937,8 @@ async def write_lesson_chapter(
         chapters=plan.chapters,
         chapter_index=chapter_index,
         segments=state.get("clean_transcript", []),
-        configuration=runtime.context,
+        lesson_policy=runtime.context.lesson,
+        transcript_policy=runtime.context.transcript,
     )
     if not any(slice_.excerpts for slice_ in context.concept_slices):
         logger.warning(
@@ -953,7 +960,7 @@ async def write_lesson_chapter(
         context_end_seconds=context.end_seconds,
     )
 
-    prompts = runtime.context.prompts
+    prompts = runtime.context.inputs.prompts
     request = prompts.render(
         _CHAPTER_USER_TEMPLATE,
         {
@@ -977,7 +984,7 @@ async def write_lesson_chapter(
     )
 
     answer = await call_chat_model(
-        runtime.context.text_model,
+        runtime.context.models.text,
         [
             SystemMessage(
                 prompts.render(
@@ -1250,9 +1257,9 @@ async def build_lesson_glossary(
         logger.info("no chapters to distil a glossary from")
         return {"glossary": []}
 
-    prompts = runtime.context.prompts
+    prompts = runtime.context.inputs.prompts
     answer = await call_chat_model(
-        runtime.context.text_model,
+        runtime.context.models.text,
         [
             SystemMessage(
                 prompts.render(
@@ -1296,7 +1303,7 @@ async def build_lesson_glossary(
         metadata={"chapter_count": len(drafts)},
     )
 
-    glossary = _read_glossary(answer.text, runtime.context.glossary_key_length)
+    glossary = _read_glossary(answer.text, runtime.context.lesson.glossary_key_length)
     logger.info("glossary distilled", term_count=len(glossary))
 
     stream_writer = get_stream_writer()
