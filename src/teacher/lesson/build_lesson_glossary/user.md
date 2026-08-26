@@ -1,7 +1,9 @@
 # Glossary request
 
-Language: {{ language }}
-Lesson title: {{ lesson_title }}
+| Field | Value |
+| --- | --- |
+| Language | {{ language }} |
+| Lesson title | {{ lesson_title }} |
 
 ## Completed lesson
 
