@@ -1,0 +1,294 @@
+#let horizontalrule = line(start: (12.5%,0%), end: (87.5%,0%), stroke: 0.5pt)
+
+#show terms.item: it => block(breakable: false)[
+  #text(weight: "bold")[#it.term]
+  #block(inset: (left: 1.5em, top: -0.4em))[#it.description]
+]
+
+#set table(
+  align: (left + horizon),
+  inset: (x: 0.75em, y: 0.55em),
+  stroke: none,
+  fill: (_, y) => if y == 0 { rgb("EEF2F7") },
+)
+// Pandoc emits `align(center)[#table(align: (auto, ...))]`, so every cell
+// inherits centre alignment from the wrapper. Force left so numbers and
+// text sit flush at the start of their column (a small value no longer
+// floats in the middle of a column widened by a long header) and wrapped
+// prose justifies cleanly. A cell-level show rule overrides the per-table
+// `auto`, which a `#set table(align:)` cannot.
+#show table.cell: set align(left + top)
+#show table.cell: set par(justify: true)
+// Bold the header row and give horizontal rules a thin, muted stroke so
+// tables read as clean banded blocks rather than heavy grids.
+#show table.cell.where(y: 0): set text(weight: "bold")
+#set table.hline(stroke: 0.6pt + rgb("9AA4AF"))
+
+#show math.equation: set text(font: "Libertinus Math")
+
+// Accent palette — a deep slate-blue echoing the table-header tint, used
+// for the title and headings, with a light blue for hairline rules.
+#let accent-blue = rgb("21496E")
+#let accent-tint = rgb("CBD8E8")
+
+// Headings in the accent blue. Chapter (level 1) headings sit above a thin
+// blue hairline, giving each chapter a clean divider; deeper levels are
+// coloured but unruled so the hierarchy reads through colour, weight and a
+// touch of size.
+#show heading: set text(fill: accent-blue)
+#show heading: set block(above: 1.5em, below: 1em)
+#show heading.where(level: 1): set text(size: 1.15em)
+#show heading.where(level: 1): it => block(below: 0.85em, width: 100%, breakable: false)[
+  #it
+  #v(-0.875em)
+  #line(length: 100%, stroke: 0.6pt + accent-tint)
+]
+#show heading.where(level: 3): set text(fill: accent-blue.lighten(12%))
+
+// Table figures get vertical breathing room so they never crowd the text
+// above or below them.
+#show figure.where(kind: table): set block(above: 1.5em, below: 1.5em)
+
+#show figure.where(
+  kind: table
+): set figure.caption(position: $if(table-caption-position)$$table-caption-position$$else$top$endif$)
+
+#show figure.where(
+  kind: image
+): set figure.caption(position: $if(figure-caption-position)$$figure-caption-position$$else$bottom$endif$)
+
+$if(glossary)$
+// Glossary (vendored `glossarium` under typst-packages/, resolved offline via
+// --package-cache-path). `make-glossary` installs show rules for references and
+// the printed entries; it is applied AFTER the figure show rules above to avoid
+// the documented figure-rule conflict. Entries are registered here from the
+// `glossary` metadata so in-body `#gls(...)` calls (injected by the PDF Lua
+// filter) and the printed glossary after the body both resolve.
+#import "@preview/glossarium:0.5.10": make-glossary, register-glossary, print-glossary, gls, glspl
+#show: make-glossary
+#let glossary-entries = (
+$for(glossary)$
+  ( key: "$it.key$", short: [$it.short$],$if(it.long)$ long: [$it.long$],$endif$ description: [$it.description$] ),
+$endfor$
+)
+#register-glossary(glossary-entries)
+$endif$
+$if(highlighting-definitions)$
+// syntax highlighting functions from skylighting:
+$highlighting-definitions$
+
+$endif$
+$if(template)$
+#import "$template$": conf
+$else$
+$template.typst()$
+$endif$
+
+#set smartquote(enabled: true)
+
+$for(header-includes)$
+$header-includes$
+
+$endfor$
+#show: doc => conf(
+$if(subtitle)$
+  subtitle: [$subtitle$],
+$endif$
+$if(keywords)$
+  keywords: ($for(keywords)$$keywords$$sep$,$endfor$),
+$endif$
+$if(lang)$
+  lang: "$lang$",
+$endif$
+$if(region)$
+  region: "$region$",
+$endif$
+$if(abstract-title)$
+  abstract-title: [$abstract-title$],
+$endif$
+$if(abstract)$
+  abstract: [$abstract$],
+$endif$
+$if(thanks)$
+  thanks: [$thanks$],
+$endif$
+$if(margin)$
+  margin: ($for(margin/pairs)$$margin.key$: $margin.value$,$endfor$),
+$else$
+  margin: (x: 2.2cm, top: 2.2cm, bottom: 2.4cm),
+$endif$
+$if(papersize)$
+  paper: "$papersize$",
+$endif$
+  font: ($if(mainfont)$"$mainfont$"$else$"Libertinus Serif"$endif$,),
+$if(fontsize)$
+  fontsize: $fontsize$,
+$endif$
+$if(mathfont)$
+  mathfont: ($for(mathfont)$"$mathfont$",$endfor$),
+$endif$
+$if(codefont)$
+  codefont: ($for(codefont)$"$codefont$",$endfor$),
+$endif$
+$if(linestretch)$
+  linestretch: $linestretch$,
+$endif$
+$if(section-numbering)$
+  sectionnumbering: "$section-numbering$",
+$endif$
+  pagenumbering: $if(page-numbering)$"$page-numbering$"$else$none$endif$,
+$if(linkcolor)$
+  linkcolor: [$linkcolor$],
+$endif$
+$if(citecolor)$
+  citecolor: [$citecolor$],
+$endif$
+$if(filecolor)$
+  filecolor: [$filecolor$],
+$endif$
+  cols: $if(columns)$$columns$$else$1$endif$,
+  doc,
+)
+
+$if(title)$
+#set document(title: [$title$])
+$if(author)$
+#set document(author: ($for(author)$"$if(author.name)$$author.name$$else$$author$$endif$", $endfor$))
+$endif$
+// Title block, rendered here (not by conf) for full styling control: a
+// larger, calmer title, a thin centred accent rule, and a muted subtitle
+// and date. The abstract follows in a justified, slightly smaller block.
+#block(width: 100%, below: 1.6em)[
+  #align(center)[
+    #block(below: 1.2em)[
+      #text(size: 1.95em, weight: 700, hyphenate: false)[$title$]
+    ]
+$if(subtitle)$
+    #block(below: 0.5em)[
+      #text(size: 1.2em, weight: 500, hyphenate: false)[$subtitle$]
+    ]
+$endif$
+    #line(length: 37.5%, stroke: 0.5pt + luma(40))
+$if(author)$
+    #block(above: 1.2em)[
+      #text(size: 1em, hyphenate: false)[$for(author)$$if(author.name)$$author.name$$else$$author$$endif$$sep$, $endfor$]
+    ]
+$endif$
+$if(date)$
+    #block(above: 0.7em)[#text(size: 0.9em)[$date$]]
+$endif$
+$if(generated-notice)$
+    // EU AI Act Art. 50(2): a small, muted marking that this document is
+    // machine-generated study material. Rendered on the title page so the
+    // disclosure travels with every exported / shared copy, kept quiet so it
+    // never competes with the title block.
+    #block(above: 0.9em)[#text(size: 0.78em, fill: luma(110), style: "italic")[$generated-notice$]]
+$endif$
+$if(qr-image-path)$
+    // Share QR for the publicly hosted copy of this PDF. Centred, below the
+    // date and above the abstract. Unboxed — `background-fill: white` is the
+    // only chrome (a clean quiet zone, no border). No caption; self-explanatory.
+    #block(above: 1.2em)[
+      #image("$qr-image-path$", width: 3cm)
+    ]
+$endif$
+  ]
+$if(abstract)$
+  #block(width: 100%, inset: (x: 1.7em), above: 1.4em)[
+    #set par(justify: true)
+    #set text(size: 0.93em)
+    #text(weight: "semibold")[$abstract-title$.]#h(0.5em)$abstract$
+  ]
+$endif$
+]
+$endif$
+
+$for(include-before)$
+$include-before$
+
+$endfor$
+$if(audio-files)$
+// Source-file listing tables. Column headers use translated labels passed
+// as metadata (with English fallbacks) and adopt the document's normal
+// table-header styling (blue tint + rule) via the global table rules —
+// ordinary table headers, not bold standalone titles.
+#table(
+  columns: (1fr, auto),
+  table.header([$if(recordings-label)$$recordings-label$$else$Recordings$endif$], [$if(duration-label)$$duration-label$$else$Duration$endif$]),
+  table.hline(),
+$for(audio-files)$  [#text(font: "DejaVu Sans Mono", size: 0.76125em)[$it.name$]], [$if(it.duration)$$it.duration$$endif$],
+$endfor$)
+
+$endif$
+$if(reference-files)$
+#table(
+  columns: (1fr, auto),
+  table.header([$if(reference-documents-label)$$reference-documents-label$$else$Reference documents$endif$], [$if(pages-label)$$pages-label$$else$Pages$endif$]),
+  table.hline(),
+$for(reference-files)$  [#text(font: "DejaVu Sans Mono", size: 0.76125em)[$it.name$]], [$if(it.pages)$$it.pages$$endif$],
+$endfor$)
+
+$endif$
+$if(toc)$
+// Table of contents: chapter (level 1) entries bold with breathing room
+// above each group; concept (level 2) entries lighter, muted and smaller;
+// a subtle light-grey dotted leader replaces the dense default so the
+// columns read as a calm two-column list rather than a wall of dots.
+#show outline.entry.where(level: 1): it => {
+  // Non-weak leading space so it does not collapse against the "Indice"
+  // divider above the first entry — every chapter group, including the
+  // first, gets the same clear gap.
+  set text(weight: "bold", fill: accent-blue)
+  it
+}
+#show outline.entry.where(level: 2): it => {
+  set text(fill: luma(20), size: 0.96em)
+  it
+}
+#set outline.entry(fill: text(fill: luma(150))[#box(width: 1fr, repeat(gap: 0.24em)[.])])
+#show outline: set text(hyphenate: false)
+#outline(
+  title: auto,
+  depth: $toc-depth$
+)
+// Weak break so the body starts on a fresh page, but NO blank page is inserted
+// when the outline already happens to end exactly at a page boundary (a hard
+// #pagebreak() would waste a page there).
+
+$endif$
+
+$body$
+
+$if(glossary)$
+// Printed glossary as a final top-level section. A thematic-break rule (the
+// same one chapters are separated by) divides it from the last chapter so the
+// section doesn't butt straight against the preceding body. `show-all: true`
+// prints every registered term whether or not it is referenced in the body;
+// `disable-back-references: true` drops the per-entry "used on page N" pointers
+// — the in-body `#gls(...)` links already provide forward navigation, so the
+// reverse pointers were redundant clutter (and ragged, since only linked terms
+// had one).
+#horizontalrule
+= $if(glossary-title)$$glossary-title$$else$Glossary$endif$
+#print-glossary(glossary-entries, show-all: true, disable-back-references: true)
+$endif$
+$if(citations)$
+$for(nocite-ids)$
+#cite(label("${it}"), form: none)
+$endfor$
+$if(csl)$
+
+#set bibliography(style: "$csl$")
+$elseif(bibliographystyle)$
+
+#set bibliography(style: "$bibliographystyle$")
+$endif$
+$if(bibliography)$
+
+#bibliography(($for(bibliography)$"$bibliography$"$sep$,$endfor$)$if(full-bibliography)$, full: true$endif$)
+$endif$
+$endif$
+$for(include-after)$
+
+$include-after$
+$endfor$
