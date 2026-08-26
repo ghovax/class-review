@@ -14,8 +14,6 @@ from teacher.errors import PipelineError, classify_retryable
 from teacher.logging_support import get_logger
 from teacher.model_calls import call_chat_model
 from teacher.models import LanguageModelUsage
-from teacher.prompt_fragments import render_language_policy
-from teacher.prompts import Prompts
 from teacher.state import StagedPage
 
 __all__ = ["read_page"]
@@ -27,8 +25,11 @@ _USER_TEMPLATE = "documents/read_page/user"
 _NOTATION_TEMPLATE = "mathematics_notation_rules"
 
 # What a page that could not be read contributes.
-_UNREADABLE_SUMMARY_TEMPLATE = "fragments/unreadable_page_summary"
-_UNREADABLE_DETAILS_TEMPLATE = "fragments/unreadable_page_details"
+_UNREADABLE_SUMMARY = "This page could not be read."
+_UNREADABLE_DETAILS = (
+    "No content could be extracted from this page. It is recorded so the page numbering "
+    "stays continuous, and is not drawn on when the lecture is written."
+)
 
 
 async def read_page(state: PageToRead, runtime: Runtime[GraphRuntime]) -> dict[str, object]:
@@ -41,7 +42,7 @@ async def read_page(state: PageToRead, runtime: Runtime[GraphRuntime]) -> dict[s
     system_prompt = prompts.render(
         _SYSTEM_TEMPLATE,
         {
-            "language_policy": render_language_policy(prompts),
+            "language_policy": prompts.render("language_policy"),
             "mathematics_notation_rules": prompts.render(_NOTATION_TEMPLATE),
         },
     )
@@ -94,7 +95,7 @@ async def read_page(state: PageToRead, runtime: Runtime[GraphRuntime]) -> dict[s
                     error_message=str(error),
                     error_metadata=error.metadata,
                 )
-                return _staged(page, prompts, accumulated_usage, was_extracted=False)
+                return _staged(page, accumulated_usage, was_extracted=False)
             logger.info(
                 "page documents attempt failed, trying again",
                 document_index=page.document_index,
@@ -125,12 +126,11 @@ async def read_page(state: PageToRead, runtime: Runtime[GraphRuntime]) -> dict[s
             "usage_by_model": accumulated_usage,
         }
 
-    return _staged(page, prompts, accumulated_usage, was_extracted=False)
+    return _staged(page, accumulated_usage, was_extracted=False)
 
 
 def _staged(
     page: PageToRead,
-    prompts: Prompts,
     usage: dict[str, LanguageModelUsage],
     *,
     was_extracted: bool,
@@ -141,8 +141,8 @@ def _staged(
             StagedPage(
                 document_index=page.document_index,
                 page_number=page.page_number,
-                summary=prompts.render(_UNREADABLE_SUMMARY_TEMPLATE),
-                details=prompts.render(_UNREADABLE_DETAILS_TEMPLATE),
+                summary=_UNREADABLE_SUMMARY,
+                details=_UNREADABLE_DETAILS,
                 was_extracted=was_extracted,
             )
         ],

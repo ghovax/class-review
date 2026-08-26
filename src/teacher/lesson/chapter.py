@@ -27,7 +27,6 @@ from teacher.models import (
     PlannedChapter,
     SectionMap,
 )
-from teacher.prompt_fragments import render_language_policy
 from teacher.prompts import Prompts
 from teacher.rendering import render_page_entries
 from teacher.state import (
@@ -35,7 +34,7 @@ from teacher.state import (
     ChapterExchange,
     LessonState,
 )
-from teacher.xml.documents import build_xml_document
+from teacher.xml import build_xml_document
 
 __all__ = ["write_chapter"]
 
@@ -127,7 +126,7 @@ async def write_chapter(state: LessonState, runtime: Runtime[GraphRuntime]) -> d
                     _SYSTEM_TEMPLATE,
                     {
                         "language": state["output_language"],
-                        "language_policy": render_language_policy(prompts),
+                        "language_policy": prompts.render("language_policy"),
                         "mathematics_notation_rules": prompts.render(_NOTATION_TEMPLATE),
                     },
                 )
@@ -324,7 +323,7 @@ def _render_document_material(
                 section = sections.get(section_index)
                 if section is None:
                     continue
-                entry = render_page_entries(document, section, prompts)
+                entry = render_page_entries(document, section)
                 if entry and entry not in rendered:
                     rendered.append(entry)
 

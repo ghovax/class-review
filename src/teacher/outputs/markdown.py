@@ -3,16 +3,29 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
 
+from teacher.errors import PipelineError
 from teacher.glossary_links import apply_glossary_links
 from teacher.models import Lesson
 from teacher.outputs.citations import build_citation_definitions
 from teacher.outputs.localization import export_labels
-from teacher.outputs.models import ExportMetadata
+from teacher.outputs.models import ExportError, ExportMetadata
 from teacher.outputs.source_listings import build_source_tables
-from teacher.outputs.templates import render_export_template
+from teacher.prompts import Prompts
 
 __all__ = ["render_export_markdown"]
+
+_TEMPLATES = Prompts(package="teacher.output_templates")
+
+
+def render_export_template(name: str, variables: Mapping[str, object]) -> str:
+    """Render one packaged export shape with strict placeholder checking."""
+
+    try:
+        return _TEMPLATES.render(name, variables)
+    except PipelineError as error:
+        raise ExportError(f"export template {name!r} could not be rendered") from error
 
 
 def render_export_markdown(lesson: Lesson, metadata: ExportMetadata) -> str:

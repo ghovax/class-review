@@ -16,7 +16,6 @@ from teacher.models import (
     LanguageModelUsage,
     SectionNotes,
 )
-from teacher.prompt_fragments import render_language_policy
 from teacher.rendering import render_page_entries
 from teacher.state import LessonState
 
@@ -41,7 +40,7 @@ async def explain_sections(state: LessonState, runtime: Runtime[GraphRuntime]) -
     system_prompt = prompts.render(
         _SYSTEM_TEMPLATE,
         {
-            "language_policy": render_language_policy(prompts),
+            "language_policy": prompts.render("language_policy"),
             "mathematics_notation_rules": prompts.render(_NOTATION_TEMPLATE),
         },
     )
@@ -106,7 +105,7 @@ async def _explain_one(
     runtime: Runtime[GraphRuntime],
 ) -> tuple[SectionNotes, dict[str, LanguageModelUsage]]:
     """Narrates one section."""
-    pages_markdown = render_page_entries(document, section, runtime.context.prompts)
+    pages_markdown = render_page_entries(document, section)
     answer = await call_chat_model(
         runtime.context.text_model,
         [

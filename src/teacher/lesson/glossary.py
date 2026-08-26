@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import secrets
-from collections.abc import Sequence
 from typing import Final
 
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -15,17 +14,15 @@ from teacher.configuration import GraphRuntime
 from teacher.events import GlossaryDistilled
 from teacher.logging_support import get_logger
 from teacher.model_calls import call_chat_model
-from teacher.models import GlossaryEntry, LessonPlan
-from teacher.prompt_fragments import render_language_policy
-from teacher.prompts import Prompts
-from teacher.state import ChapterDraft, LessonState
-from teacher.xml.schema_definitions import (
+from teacher.models import GlossaryEntry
+from teacher.state import LessonState
+from teacher.xml import (
     OneOrMany,
     RequiredText,
     parse_xml_with_schema,
 )
 
-__all__ = ["build_glossary", "render_lesson_markdown"]
+__all__ = ["build_glossary"]
 
 logger = get_logger(__name__)
 
@@ -33,7 +30,6 @@ _SYSTEM_TEMPLATE = "lesson/build_glossary/system"
 _USER_TEMPLATE = "lesson/build_glossary/user"
 _NOTATION_TEMPLATE = "mathematics_notation_rules"
 _ROOT_TAG = "Glossary"
-_CHAPTER_SECTION_TEMPLATE = "fragments/chapter_section"
 
 # Keys are built from this alphabet alone, so a key is always safe to write into a
 # link destination and to match against in body text.
@@ -72,7 +68,7 @@ async def build_glossary(state: LessonState, runtime: Runtime[GraphRuntime]) -> 
                     _SYSTEM_TEMPLATE,
                     {
                         "language": state["output_language"],
-                        "language_policy": render_language_policy(prompts),
+                        "language_policy": prompts.render("language_policy"),
                         "mathematics_notation_rules": prompts.render(_NOTATION_TEMPLATE),
                     },
                 )
@@ -83,7 +79,10 @@ async def build_glossary(state: LessonState, runtime: Runtime[GraphRuntime]) -> 
                     {
                         "language": state["output_language"],
                         "lesson_title": plan.title,
-                        "lesson_markdown": render_lesson_markdown(plan, drafts, prompts),
+                        "lesson_markdown": "\n\n".join(
+                            f"## {(draft.title or (plan.chapters[draft.chapter_index].title if draft.chapter_index < len(plan.chapters) else '')).strip()}\n\n{draft.content.strip()}".strip()
+                            for draft in sorted(drafts, key=lambda item: item.chapter_index)
+                        ),
                     },
                 )
             ),
@@ -98,29 +97,6 @@ async def build_glossary(state: LessonState, runtime: Runtime[GraphRuntime]) -> 
     stream_writer(GlossaryDistilled(term_count=len(glossary)))
 
     return {"glossary": glossary, "usage_by_model": answer.usage_by_model}
-
-
-def render_lesson_markdown(
-    plan: LessonPlan,
-    drafts: Sequence[ChapterDraft],
-    prompts: Prompts,
-) -> str:
-    """Stitches the written chapters into one document."""
-    return "\n\n".join(
-        prompts.render(
-            _CHAPTER_SECTION_TEMPLATE,
-            {
-                "chapter_title": draft.title
-                or (
-                    plan.chapters[draft.chapter_index].title
-                    if draft.chapter_index < len(plan.chapters)
-                    else ""
-                ),
-                "chapter_content": draft.content,
-            },
-        ).strip()
-        for draft in sorted(drafts, key=lambda item: item.chapter_index)
-    )
 
 
 def _read_glossary(answer_text: str, key_length: int) -> list[GlossaryEntry]:

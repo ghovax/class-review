@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+from typing import Literal
+
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import RetryPolicy, Send
 
@@ -11,17 +14,49 @@ from teacher.documents.load import DocumentToLoad, load_document
 from teacher.documents.notes import explain_sections
 from teacher.documents.read_page import read_page
 from teacher.documents.sections import map_sections
-from teacher.errors import classify_retryable
+from teacher.errors import PipelineError, classify_retryable
 from teacher.lesson.chapter import write_chapter
 from teacher.lesson.finish import finish_lesson
 from teacher.lesson.glossary import build_glossary
 from teacher.lesson.plan import plan_lesson
-from teacher.lesson.routing import route_after_chapter
+from teacher.logging_support import get_logger
+from teacher.models import TranscriptSegment
 from teacher.state import LessonInput, LessonOutput, LessonState
-from teacher.transcript.batching import build_batches
 from teacher.transcript.correct import CorrectionBatch, correct_batch
 from teacher.transcript.finish import finish_transcript
 from teacher.transcript.terms import EMPTY_TERMINOLOGY, find_terms
+
+logger = get_logger(__name__)
+
+
+def build_batches(
+    segments: Sequence[TranscriptSegment], span_seconds: float
+) -> list[list[TranscriptSegment]]:
+    """Pack ordered transcript segments into bounded correction windows."""
+
+    ordered = sorted(segments, key=lambda item: (item.start_seconds, item.end_seconds))
+    if not ordered:
+        raise PipelineError.terminal("the transcript has no segments")
+    batches: list[list[TranscriptSegment]] = []
+    for segment in ordered:
+        if not batches or segment.end_seconds - batches[-1][0].start_seconds > span_seconds:
+            batches.append([segment])
+        else:
+            batches[-1].append(segment)
+    return batches
+
+
+def route_after_chapter(
+    state: LessonState,
+) -> Literal["write_chapter", "build_glossary"]:
+    """Loop over chapter writing until the plan is complete."""
+
+    plan = state.get("plan")
+    written = len(state.get("chapter_drafts", []))
+    if plan is not None and written < len(plan.chapters):
+        return "write_chapter"
+    logger.info("every chapter written", chapter_count=written)
+    return "build_glossary"
 
 
 def dispatch_documents(state: LessonState) -> list[Send] | str:

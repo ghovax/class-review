@@ -9,7 +9,7 @@ from langchain_core.language_models import BaseChatModel
 from models_provider import ModelConfiguration, ModelProvider
 
 from teacher.inputs import DocumentImporter
-from teacher.pdf_input import WebPdfImporter
+from teacher.importers.pdf import WebPdfImporter
 from teacher.prompts import Prompts
 
 

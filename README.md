@@ -4,6 +4,25 @@
 structured lesson through one resumable graph: transcript cleanup, source
 reading, lesson planning, chapter writing, glossary creation, and export.
 
+## Code layout
+
+The package follows the graph rather than a generic utilities hierarchy:
+
+```text
+graph.py              graph wiring, fan-out, barriers, and chapter loop
+transcript/           find terms -> correct batches -> finish transcript
+documents/            load PDFs -> read pages -> map sections -> explain sections
+lesson/               plan -> write chapters -> glossary -> finish lesson
+importers/             transcript and PDF input adapters, including Modal clients
+xml/                   one public XML recovery and schema-validation boundary
+outputs/               Markdown/PDF/JSON export
+```
+
+The prompt files contain model-facing instructions only. Prompt fragments that
+were just one-line formatting wrappers are represented directly at the node or
+rendering boundary, so the execution path does not jump through a second
+prompt-fragment module.
+
 ## Explicit API contract
 
 The graph input is:

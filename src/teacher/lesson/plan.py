@@ -25,12 +25,11 @@ from teacher.models import (
     ProgressionAxis,
     TimeSpan,
 )
-from teacher.prompt_fragments import render_language_policy
 from teacher.state import LessonState
-from teacher.xml.documents import build_xml_document
-from teacher.xml.schema_definitions import (
+from teacher.xml import (
     OneOrMany,
     RequiredText,
+    build_xml_document,
     case_insensitive_with_fallback,
     parse_xml_with_schema,
 )
@@ -127,7 +126,7 @@ async def plan_lesson(state: LessonState, runtime: Runtime[GraphRuntime]) -> dic
         _SYSTEM_TEMPLATE,
         {
             "language": state["output_language"],
-            "language_policy": render_language_policy(prompts),
+            "language_policy": prompts.render("language_policy"),
             "mathematics_notation_rules": prompts.render(_NOTATION_TEMPLATE),
         },
     )
