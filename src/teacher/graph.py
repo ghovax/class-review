@@ -6,9 +6,9 @@ from collections.abc import Sequence
 from typing import Literal
 
 from langgraph.graph import END, START, StateGraph
-from langgraph.types import RetryPolicy, Send
+from langgraph.types import RetryPolicy as LangGraphRetryPolicy, Send
 
-from teacher.configuration import GraphRuntime
+from teacher.configuration import GraphRuntime, RetryPolicy
 from teacher.documents import (
     DocumentPageReadRequest,
     DocumentReadRequest,
@@ -36,6 +36,8 @@ from teacher.transcript import (
 )
 
 logger = get_logger(__name__)
+
+_DEFAULT_RETRY_POLICY = RetryPolicy()
 
 
 def split_transcript_for_correction(
@@ -87,7 +89,8 @@ def route_transcript_corrections(state: LessonState, runtime) -> list[Send]:
     """Create one correction request for each bounded span of transcript."""
 
     requests = split_transcript_for_correction(
-        state["transcript"].segments, runtime.context.maximum_transcript_seconds_per_request
+        state["transcript"].segments,
+        runtime.context.transcript.maximum_request_seconds,
     )
     language = ", ".join(state["transcript"].languages)
     terminology = state.get("terminology") or EMPTY_TERMINOLOGY
@@ -105,11 +108,14 @@ def route_transcript_corrections(state: LessonState, runtime) -> list[Send]:
 
 
 def define_graph(
-    *, model_attempts: int = 3
+    *, retry_policy: RetryPolicy = _DEFAULT_RETRY_POLICY
 ) -> StateGraph[LessonState, GraphRuntime, LessonInput, LessonOutput]:
     """Build the complete graph without compiling it."""
 
-    retry = RetryPolicy(max_attempts=model_attempts, retry_on=classify_retryable)
+    retry = LangGraphRetryPolicy(
+        max_attempts=retry_policy.model_attempts,
+        retry_on=classify_retryable,
+    )
     graph = StateGraph(
         LessonState,
         input_schema=LessonInput,

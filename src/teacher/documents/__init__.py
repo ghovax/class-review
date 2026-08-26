@@ -112,11 +112,11 @@ async def load_document_pages(
     """Load one document and send each rendered page for extraction."""
 
     item = state
-    if runtime.context.page_model is None:
+    if runtime.context.models.page is None:
         raise PipelineError.terminal("page_model is required when documents are supplied")
-    if runtime.context.document_reader is None:
+    if runtime.context.inputs.document_reader is None:
         raise PipelineError.terminal("document_reader is required when documents are supplied")
-    imported = await runtime.context.document_reader.read(
+    imported = await runtime.context.inputs.document_reader.read(
         item.source, document_index=item.document_index
     )
     if not imported.pages:
@@ -157,10 +157,10 @@ async def extract_document_page(
 ) -> dict[str, object]:
     """Reads one page, leaving its content empty when all attempts fail."""
     page = state
-    page_model = runtime.context.page_model
+    page_model = runtime.context.models.page
     if page_model is None:
         raise PipelineError.terminal("page_model is required when documents are supplied")
-    prompts = runtime.context.prompts
+    prompts = runtime.context.inputs.prompts
     system_prompt = prompts.render(
         _PAGE_SYSTEM_TEMPLATE,
         {
@@ -182,7 +182,7 @@ async def extract_document_page(
     )
 
     accumulated_usage: dict[str, ModelUsage] = {}
-    maximum_attempts = max(1, runtime.context.page_attempts)
+    maximum_attempts = max(1, runtime.context.retries.page_attempts)
 
     for attempt_number in range(1, maximum_attempts + 1):
         try:
@@ -354,14 +354,14 @@ async def map_document_sections(
     state: LessonState, runtime: Runtime[GraphRuntime]
 ) -> dict[str, object]:
     """Divides every document into sections."""
-    prompts = runtime.context.prompts
+    prompts = runtime.context.inputs.prompts
     documents = state.get("documents", [])
     if not documents:
         logger.info("no documents to segment")
         return {"section_map": SectionMap(documents=())}
 
     answer = await call_chat_model(
-        runtime.context.text_model,
+        runtime.context.models.text,
         [
             SystemMessage(
                 prompts.render(
@@ -469,7 +469,7 @@ async def explain_document_sections(
         logger.info("no sections to explain")
         return {"section_notes": []}
 
-    prompts = runtime.context.prompts
+    prompts = runtime.context.inputs.prompts
     system_prompt = prompts.render(
         _NOTES_SYSTEM_TEMPLATE,
         {
@@ -540,13 +540,13 @@ async def _explain_one(
     runtime: Runtime[GraphRuntime],
 ) -> tuple[SectionNotes, dict[str, ModelUsage]]:
     """Narrates one section."""
-    pages_markdown = render_section_pages(document, section, runtime.context.prompts)
+    pages_markdown = render_section_pages(document, section, runtime.context.inputs.prompts)
     answer = await call_chat_model(
-        runtime.context.text_model,
+        runtime.context.models.text,
         [
             SystemMessage(system_prompt),
             HumanMessage(
-                runtime.context.prompts.render(
+                runtime.context.inputs.prompts.render(
                     _NOTES_USER_TEMPLATE,
                     {
                         "section": {

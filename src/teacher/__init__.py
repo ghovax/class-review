@@ -1,7 +1,16 @@
 """Public API for teacher."""
 
 from teacher.api import LessonGraph, LessonResult
-from teacher.configuration import GraphConfiguration
+from teacher.configuration import (
+    ExecutionPolicy,
+    GraphConfiguration,
+    GraphInputs,
+    GraphModels,
+    GraphStorage,
+    LessonPolicy,
+    RetryPolicy,
+    TranscriptPolicy,
+)
 from teacher.models import (
     DocumentPages,
     DocumentReader,
@@ -24,6 +33,13 @@ from teacher.outputs import (
 
 __all__ = [
     "GraphConfiguration",
+    "GraphInputs",
+    "GraphModels",
+    "GraphStorage",
+    "RetryPolicy",
+    "TranscriptPolicy",
+    "LessonPolicy",
+    "ExecutionPolicy",
     "DocumentSource",
     "DocumentPages",
     "DocumentReader",

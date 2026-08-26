@@ -35,10 +35,11 @@ class LessonGraph:
         self._graph: Any = None
 
     async def __aenter__(self) -> LessonGraph:
-        self.configuration.checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
-        self._connection = await aiosqlite.connect(str(self.configuration.checkpoint_path))
+        checkpoint_path = self.configuration.storage.checkpoint_path
+        checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
+        self._connection = await aiosqlite.connect(str(checkpoint_path))
         checkpointer = AsyncSqliteSaver(self._connection, serde=build_serializer())
-        self._graph = define_graph(model_attempts=self.configuration.model_attempts).compile(
+        self._graph = define_graph(retry_policy=self.configuration.retries).compile(
             checkpointer=checkpointer
         )
         return self
@@ -87,7 +88,7 @@ class LessonGraph:
 
     def _provider_scope(self) -> AbstractContextManager[None]:
         """Activate provider-local state for every model call in this graph run."""
-        return self.configuration.model_provider.scope()
+        return self.configuration.models.provider.scope()
 
     @staticmethod
     def _run_configuration(run_id: str, runtime: GraphRuntime) -> dict[str, object]:
@@ -95,7 +96,7 @@ class LessonGraph:
             raise ValueError("run_id cannot be empty")
         return {
             "configurable": {"thread_id": run_id.strip()},
-            "recursion_limit": runtime.recursion_limit,
+            "recursion_limit": runtime.execution.recursion_limit,
         }
 
     def _require_graph(self) -> Any:

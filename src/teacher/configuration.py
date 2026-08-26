@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from langchain_core.language_models import BaseChatModel
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from models_provider import ModelConfiguration, ModelProvider
@@ -17,79 +17,115 @@ from typing import Final
 
 
 @dataclass(frozen=True, slots=True)
-class GraphConfiguration:
-    """Models, provider, storage, and bounded graph settings."""
+class GraphModels:
+    """Models and provider used by the graph."""
 
-    language_model: ModelConfiguration
-    checkpoint_path: Path
-    model_provider: ModelProvider
-    page_language_model: ModelConfiguration | None = None
+    language: ModelConfiguration
+    provider: ModelProvider
+    page: ModelConfiguration | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class GraphInputs:
+    """Caller-supplied readers and model-facing prompt resources."""
+
     document_reader: DocumentReader | None = None
-    prompts: Prompts = Prompts()
+    prompts: Prompts = field(default_factory=Prompts)
+
+
+@dataclass(frozen=True, slots=True)
+class GraphStorage:
+    """Persistent storage used by one graph instance."""
+
+    checkpoint_path: Path
+
+
+@dataclass(frozen=True, slots=True)
+class RetryPolicy:
+    """Retry limits for ordinary and document-page model calls."""
+
     model_attempts: int = 3
     page_attempts: int = 3
-    maximum_transcript_seconds_per_request: float = 1800.0
+
+
+@dataclass(frozen=True, slots=True)
+class TranscriptPolicy:
+    """Limits and timestamp rules for transcript processing."""
+
+    maximum_request_seconds: float = 1800.0
+    zero_duration_seconds: float = 1e-6
+    timestamp_decimals: int = 1
+
+
+@dataclass(frozen=True, slots=True)
+class LessonPolicy:
+    """Context and validation limits for lesson authoring."""
+
     chapter_context_margin_seconds: float = 45.0
     maximum_chapter_context_seconds: float = 600.0
-    zero_duration_seconds: float = 1e-6
     maximum_plan_request_characters: int = 400_000
     maximum_model_index: int = 10_000
     maximum_model_seconds: float = 86_400.0
-    transcript_timestamp_decimals: int = 1
     glossary_key_length: int = 10
+
+
+@dataclass(frozen=True, slots=True)
+class ExecutionPolicy:
+    """Graph execution limits."""
+
     recursion_limit: int = 200
+
+
+@dataclass(frozen=True, slots=True)
+class ResolvedModels:
+    """Provider-created models passed between graph nodes."""
+
+    text: BaseChatModel
+    page: BaseChatModel | None
+
+
+@dataclass(frozen=True, slots=True)
+class GraphConfiguration:
+    """Structured models, inputs, storage, policies, and execution limits."""
+
+    models: GraphModels
+    storage: GraphStorage
+    inputs: GraphInputs = field(default_factory=GraphInputs)
+    retries: RetryPolicy = field(default_factory=RetryPolicy)
+    transcript: TranscriptPolicy = field(default_factory=TranscriptPolicy)
+    lesson: LessonPolicy = field(default_factory=LessonPolicy)
+    execution: ExecutionPolicy = field(default_factory=ExecutionPolicy)
 
     def runtime(self) -> GraphRuntime:
         """Resolve provider models and immutable settings for one run."""
 
         return GraphRuntime(
-            text_model=self.model_provider.create(
-                self.language_model,
+            models=ResolvedModels(
+                text=self.models.provider.create(self.models.language),
+                page=(
+                    self.models.provider.create(self.models.page)
+                    if self.models.page is not None
+                    else None
+                ),
             ),
-            page_model=(
-                self.model_provider.create(
-                    self.page_language_model,
-                )
-                if self.page_language_model is not None
-                else None
-            ),
-            document_reader=self.document_reader,
-            prompts=self.prompts,
-            model_attempts=self.model_attempts,
-            page_attempts=self.page_attempts,
-            maximum_transcript_seconds_per_request=self.maximum_transcript_seconds_per_request,
-            chapter_context_margin_seconds=self.chapter_context_margin_seconds,
-            maximum_chapter_context_seconds=self.maximum_chapter_context_seconds,
-            zero_duration_seconds=self.zero_duration_seconds,
-            maximum_plan_request_characters=self.maximum_plan_request_characters,
-            maximum_model_index=self.maximum_model_index,
-            maximum_model_seconds=self.maximum_model_seconds,
-            transcript_timestamp_decimals=self.transcript_timestamp_decimals,
-            glossary_key_length=self.glossary_key_length,
-            recursion_limit=self.recursion_limit,
+            inputs=self.inputs,
+            retries=self.retries,
+            transcript=self.transcript,
+            lesson=self.lesson,
+            execution=self.execution,
         )
 
 
 @dataclass(frozen=True, slots=True)
 class GraphRuntime:
-    """Resolved models and settings passed between graph nodes."""
+    """Resolved models and grouped policies passed between graph nodes."""
 
-    text_model: BaseChatModel
-    page_model: BaseChatModel | None
-    document_reader: DocumentReader | None
-    prompts: Prompts
-    model_attempts: int
-    page_attempts: int
-    maximum_transcript_seconds_per_request: float
-    chapter_context_margin_seconds: float
-    maximum_chapter_context_seconds: float
-    zero_duration_seconds: float
-    maximum_plan_request_characters: int
-    maximum_model_index: int
-    maximum_model_seconds: float
-    transcript_timestamp_decimals: int
-    glossary_key_length: int
-    recursion_limit: int
+    models: ResolvedModels
+    inputs: GraphInputs
+    retries: RetryPolicy
+    transcript: TranscriptPolicy
+    lesson: LessonPolicy
+    execution: ExecutionPolicy
 
 
 """Checkpoint serialization for teacher's persisted values."""

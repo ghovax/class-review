@@ -56,12 +56,12 @@ async def extract_transcript_terminology(
     state: LessonState, runtime: Runtime[GraphRuntime]
 ) -> dict[str, object]:
     """Reads the whole machine transcript and settles its terminology."""
-    prompts = runtime.context.prompts
+    prompts = runtime.context.inputs.prompts
     segments = list(state["transcript"].segments)
     transcript_text = render_transcript_input(segments, prompts)
 
     answer = await call_chat_model(
-        runtime.context.text_model,
+        runtime.context.models.text,
         [
             SystemMessage(
                 prompts.render(
@@ -190,7 +190,7 @@ async def correct_transcript(
 ) -> dict[str, object]:
     """Corrects supplied transcript material and commits its units."""
     correction = state
-    prompts = runtime.context.prompts
+    prompts = runtime.context.inputs.prompts
     start_seconds = correction.segments[0].start_seconds
     end_seconds = correction.segments[-1].end_seconds
 
@@ -211,7 +211,7 @@ async def correct_transcript(
         },
     )
     answer = await call_chat_model(
-        runtime.context.text_model,
+        runtime.context.models.text,
         [
             SystemMessage(
                 prompts.render(
