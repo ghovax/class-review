@@ -21,7 +21,7 @@ from typing import Final
 
 """Transcript graph nodes: terminology, correction, and transcript assembly."""
 
-"""Establishing the canonical terminology before correction fans out."""
+"""Establishing the canonical terminology before transcript correction."""
 
 
 logger = get_logger(__name__)
@@ -48,7 +48,7 @@ async def extract_transcript_terminology(
                 prompts.render(
                     _SYSTEM_TEMPLATE,
                     {
-                        "audio_language": ", ".join(state["transcript"].languages),
+                        "language": ", ".join(state["transcript"].languages),
                         "language_policy": prompts.render("language_policy"),
                     },
                 )
@@ -57,8 +57,8 @@ async def extract_transcript_terminology(
                 prompts.render(
                     _USER_TEMPLATE,
                     {
-                        "audio_language": ", ".join(state["transcript"].languages),
-                        "transcript_full": transcript_text,
+                        "language": ", ".join(state["transcript"].languages),
+                        "transcript": transcript_text,
                     },
                 )
             ),
@@ -197,7 +197,7 @@ async def correct_transcript(
                 prompts.render(
                     _SYSTEM_TEMPLATE,
                     {
-                        "audio_language": correction.spoken_language,
+                        "language": correction.spoken_language,
                         "language_policy": prompts.render("language_policy"),
                     },
                 )
@@ -206,11 +206,11 @@ async def correct_transcript(
                 prompts.render(
                     _USER_TEMPLATE,
                     {
-                        "audio_language": correction.spoken_language,
+                        "language": correction.spoken_language,
                         "start_seconds": start_seconds,
                         "end_seconds": end_seconds,
                         "terminology_xml": render_terminology_xml(correction.terminology),
-                        "source_segments_xml": source_document,
+                        "transcript_xml": source_document,
                     },
                 )
             ),
@@ -269,7 +269,7 @@ def _read_units(
         for position, (timestamp, content) in enumerate(clamped)
     ]
 
-"""Joining parallel corrections into one transcript."""
+"""Joining correction results into one transcript."""
 
 
 logger = get_logger(__name__)

@@ -142,7 +142,7 @@ async def extract_document_page(
             accumulated_usage = _combine(accumulated_usage, getattr(error, "usage_by_model", {}))
             if not classify_retryable(error) or attempt_number == maximum_attempts:
                 logger.warning(
-                    "page could not be read, staging an empty page",
+                    "page could not be read, recording an empty page reading",
                     document_index=page.document_index,
                     page_number=page.page_number,
                     attempt_number=attempt_number,
@@ -151,7 +151,7 @@ async def extract_document_page(
                 )
                 return _page_reading_update(page, accumulated_usage)
             logger.info(
-                "page documents attempt failed, trying again",
+                "page reading attempt failed, trying again",
                 document_index=page.document_index,
                 page_number=page.page_number,
                 attempt_number=attempt_number,
@@ -215,12 +215,12 @@ def _read_sections(answer_text: str) -> tuple[str, str]:
     """Splits the answer into its summary and its details."""
     content = answer_text.strip()
     if not content:
-        raise PipelineError.retryable("the page documents is empty")
+        raise PipelineError.retryable("the page reading is empty")
 
     headings = list(re.finditer(r"^(#{1,6})[ \t]+.+?[ \t]*$", content, re.MULTILINE))
     if len(headings) < 2:
         raise PipelineError.retryable(
-            "the page documents carries fewer than two headings",
+            "the page reading carries fewer than two headings",
             {"heading_count": len(headings)},
         )
 
@@ -229,7 +229,7 @@ def _read_sections(answer_text: str) -> tuple[str, str]:
     section_positions = [match for match, depth in zip(headings, depths, strict=True) if depth == shallowest_depth]
     if len(section_positions) != 2:
         raise PipelineError.retryable(
-            "the page documents does not carry exactly two sections",
+            "the page reading does not carry exactly two sections",
             {
                 "section_count": len(section_positions),
                 "shallowest_depth": shallowest_depth,
@@ -241,9 +241,9 @@ def _read_sections(answer_text: str) -> tuple[str, str]:
     details = content[details_start.end() :].strip()
 
     if not summary:
-        raise PipelineError.retryable("the page documents has an empty summary")
+        raise PipelineError.retryable("the page reading has an empty summary")
     if not details:
-        raise PipelineError.retryable("the page documents has empty details")
+        raise PipelineError.retryable("the page reading has empty details")
     return summary, details
 
 """Organizing every document's pages into the sections they actually form."""

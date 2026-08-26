@@ -544,7 +544,7 @@ class _ChapterSchema(BaseModel):
 
 
 class _OutlineSchema(BaseModel):
-    """The element an plan call is expected to answer with."""
+    """The element a plan call is expected to answer with."""
 
     title: RequiredText = Field(alias="Title")
     description: RequiredText = Field(alias="Description")
@@ -590,7 +590,6 @@ async def plan_lesson_outline(
         {
             "language": state["output_language"],
             "metadata": {
-                "language": state["output_language"],
                 "document_count": len(documents),
                 "lesson_start_seconds": round(start_seconds, 1),
                 "lesson_end_seconds": round(end_seconds, 1),
@@ -720,7 +719,7 @@ def _read_plan(
     transcript_end_seconds: float,
     policy: GraphRuntime,
 ) -> LessonPlan:
-    """Reads the answer into an plan, held to the transcript that exists."""
+    """Read the answer into a plan, held to the transcript that exists."""
     parsed = parse_xml_with_schema(content=answer_text, root_tag=_PLAN_ROOT_TAG, schema=_OutlineSchema)
     if not parsed.chapters:
         raise PipelineError.retryable("the plan declares no chapters")
@@ -801,7 +800,7 @@ def _check_request_size(
     if character_count <= policy.maximum_plan_request_characters:
         return
     raise PipelineError.terminal(
-        "the transcript is too long to draft an plan from in one request",
+        "the transcript is too long to draft a plan from in one request",
         {
             "request_character_count": character_count,
             "maximum_request_characters": policy.maximum_plan_request_characters,
