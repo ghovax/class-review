@@ -608,7 +608,7 @@ async def plan_lesson_outline(
     stream_writer = get_stream_writer()
     stream_writer(StageChanged(stage=PipelineStage.PLANNING_LESSON))
 
-    prompts = runtime.context.inputs.prompts
+    prompts = runtime.context.prompts
     start_seconds = min(segment.start_seconds for segment in segments)
     end_seconds = max(segment.end_seconds for segment in segments)
     duration_seconds = max(0.0, end_seconds - start_seconds)
@@ -961,7 +961,7 @@ async def write_lesson_chapter(
         context_end_seconds=context.end_seconds,
     )
 
-    prompts = runtime.context.inputs.prompts
+    prompts = runtime.context.prompts
     request = prompts.render(
         _CHAPTER_USER_TEMPLATE,
         {
@@ -1259,7 +1259,7 @@ async def build_lesson_glossary(
         logger.info("no chapters to distil a glossary from")
         return {"glossary": []}
 
-    prompts = runtime.context.inputs.prompts
+    prompts = runtime.context.prompts
     answer = await call_chat_model(
         runtime.context.models.text,
         [

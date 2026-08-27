@@ -70,18 +70,18 @@ def route_after_chapter_writing(
     return "build_lesson_glossary"
 
 
-def route_document_sources(state: LessonState) -> list[Send] | str:
-    """Send each source to the caller's document reader or continue with none."""
+def route_documents(state: LessonState) -> list[Send] | str:
+    """Send each document to the decoder or continue with none."""
 
-    sources = state.get("sources", [])
-    if not sources:
+    document_sources = state.get("document_sources", [])
+    if not document_sources:
         return "assemble_documents_from_pages"
     return [
         Send(
             "load_document_pages",
-            DocumentReadRequest(document_index=index, source=source),
+            DocumentReadRequest(document_index=index, source=document_source),
         )
-        for index, source in enumerate(sources)
+        for index, document_source in enumerate(document_sources)
     ]
 
 
@@ -152,7 +152,7 @@ def define_graph(
 
     graph.add_edge(START, "extract_transcript_terminology")
     graph.add_conditional_edges(
-        START, route_document_sources, ["load_document_pages", "assemble_documents_from_pages"]
+        START, route_documents, ["load_document_pages", "assemble_documents_from_pages"]
     )
     graph.add_conditional_edges(
         "extract_transcript_terminology", route_transcript_corrections, ["correct_transcript"]
