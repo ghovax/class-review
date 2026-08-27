@@ -12,27 +12,36 @@ Before starting, ask for:
 - desired lesson language;
 - optional PDF sources;
 - final output location and format;
-- durable SQLite checkpoint location and stable run ID;
-- model provider, model, reasoning effort, and explicit credentials/configuration
-  source.
+- an optional persistent SQLite checkpoint location for durable resume;
+- model identifiers, reasoning effort, and the credential source.
 
-Do not proceed without the output and checkpoint destinations. A run usually takes 15–20
-minutes, and an unsaved `LessonResult` disappears with its process.
+The checkpoint is optional for an in-memory run. An unsaved `LessonResult` disappears
+with the process.
 
 Construct `Transcript` from the caller's timestamped data. Provide supplementary
 documents as `DocumentSource(content=file_bytes, file_name=...)`; the bytes may come
-from local storage, a web client, or object storage. Supply a `DocumentReader` only when
-documents are present. Audio transcription, file retrieval, and persistence remain
-application responsibilities.
+from local storage, a web client, or object storage. Teacher decodes supplied PDF bytes
+internally. Audio transcription and file retrieval remain application responsibilities.
 
-Configure models through the independent `models-provider` package. Use
-`ModelConfiguration` with a provider and model, then pass any `ModelProvider`
-implementation to `GraphModels`. Credentials and provider-specific transport belong to
-that implementation; Teacher does not read environment variables or select a provider.
+Create ready-to-use models through the independent `models-provider` package, then
+assign them with `ModelSelection`. Use one text model and add a vision model only when
+page interpretation needs a different model. Credentials and provider-specific transport
+stay inside Models Provider.
 
-Build a small Python script around `GraphConfiguration` and `LessonGraph`. Supply
-`page_language_model` only with PDFs. Call `LessonGraph.generate` with the transcript,
-output language, stable run ID, and optional `DocumentSource` values.
+Build a small Python script around `LessonGraph`:
+
+```python
+from models_provider import Models
+from teacher import LessonGraph, ModelSelection
+
+models = Models()
+graph = LessonGraph(
+    models=ModelSelection(text=models.chat("openai/gpt-4.1-mini")),
+)
+```
+
+Call `LessonGraph.generate` with the transcript, output language, and optional
+`DocumentSource` values. The graph creates a run identifier when one is not supplied.
 
 Always launch the script detached:
 
@@ -41,13 +50,13 @@ nohup uv run python run_lesson.py >lesson.log 2>&1 </dev/null &
 echo $! >lesson.pid
 ```
 
-Return the PID, log path, checkpoint path, run ID, and expected output path immediately.
-Monitor with `tail lesson.log` and `ps -p "$(cat lesson.pid)"`; never hold an agent
-command open for the full run.
+Return the PID, log path, checkpoint path, and expected output path immediately. Monitor
+with `tail lesson.log` and `ps -p "$(cat lesson.pid)"`; never hold an agent command open
+for the full run.
 
-After an interruption, reconstruct the same `GraphConfiguration` and call
-`LessonGraph.resume(run_id)` with the same checkpoint and run ID. Use a new ID only when
-the user wants a fresh result.
+After an interruption, reconstruct the same graph with the same persistent checkpoint
+location and call `LessonGraph.resume(run_id)`. Use a new identifier only when the user
+wants a fresh result.
 
 Save the typed `LessonResult` before exit. Use `render_export_markdown` or
 `export_to_bytes(..., format="markdown")` for Markdown and
