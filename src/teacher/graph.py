@@ -137,7 +137,7 @@ def define_graph(
         load_document_pages,
         input_schema=DocumentReadRequest,
         retry_policy=retry,
-        destinations=("extract_document_page", "assemble_documents_from_pages"),
+        destinations=("extract_document_page",),
     )
     graph.add_node(
         "extract_document_page", extract_document_page, input_schema=DocumentPageReadRequest

@@ -10,3 +10,4 @@ __pycache__/
 dist/
 build/
 temporary-tests
+.langgraph_api/
