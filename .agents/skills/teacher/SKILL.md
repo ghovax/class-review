@@ -96,7 +96,7 @@ def read_transcript(path: Path) -> Transcript:
 
 async def main() -> None:
     graph = LessonGraph(
-        models=ModelSelection(text=Models().chat("openai/gpt-4.1-mini")),
+        models=ModelSelection(text=Models.from_environment().chat("openai/gpt-4.1-mini")),
         checkpoint_path=Path("/tmp/lecture.lesson.sqlite"),
     )
     async with graph:

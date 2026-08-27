@@ -59,7 +59,7 @@ async def main() -> None:
 
     # For Google Drive, replace local_pdf with load_google_drive_pdf(drive, ...).
     documents = (local_pdf,)
-    models = Models()
+    models = Models.from_environment()
     graph = LessonGraph(
         models=ModelSelection(text=models.chat("openai/gpt-4.1-mini")),
         checkpoint_path=Path("/tmp/calculus.lesson.sqlite"),
