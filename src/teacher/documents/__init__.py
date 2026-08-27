@@ -112,11 +112,9 @@ async def load_document_pages(
     """Load one document and send each rendered page for extraction."""
 
     item = state
-    if runtime.context.models.page is None:
-        raise PipelineError.terminal("page_model is required when documents are supplied")
-    if runtime.context.inputs.document_reader is None:
-        raise PipelineError.terminal("document_reader is required when documents are supplied")
-    imported = await runtime.context.inputs.document_reader.read(
+    if runtime.context.document_decoder is None:
+        raise PipelineError.terminal("document_decoder is required when documents are supplied")
+    imported = await runtime.context.document_decoder.read(
         item.source, document_index=item.document_index
     )
     if not imported.pages:
@@ -157,10 +155,8 @@ async def extract_document_page(
 ) -> dict[str, object]:
     """Reads one page, leaving its content empty when all attempts fail."""
     page = state
-    page_model = runtime.context.models.page
-    if page_model is None:
-        raise PipelineError.terminal("page_model is required when documents are supplied")
-    prompts = runtime.context.inputs.prompts
+    page_model = runtime.context.models.vision or runtime.context.models.text
+    prompts = runtime.context.prompts
     system_prompt = prompts.render(
         _PAGE_SYSTEM_TEMPLATE,
         {
@@ -354,7 +350,7 @@ async def map_document_sections(
     state: LessonState, runtime: Runtime[GraphRuntime]
 ) -> dict[str, object]:
     """Divides every document into sections."""
-    prompts = runtime.context.inputs.prompts
+    prompts = runtime.context.prompts
     documents = state.get("documents", [])
     if not documents:
         logger.info("no documents to segment")
@@ -470,7 +466,7 @@ async def explain_document_sections(
         logger.info("no sections to explain")
         return {"section_notes": []}
 
-    prompts = runtime.context.inputs.prompts
+    prompts = runtime.context.prompts
     system_prompt = prompts.render(
         _NOTES_SYSTEM_TEMPLATE,
         {
@@ -541,13 +537,13 @@ async def _explain_one(
     runtime: Runtime[GraphRuntime],
 ) -> tuple[SectionNotes, dict[str, ModelUsage]]:
     """Narrates one section."""
-    pages_markdown = render_section_pages(document, section, runtime.context.inputs.prompts)
+    pages_markdown = render_section_pages(document, section, runtime.context.prompts)
     answer = await call_chat_model(
         runtime.context.models.text,
         [
             SystemMessage(system_prompt),
             HumanMessage(
-                runtime.context.inputs.prompts.render(
+                runtime.context.prompts.render(
                     _NOTES_USER_TEMPLATE,
                     {
                         "section": {

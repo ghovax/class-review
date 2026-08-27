@@ -1,48 +1,31 @@
-"""Consolidated Teacher implementation."""
+"""Small runtime values shared by Teacher's graph nodes."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from langchain_core.language_models import BaseChatModel
-from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
-from models_provider import ModelConfiguration, ModelProvider
-from pathlib import Path
-from teacher.models import DocumentReader
-from teacher.prompts import Prompts
 from typing import Final
 
-"""Graph configuration, resolved runtime values, and checkpoint serialization."""
+from langchain_core.language_models import BaseChatModel
+from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 
-"""Configuration for one lesson graph."""
-
-
-@dataclass(frozen=True, slots=True)
-class GraphModels:
-    """Models and provider used by the graph."""
-
-    language: ModelConfiguration
-    provider: ModelProvider
-    page: ModelConfiguration | None = None
+from teacher.models import DocumentDecoder
+from teacher.prompts import Prompts
 
 
 @dataclass(frozen=True, slots=True)
-class GraphInputs:
-    """Caller-supplied readers and model-facing prompt resources."""
+class ModelSelection:
+    """The models assigned to Teacher's two content modalities."""
 
-    document_reader: DocumentReader | None = None
-    prompts: Prompts = field(default_factory=Prompts)
+    text: BaseChatModel
+    vision: BaseChatModel | None = None
 
-
-@dataclass(frozen=True, slots=True)
-class GraphStorage:
-    """Persistent storage used by one graph instance."""
-
-    checkpoint_path: Path
-
+    def __post_init__(self) -> None:
+        if self.text is None:
+            raise ValueError("text model is required")
 
 @dataclass(frozen=True, slots=True)
 class RetryPolicy:
-    """Retry limits for ordinary and document-page model calls."""
+    """Retry limits for model calls."""
 
     model_attempts: int = 3
     page_attempts: int = 3
@@ -77,58 +60,16 @@ class ExecutionPolicy:
 
 
 @dataclass(frozen=True, slots=True)
-class ResolvedModels:
-    """Provider-created models passed between graph nodes."""
+class GraphRuntime:
+    """Resolved values passed to graph nodes."""
 
-    text: BaseChatModel
-    page: BaseChatModel | None
-
-
-@dataclass(frozen=True, slots=True)
-class GraphConfiguration:
-    """Structured models, inputs, storage, policies, and execution limits."""
-
-    models: GraphModels
-    storage: GraphStorage
-    inputs: GraphInputs = field(default_factory=GraphInputs)
+    models: ModelSelection
+    prompts: Prompts = field(default_factory=Prompts)
+    document_decoder: DocumentDecoder | None = None
     retries: RetryPolicy = field(default_factory=RetryPolicy)
     transcript: TranscriptPolicy = field(default_factory=TranscriptPolicy)
     lesson: LessonPolicy = field(default_factory=LessonPolicy)
     execution: ExecutionPolicy = field(default_factory=ExecutionPolicy)
-
-    def runtime(self) -> GraphRuntime:
-        """Resolve provider models and immutable settings for one run."""
-
-        return GraphRuntime(
-            models=ResolvedModels(
-                text=self.models.provider.create(self.models.language),
-                page=(
-                    self.models.provider.create(self.models.page)
-                    if self.models.page is not None
-                    else None
-                ),
-            ),
-            inputs=self.inputs,
-            retries=self.retries,
-            transcript=self.transcript,
-            lesson=self.lesson,
-            execution=self.execution,
-        )
-
-
-@dataclass(frozen=True, slots=True)
-class GraphRuntime:
-    """Resolved models and grouped policies passed between graph nodes."""
-
-    models: ResolvedModels
-    inputs: GraphInputs
-    retries: RetryPolicy
-    transcript: TranscriptPolicy
-    lesson: LessonPolicy
-    execution: ExecutionPolicy
-
-
-"""Checkpoint serialization for teacher's persisted values."""
 
 
 PERSISTED_TYPES: Final[tuple[tuple[str, str], ...]] = (
@@ -167,6 +108,17 @@ PERSISTED_TYPES: Final[tuple[tuple[str, str], ...]] = (
 
 
 def build_serializer() -> JsonPlusSerializer:
-    """Build a serializer that restores every persisted teacher type."""
+    """Build a serializer that restores every persisted Teacher type."""
 
     return JsonPlusSerializer(allowed_msgpack_modules=list(PERSISTED_TYPES))
+
+
+__all__ = [
+    "ExecutionPolicy",
+    "GraphRuntime",
+    "LessonPolicy",
+    "ModelSelection",
+    "RetryPolicy",
+    "TranscriptPolicy",
+    "build_serializer",
+]
