@@ -31,7 +31,7 @@
 #let accent-blue = rgb("21496E")
 #let accent-tint = rgb("CBD8E8")
 
-// Headings in the accent blue. Chapter (level 1) headings sit above a thin
+// Headings in the accent blue. Chapter headings sit above a thin
 // blue hairline, giving each chapter a clean divider; deeper levels are
 // coloured but unruled so the hierarchy reads through colour, weight and a
 // touch of size.
@@ -230,8 +230,8 @@ $endfor$)
 
 $endif$
 $if(toc)$
-// Table of contents: chapter (level 1) entries bold with breathing room
-// above each entry; concept (level 2) entries lighter, muted and smaller;
+// Table of contents: chapter entries bold with breathing room
+// above each entry; concept entries lighter, muted and smaller;
 // a subtle light-grey dotted leader replaces the dense default so the
 // columns read as a calm two-column list rather than a wall of dots.
 #show outline.entry.where(level: 1): it => {

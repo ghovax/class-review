@@ -15,7 +15,7 @@ comparisons. Keep the chapter readable and do not add unsupported claims.
 
 {{ mathematics_notation_rules }}
 
-Return Markdown with an optional level-one title followed by the chapter body. A source
+Return Markdown with an optional top-level title followed by the chapter body. A source
 citation is an inline XML block in this exact shape, placed after the sentence it
 supports:
 

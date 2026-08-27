@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from langchain_core.callbacks import get_usage_metadata_callback
 from langchain_core.language_models import BaseChatModel
@@ -206,13 +206,8 @@ def _read_usage(usage_metadata: Any) -> dict[str, ModelUsage]:  # noqa: ANN401
     """Converts collected usage metadata into the channel's shape."""
     converted: dict[str, ModelUsage] = {}
     for model_name, counts in (usage_metadata or {}).items():
-        input_details = counts.get("input_token_details") or {}
-        converted[str(model_name)] = ModelUsage(
-            input_tokens=int(counts.get("input_tokens", 0)),
-            output_tokens=int(counts.get("output_tokens", 0)),
-            total_tokens=int(counts.get("total_tokens", 0)),
-            cache_read_tokens=int(input_details.get("cache_read", 0)),
-            cache_write_tokens=int(input_details.get("cache_creation", 0)),
+        converted[str(model_name)] = ModelUsage.from_mapping(
+            counts if isinstance(counts, Mapping) else {}
         )
     return converted
 
