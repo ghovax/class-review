@@ -101,3 +101,9 @@ pdf_bytes = export_to_bytes(lesson, format=ExportFormat.PDF)
 
 XML is used only at the model boundary. Teacher parses it immediately into typed values
 and does not store raw XML in graph state.
+
+## Visual graph
+
+Run `uv run --with "langgraph-cli[inmem]" langgraph dev --no-browser` from the
+repository root. The command starts a local in-memory server and prints the LangGraph
+Studio URL.

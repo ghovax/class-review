@@ -26,6 +26,17 @@ async def assemble_documents_from_pages(
     page_readings = state.get("page_readings", [])
 
     chosen = _select_page_readings(page_readings)
+    incomplete = sorted(
+        (document_index, page_number)
+        for (document_index, page_number), reading in chosen.items()
+        if reading.summary is None or reading.details is None
+    )
+    if incomplete:
+        raise PipelineError.terminal(
+            "document assembly received an unreadable page",
+            {"pages": incomplete},
+        )
+
     known_indices = {document.document_index for document in documents}
     orphaned = sorted({document_index for document_index, _ in chosen} - known_indices)
     if orphaned:
@@ -46,11 +57,6 @@ async def assemble_documents_from_pages(
             ),
             key=lambda reading: reading.page_number,
         )
-        unreadable_count = sum(
-            1
-            for reading in pages_for_document
-            if reading.summary is None or reading.details is None
-        )
         assembled.append(
             Document(
                 document_index=document.document_index,
@@ -70,14 +76,14 @@ async def assemble_documents_from_pages(
             document_index=document.document_index,
             file_name=document.file_name,
             page_count=len(pages_for_document),
-            unreadable_page_count=unreadable_count,
+            unreadable_page_count=0,
         )
         stream_writer(
             DocumentRead(
                 document_index=document.document_index,
                 file_name=document.file_name,
                 page_count=len(pages_for_document),
-                unreadable_page_count=unreadable_count,
+                unreadable_page_count=0,
             )
         )
 
