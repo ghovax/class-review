@@ -104,7 +104,13 @@ async def load_document_pages(
     item = state
     imported = await _decode_document(item.source, document_index=item.document_index)
     if not imported.pages:
-        return Command(update={}, goto=["assemble_documents_from_pages"])
+        raise PipelineError.terminal(
+            "document contains no readable pages",
+            {
+                "document_index": imported.document_index,
+                "file_name": imported.file_name,
+            },
+        )
     shell = Document(
         document_index=imported.document_index,
         file_name=imported.file_name,
@@ -139,7 +145,7 @@ _PAGE_USER_TEMPLATE = "documents/extract_document_page/user"
 async def extract_document_page(
     state: DocumentPageReadRequest, runtime: Runtime[GraphRuntime]
 ) -> dict[str, object]:
-    """Reads one page, leaving its content empty when all attempts fail."""
+    """Read one page or abort the graph when the page cannot be read."""
     page = state
     page_model = runtime.context.models.vision or runtime.context.models.text
     prompts = runtime.context.prompts
@@ -193,15 +199,16 @@ async def extract_document_page(
         except PipelineError as error:
             accumulated_usage = _combine(accumulated_usage, getattr(error, "usage_by_model", {}))
             if not classify_retryable(error) or attempt_number == maximum_attempts:
-                logger.warning(
-                    "page could not be read, recording an empty page reading",
-                    document_index=page.document_index,
-                    page_number=page.page_number,
-                    attempt_number=attempt_number,
-                    error_message=str(error),
-                    error_metadata=error.metadata,
-                )
-                return _page_reading_update(page, accumulated_usage)
+                raise PipelineError.terminal(
+                    "document page could not be read",
+                    {
+                        "document_index": page.document_index,
+                        "page_number": page.page_number,
+                        "attempt_number": attempt_number,
+                        "error_metadata": error.metadata,
+                    },
+                    cause=error,
+                ) from error
             logger.info(
                 "page reading attempt failed, trying again",
                 document_index=page.document_index,
@@ -231,25 +238,14 @@ async def extract_document_page(
             "usage_by_model": accumulated_usage,
         }
 
-    return _page_reading_update(page, accumulated_usage)
-
-
-def _page_reading_update(
-    page: DocumentPageReadRequest,
-    usage: dict[str, ModelUsage],
-) -> dict[str, object]:
-    """Build the empty reading recorded when a page could not be read."""
-    return {
-        "page_readings": [
-            DocumentPageReading(
-                document_index=page.document_index,
-                page_number=page.page_number,
-                summary=None,
-                details=None,
-            )
-        ],
-        "usage_by_model": usage,
-    }
+    raise PipelineError.terminal(
+        "document page could not be read",
+        {
+            "document_index": page.document_index,
+            "page_number": page.page_number,
+            "attempt_number": maximum_attempts,
+        },
+    )
 
 
 def _combine(accumulated: dict[str, ModelUsage], incoming: Any) -> dict[str, ModelUsage]:
