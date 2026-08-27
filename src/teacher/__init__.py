@@ -9,8 +9,6 @@ from teacher.configuration import (
     TranscriptPolicy,
 )
 from teacher.models import (
-    DocumentPages,
-    DocumentDecoder,
     DocumentSource,
     Recording,
     Terminology,
@@ -35,8 +33,6 @@ __all__ = [
     "LessonPolicy",
     "ExecutionPolicy",
     "DocumentSource",
-    "DocumentPages",
-    "DocumentDecoder",
     "Terminology",
     "TerminologyHeard",
     "TerminologyTerm",

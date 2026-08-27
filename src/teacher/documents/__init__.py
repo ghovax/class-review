@@ -21,17 +21,49 @@ from teacher.models import (
     SectionNotes,
     DocumentRead,
     DocumentPage,
+    DocumentPages,
+    RenderedPage,
 )
 from teacher.state import DocumentPageReading, LessonState
 from teacher.support import PipelineError, classify_retryable, get_logger, call_chat_model
 from teacher.xml import OneOrMany, RequiredText, parse_xml_with_schema
 from typing import Any
 import asyncio
+import base64
 import re
 
 """Document graph nodes: page reading, section mapping, notes, and assembly."""
 
 """Loading source documents and routing their pages."""
+
+
+async def _decode_document(source: DocumentSource, *, document_index: int) -> DocumentPages:
+    """Render PDF bytes into page images for the graph's document nodes."""
+    try:
+        return await asyncio.to_thread(_render_pdf, source, document_index)
+    except Exception as error:  # noqa: BLE001
+        raise PipelineError.terminal(
+            f"could not decode document {source.file_name or document_index}", cause=error
+        ) from error
+
+
+def _render_pdf(source: DocumentSource, document_index: int) -> DocumentPages:
+    import pymupdf
+
+    file_name = source.file_name or f"document-{document_index + 1}.pdf"
+    with pymupdf.open(stream=source.content, filetype="pdf") as pdf_document:
+        pages = []
+        for page_number in range(1, len(pdf_document) + 1):
+            pdf_page = pdf_document.load_page(page_number - 1)
+            pixmap = pdf_page.get_pixmap(matrix=pymupdf.Matrix(1.5, 1.5), alpha=False)
+            encoded = base64.b64encode(pixmap.tobytes("png")).decode("ascii")
+            pages.append(
+                RenderedPage(
+                    page_number=page_number,
+                    image_data_url=f"data:image/png;base64,{encoded}",
+                )
+            )
+    return DocumentPages(document_index=document_index, file_name=file_name, pages=tuple(pages))
 
 
 def render_document_summaries(documents: Sequence[Document], prompts: Prompts) -> str:
@@ -112,11 +144,7 @@ async def load_document_pages(
     """Load one document and send each rendered page for extraction."""
 
     item = state
-    if runtime.context.document_decoder is None:
-        raise PipelineError.terminal("document_decoder is required when documents are supplied")
-    imported = await runtime.context.document_decoder.read(
-        item.source, document_index=item.document_index
-    )
+    imported = await _decode_document(item.source, document_index=item.document_index)
     if not imported.pages:
         return Command(update={}, goto=["assemble_documents_from_pages"])
     shell = Document(

@@ -23,7 +23,7 @@ from teacher.configuration import (
     build_serializer,
 )
 from teacher.graph import define_graph
-from teacher.models import DocumentDecoder, DocumentSource, Lesson, Transcript
+from teacher.models import DocumentSource, Lesson, Transcript
 from teacher.prompts import Prompts
 
 
@@ -44,7 +44,6 @@ class LessonGraph:
         models: ModelSelection,
         *,
         checkpoint_path: Path | None = None,
-        document_decoder: DocumentDecoder | None = None,
         prompts: Prompts | None = None,
         retries: RetryPolicy | None = None,
         transcript_policy: TranscriptPolicy | None = None,
@@ -54,7 +53,6 @@ class LessonGraph:
         self._runtime = GraphRuntime(
             models=models,
             prompts=prompts or Prompts(),
-            document_decoder=document_decoder,
             retries=retries or RetryPolicy(),
             transcript=transcript_policy or TranscriptPolicy(),
             lesson=lesson_policy or LessonPolicy(),

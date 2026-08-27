@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
-from typing import Any, Protocol, runtime_checkable
+from typing import Any
 import dataclasses
 
 """Domain values, graph input/output contracts, and emitted events."""
@@ -356,13 +356,6 @@ class DocumentPages:
     document_index: int
     file_name: str
     pages: tuple[RenderedPage, ...]
-
-
-@runtime_checkable
-class DocumentDecoder(Protocol):
-    """Turns document bytes into page images."""
-
-    async def read(self, source: DocumentSource, *, document_index: int) -> DocumentPages: ...
 
 
 """Progress events the graphs emit as they run."""

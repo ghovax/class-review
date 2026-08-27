@@ -8,7 +8,6 @@ from typing import Final
 from langchain_core.language_models import BaseChatModel
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 
-from teacher.models import DocumentDecoder
 from teacher.prompts import Prompts
 
 
@@ -65,7 +64,6 @@ class GraphRuntime:
 
     models: ModelSelection
     prompts: Prompts = field(default_factory=Prompts)
-    document_decoder: DocumentDecoder | None = None
     retries: RetryPolicy = field(default_factory=RetryPolicy)
     transcript: TranscriptPolicy = field(default_factory=TranscriptPolicy)
     lesson: LessonPolicy = field(default_factory=LessonPolicy)

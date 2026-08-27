@@ -12,7 +12,6 @@ models = Models()
 
 graph = LessonGraph(
     models=ModelSelection(text=models.chat("openai/gpt-4.1-mini")),
-    document_decoder=document_decoder,
 )
 
 source = DocumentSource.from_path("/tmp/calculus-lecture.pdf")
@@ -56,7 +55,7 @@ DocumentSource(
 )
 ```
 
-`DocumentSource.from_path(...)` is a convenience that reads bytes once. A web client or object-storage client can provide the same bytes directly. The optional `DocumentDecoder` is the advanced boundary for converting those bytes into rendered pages; the graph does not care where the bytes came from.
+`DocumentSource.from_path(...)` is a convenience that reads bytes once. A web client or object-storage client can provide the same bytes directly. Teacher renders PDF bytes internally, so the graph does not care where they came from.
 
 ## Output contract
 
