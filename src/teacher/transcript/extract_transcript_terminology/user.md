@@ -1,7 +1,7 @@
 # Transcript
 
-| Field | Value |
-| --- | --- |
+| Field    | Value          |
+| -------- | -------------- |
 | Language | {{ language }} |
 
 Extract the terminology used in the transcript. Return only:

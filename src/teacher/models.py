@@ -168,6 +168,11 @@ class Transcript:
             raise ValueError("transcript must contain at least one segment")
         if not self.languages or any(not language.strip() for language in self.languages):
             raise ValueError("transcript must contain at least one language")
+        for previous_segment, current_segment in zip(
+            self.segments, self.segments[1:], strict=True
+        ):
+            if current_segment.start_seconds < previous_segment.start_seconds:
+                raise ValueError("transcript segments must be ordered by start timestamp")
 
 
 @dataclass(frozen=True, slots=True)
