@@ -5,27 +5,85 @@ lesson through a resumable graph. It cleans the transcript, extracts document ma
 plans chapters, writes the lesson, builds a glossary, and provides Markdown or PDF
 bytes.
 
-## Public flow
+## Invocation
+
+Transcribe audio separately and save the timestamped result before invoking Teacher.
+That saved transcript can be reused for every later lesson generation.
 
 ```python
+from __future__ import annotations
+
+import asyncio
+import json
+from pathlib import Path
+
 from models_provider import Models
-from teacher import DocumentSource, LessonGraph, ModelSelection
-
-models = Models()
-
-graph = LessonGraph(
-    models=ModelSelection(text=models.chat("openai/gpt-4.1-mini")),
+from teacher import (
+    DocumentSource,
+    ExportFormat,
+    LessonGraph,
+    ModelSelection,
+    Transcript,
+    TranscriptSegment,
+    export_to_bytes,
 )
 
-source = DocumentSource.from_path("/tmp/calculus-lecture.pdf")
 
-async with graph:
-    result = await graph.generate(
-        transcript=transcript,
-        documents=(source,),
-        output_language="en",
+def load_transcript(path: Path) -> Transcript:
+    """Load the timestamped transcript saved by the transcription application."""
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return Transcript(
+        segments=tuple(
+            TranscriptSegment(
+                start_seconds=segment["start_seconds"],
+                end_seconds=segment["end_seconds"],
+                content=segment["content"],
+            )
+            for segment in data["segments"]
+        ),
+        languages=tuple(data["languages"]),
     )
+
+
+def load_google_drive_pdf(drive_service, file_id: str, file_name: str) -> DocumentSource:
+    """Read PDF bytes through an already-authenticated Google Drive client."""
+    file_bytes = drive_service.files().get_media(fileId=file_id).execute()
+    if not isinstance(file_bytes, bytes):
+        raise TypeError("Google Drive did not return file bytes")
+    return DocumentSource(content=file_bytes, file_name=file_name)
+
+
+async def main() -> None:
+    transcript = load_transcript(Path("/tmp/calculus.transcript.json"))
+    local_pdf = DocumentSource.from_path("/tmp/calculus-notes.pdf")
+
+    # For Google Drive, replace local_pdf with load_google_drive_pdf(drive, ...).
+    documents = (local_pdf,)
+    models = Models()
+    graph = LessonGraph(
+        models=ModelSelection(text=models.chat("openai/gpt-4.1-mini")),
+        checkpoint_path=Path("/tmp/calculus.lesson.sqlite"),
+    )
+
+    async with graph:
+        result = await graph.generate(
+            transcript=transcript,
+            documents=documents,
+            output_language="en",
+            run_id="calculus-lecture",
+        )
+
+    Path("/tmp/calculus.lesson.md").write_bytes(
+        export_to_bytes(result.lesson, format=ExportFormat.MARKDOWN)
+    )
+
+
+asyncio.run(main())
 ```
+
+The application owns the Google Drive client and authentication; Teacher receives only
+the resulting bytes. The SQLite checkpoint and the Markdown output are explicit files,
+so a later process can resume or reuse the generated result.
 
 `models` is a ready-to-use model selection. The text model handles transcript and lesson
 writing. An optional vision model handles rendered document pages; when omitted, the
@@ -61,9 +119,9 @@ DocumentSource(
 )
 ```
 
-`DocumentSource.from_path(...)` is a convenience that reads bytes once. A web client or
-object-storage client can provide the same bytes directly. Teacher renders PDF bytes
-internally, so the graph does not care where they came from.
+`DocumentSource.from_path(...)` is a convenience that reads bytes once. A web client,
+Google Drive client, or object-storage client can provide the same bytes directly.
+Teacher renders PDF bytes internally, so the graph does not care where they came from.
 
 ## Output contract
 
