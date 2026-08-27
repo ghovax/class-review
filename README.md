@@ -45,19 +45,11 @@ def load_transcript(path: Path) -> Transcript:
     )
 
 
-def load_google_drive_pdf(drive_service, file_id: str, file_name: str) -> DocumentSource:
-    """Read PDF bytes through an already-authenticated Google Drive client."""
-    file_bytes = drive_service.files().get_media(fileId=file_id).execute()
-    if not isinstance(file_bytes, bytes):
-        raise TypeError("Google Drive did not return file bytes")
-    return DocumentSource(content=file_bytes, file_name=file_name)
-
-
 async def main() -> None:
     transcript = load_transcript(Path("/tmp/calculus.transcript.json"))
     local_pdf = DocumentSource.from_path("/tmp/calculus-notes.pdf")
 
-    # For Google Drive, replace local_pdf with load_google_drive_pdf(drive, ...).
+    # Documents can come from any source; Teacher receives their bytes.
     documents = (local_pdf,)
     models = Models.from_environment()
     graph = LessonGraph(
@@ -81,9 +73,9 @@ async def main() -> None:
 asyncio.run(main())
 ```
 
-The application owns the Google Drive client and authentication; Teacher receives only
-the resulting bytes. The SQLite checkpoint and the Markdown output are explicit files,
-so a later process can resume or reuse the generated result.
+The application owns source clients and authentication; Teacher receives only the
+resulting bytes. The SQLite checkpoint and the Markdown output are explicit files, so a
+later process can resume or reuse the generated result.
 
 Load model environment variables in the host before calling `Models.from_environment()`;
 neither Teacher nor Models Provider parses `.env` files.
