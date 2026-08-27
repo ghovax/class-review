@@ -84,7 +84,7 @@ class LessonInput(TypedDict):
     """Material and output language supplied for a run."""
 
     transcript: Transcript
-    sources: list[DocumentSource]
+    document_sources: list[DocumentSource]
     output_language: str
 
 

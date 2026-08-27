@@ -1,20 +1,30 @@
-"""Black-box execution with durable SQLite checkpoints."""
+"""The small public execution API for Teacher."""
 
 from __future__ import annotations
 
 from collections.abc import Sequence
-from contextlib import AbstractContextManager
 from dataclasses import dataclass
-from models_provider import ModelUsage
+from pathlib import Path
+from uuid import uuid4
 from typing import Any
 
 import aiosqlite
+from langgraph.checkpoint.memory import MemorySaver
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 
-from teacher.configuration import GraphConfiguration, GraphRuntime
+from models_provider import ModelUsage
+from teacher.configuration import (
+    ExecutionPolicy,
+    GraphRuntime,
+    LessonPolicy,
+    ModelSelection,
+    RetryPolicy,
+    TranscriptPolicy,
+    build_serializer,
+)
 from teacher.graph import define_graph
 from teacher.models import DocumentSource, Lesson, Transcript
-from teacher.configuration import build_serializer
+from teacher.prompts import Prompts
 
 
 @dataclass(frozen=True, slots=True)
@@ -27,19 +37,41 @@ class LessonResult:
 
 
 class LessonGraph:
-    """Generates and resumes lessons through the complete graph."""
+    """Generate lessons from transcript and document material."""
 
-    def __init__(self, configuration: GraphConfiguration) -> None:
-        self.configuration = configuration
+    def __init__(
+        self,
+        models: ModelSelection,
+        *,
+        checkpoint_path: Path | None = None,
+        prompts: Prompts | None = None,
+        retries: RetryPolicy | None = None,
+        transcript_policy: TranscriptPolicy | None = None,
+        lesson_policy: LessonPolicy | None = None,
+        execution: ExecutionPolicy | None = None,
+    ) -> None:
+        self._runtime = GraphRuntime(
+            models=models,
+            prompts=prompts or Prompts(),
+            retries=retries or RetryPolicy(),
+            transcript=transcript_policy or TranscriptPolicy(),
+            lesson=lesson_policy or LessonPolicy(),
+            execution=execution or ExecutionPolicy(),
+        )
+        self._checkpoint_path = checkpoint_path
         self._connection: aiosqlite.Connection | None = None
         self._graph: Any = None
 
-    async def __aenter__(self) -> LessonGraph:
-        checkpoint_path = self.configuration.storage.checkpoint_path
-        checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
-        self._connection = await aiosqlite.connect(str(checkpoint_path))
+    async def __aenter__(self) -> "LessonGraph":
+        if self._checkpoint_path is None:
+            self._graph = define_graph(retry_policy=self._runtime.retries).compile(
+                checkpointer=MemorySaver()
+            )
+            return self
+        self._checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
+        self._connection = await aiosqlite.connect(str(self._checkpoint_path))
         checkpointer = AsyncSqliteSaver(self._connection, serde=build_serializer())
-        self._graph = define_graph(retry_policy=self.configuration.retries).compile(
+        self._graph = define_graph(retry_policy=self._runtime.retries).compile(
             checkpointer=checkpointer
         )
         return self
@@ -56,47 +88,40 @@ class LessonGraph:
         *,
         transcript: Transcript,
         output_language: str,
-        run_id: str,
-        sources: Sequence[DocumentSource] = (),
+        documents: Sequence[DocumentSource] = (),
+        run_id: str | None = None,
     ) -> LessonResult:
-        """Start a checkpointed lesson generation."""
-
-        self._validate(transcript, output_language, run_id)
+        """Generate a lesson, creating a run identity when one is not supplied."""
+        selected_run_id = (run_id or uuid4().hex).strip()
+        self._validate(transcript, output_language, selected_run_id)
         return await self._invoke(
             {
                 "transcript": transcript,
-                "sources": list(sources),
+                "document_sources": list(documents),
                 "output_language": output_language.strip(),
             },
-            run_id.strip(),
+            selected_run_id,
         )
 
     async def resume(self, run_id: str) -> LessonResult:
         """Continue an interrupted generation from its latest checkpoint."""
-
-        return await self._invoke(None, run_id)
+        selected_run_id = run_id.strip()
+        if not selected_run_id:
+            raise ValueError("run_id cannot be empty")
+        return await self._invoke(None, selected_run_id)
 
     async def _invoke(self, value: dict[str, object] | None, run_id: str) -> LessonResult:
-        runtime = self.configuration.runtime()
-        with self._provider_scope():
-            result = await self._require_graph().ainvoke(
-                value,
-                context=runtime,
-                config=self._run_configuration(run_id, runtime),
-            )
+        result = await self._require_graph().ainvoke(
+            value,
+            context=self._runtime,
+            config=self._run_configuration(run_id),
+        )
         return self._result(result, run_id)
 
-    def _provider_scope(self) -> AbstractContextManager[None]:
-        """Activate provider-local state for every model call in this graph run."""
-        return self.configuration.models.provider.scope()
-
-    @staticmethod
-    def _run_configuration(run_id: str, runtime: GraphRuntime) -> dict[str, object]:
-        if not run_id.strip():
-            raise ValueError("run_id cannot be empty")
+    def _run_configuration(self, run_id: str) -> dict[str, object]:
         return {
-            "configurable": {"thread_id": run_id.strip()},
-            "recursion_limit": runtime.execution.recursion_limit,
+            "configurable": {"thread_id": run_id},
+            "recursion_limit": self._runtime.execution.recursion_limit,
         }
 
     def _require_graph(self) -> Any:
@@ -112,7 +137,7 @@ class LessonGraph:
             raise ValueError("transcript languages cannot be empty")
         if not output_language.strip():
             raise ValueError("output_language cannot be empty")
-        if not run_id.strip():
+        if not run_id:
             raise ValueError("run_id cannot be empty")
 
     @staticmethod
@@ -125,3 +150,6 @@ class LessonGraph:
             usage_by_model=dict(result.get("usage_by_model", {})),
             run_id=run_id,
         )
+
+
+__all__ = ["LessonGraph", "LessonResult"]

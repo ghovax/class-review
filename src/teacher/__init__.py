@@ -3,17 +3,12 @@
 from teacher.api import LessonGraph, LessonResult
 from teacher.configuration import (
     ExecutionPolicy,
-    GraphConfiguration,
-    GraphInputs,
-    GraphModels,
-    GraphStorage,
+    ModelSelection,
     LessonPolicy,
     RetryPolicy,
     TranscriptPolicy,
 )
 from teacher.models import (
-    DocumentPages,
-    DocumentReader,
     DocumentSource,
     Recording,
     Terminology,
@@ -32,17 +27,12 @@ from teacher.outputs import (
 )
 
 __all__ = [
-    "GraphConfiguration",
-    "GraphInputs",
-    "GraphModels",
-    "GraphStorage",
+    "ModelSelection",
     "RetryPolicy",
     "TranscriptPolicy",
     "LessonPolicy",
     "ExecutionPolicy",
     "DocumentSource",
-    "DocumentPages",
-    "DocumentReader",
     "Terminology",
     "TerminologyHeard",
     "TerminologyTerm",

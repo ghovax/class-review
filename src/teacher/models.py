@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
-from typing import Any, Protocol, runtime_checkable
+from typing import Any
 import dataclasses
 
 """Domain values, graph input/output contracts, and emitted events."""
@@ -169,7 +169,7 @@ class Transcript:
         if not self.languages or any(not language.strip() for language in self.languages):
             raise ValueError("transcript must contain at least one language")
         for previous_segment, current_segment in zip(
-            self.segments, self.segments[1:], strict=True
+            self.segments, self.segments[1:], strict=False
         ):
             if current_segment.start_seconds < previous_segment.start_seconds:
                 raise ValueError("transcript segments must be ordered by start timestamp")
@@ -351,18 +351,11 @@ class Lesson:
 
 @dataclass(frozen=True, slots=True)
 class DocumentPages:
-    """A document reader's rendered pages, identified by caller metadata."""
+    """Rendered pages produced from one document source."""
 
     document_index: int
     file_name: str
     pages: tuple[RenderedPage, ...]
-
-
-@runtime_checkable
-class DocumentReader(Protocol):
-    """Turns caller-provided document bytes into page images."""
-
-    async def read(self, source: DocumentSource, *, document_index: int) -> DocumentPages: ...
 
 
 """Progress events the graphs emit as they run."""
