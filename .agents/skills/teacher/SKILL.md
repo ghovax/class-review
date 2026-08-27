@@ -19,19 +19,16 @@ Before starting, ask for:
 Do not proceed without the output and checkpoint destinations. A run usually takes 15–20
 minutes, and an unsaved `LessonResult` disappears with its process.
 
-Use `JsonTranscriptImporter` for timestamped JSON, construct `Transcript` for in-memory
-data, or implement `TranscriptImporter`. For audio, use `ModalTranscriptImporter`; it
-routes supported languages to Parakeet and the rest to WhisperX. Pass endpoint URLs and
-Modal proxy credentials directly. Deploy the bundled apps with
-`modal deploy -m teacher.modal_apps.parakeet` and
-`modal deploy -m teacher.modal_apps.whisperx`.
+Construct `Transcript` from the caller's timestamped data. Provide supplementary
+documents as `DocumentSource(content=file_bytes, file_name=...)`; the bytes may come
+from local storage, a web client, or object storage. Supply a `DocumentReader` only when
+documents are present. Audio transcription, file retrieval, and persistence remain
+application responsibilities.
 
-Configure models through `models-provider`. Use `ModelConfiguration` with a provider and
-model, and use `LangMeshProvider` when LangMesh's provider catalogue, API keys, custom
-endpoints, or ChatGPT/Cursor subscription authentication are needed. Pass LangMesh
-`Configuration` or `CredentialStore` values to `LangMeshProvider`; another
-`ModelProvider` implementation may be supplied for a different backend. Never ask for or
-use environment variables.
+Configure models through the independent `models-provider` package. Use
+`ModelConfiguration` with a provider and model, then pass any `ModelProvider`
+implementation to `GraphModels`. Credentials and provider-specific transport belong to
+that implementation; Teacher does not read environment variables or select a provider.
 
 Build a small Python script around `GraphConfiguration` and `LessonGraph`. Supply
 `page_language_model` only with PDFs. Call `LessonGraph.generate` with the transcript,
@@ -52,9 +49,10 @@ After an interruption, reconstruct the same `GraphConfiguration` and call
 `LessonGraph.resume(run_id)` with the same checkpoint and run ID. Use a new ID only when
 the user wants a fresh result.
 
-Save the result before exit. Use `MarkdownExporter` for Markdown, `PdfExporter` for PDF,
-or `save_data` for complete JSON. A custom destination may implement `Exporter`; DOCX
-and other formats can consume the saved structure.
+Save the typed `LessonResult` before exit. Use `render_export_markdown` or
+`export_to_bytes(..., format="markdown")` for Markdown and
+`export_to_bytes(..., format="pdf")` or `PdfExporter` for PDF. Other formats can consume
+the typed `Lesson` value directly.
 
 Do not ask for or pass a length. The graph derives chapter and concept structure from
 the material; content-aware length control remains a future improvement.
