@@ -16,7 +16,7 @@ dependencies = [
   "langgraph>=1.0",
   "langgraph-checkpoint-sqlite>=3.0",
   "wenmode>=0.14.1",
-  "models-provider @ git+https://github.com/ghovax/models-provider.git@df534da1459a7e8b06d44a79d2e72c085d4b5f7c",
+  "models-provider @ git+https://github.com/ghovax/models-provider.git@c00d584893df40ab6e01c57ca83c3eeb713aeefb",
   "lxml>=5.3",
   "pydantic>=2.11",
   "segno>=1.6",
