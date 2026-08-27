@@ -52,13 +52,18 @@ assign them with `ModelSelection`. Use one text model and add a vision model onl
 page interpretation needs a different model. Credentials and provider-specific transport
 stay inside Models Provider.
 
+The host must load `.env` files or other secret sources itself before calling
+`Models.from_environment()`. `Models()` does not inspect process environment variables,
+and neither library parses `.env` files. An explicitly supplied credential store takes
+precedence when both sources contain credentials.
+
 Build a small Python script around `LessonGraph`:
 
 ```python
 from models_provider import Models
 from teacher import LessonGraph, ModelSelection
 
-models = Models()
+models = Models.from_environment()
 graph = LessonGraph(
     models=ModelSelection(text=models.chat("openai/gpt-4.1-mini")),
 )

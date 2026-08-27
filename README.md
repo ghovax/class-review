@@ -85,6 +85,9 @@ The application owns the Google Drive client and authentication; Teacher receive
 the resulting bytes. The SQLite checkpoint and the Markdown output are explicit files,
 so a later process can resume or reuse the generated result.
 
+Load model environment variables in the host before calling `Models.from_environment()`;
+neither Teacher nor Models Provider parses `.env` files.
+
 `models` is a ready-to-use model selection. The text model handles transcript and lesson
 writing. An optional vision model handles rendered document pages; when omitted, the
 text model is reused.
