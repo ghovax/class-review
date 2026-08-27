@@ -41,11 +41,11 @@ Use a simple application-owned transcript file, for example:
 The checkpoint is optional for an in-memory run. An unsaved `LessonResult` disappears
 with the process.
 
-Construct `Transcript` from the saved timestamped data. Provide supplementary documents
-as `DocumentSource(content=file_bytes, file_name=...)`; the bytes may come from local
-storage, Google Drive, a web client, or object storage. Teacher decodes supplied PDF
-bytes internally. Audio transcription and file retrieval remain application
-responsibilities.
+Construct `Transcript` from the saved timestamped data. Provide a local supplementary
+document with `DocumentSource.from_path("/tmp/lecture-notes.pdf")`. For Google Drive, a
+web client, or object storage, pass the retrieved file bytes and display name to
+`DocumentSource`; Teacher decodes supplied PDF bytes internally. Audio transcription and
+file retrieval remain application responsibilities.
 
 Create ready-to-use models through the independent `models-provider` package, then
 assign them with `ModelSelection`. Use one text model and add a vision model only when
@@ -119,9 +119,9 @@ async def main() -> None:
 asyncio.run(main())
 ```
 
-For a Google Drive source, replace `DocumentSource.from_path(...)` with
-`DocumentSource(content=downloaded_bytes, file_name="lecture-notes.pdf")`. The Drive
-client and its authentication remain outside Teacher.
+For a Google Drive source, replace `DocumentSource.from_path(...)` with a
+`DocumentSource` built from the bytes returned by the Drive client. The Drive client and
+its authentication remain outside Teacher.
 
 Always launch the script detached:
 

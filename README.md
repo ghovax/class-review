@@ -116,9 +116,10 @@ Transcript(
     languages=("en",),
 )
 
-DocumentSource(
-    content=pdf_bytes,
-    file_name="calculus-lecture.pdf",
+document_path = Path("/tmp/calculus-lecture.pdf")
+document = DocumentSource(
+    content=document_path.read_bytes(),
+    file_name=document_path.name,
 )
 ```
 
