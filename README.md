@@ -1,10 +1,14 @@
 # Teacher
 
-Teacher turns a timestamped transcript and optional document bytes into a structured lesson through a resumable graph. It cleans the transcript, extracts document material, plans chapters, writes the lesson, builds a glossary, and provides Markdown or PDF bytes.
+Teacher turns a timestamped transcript and optional document bytes into a structured
+lesson through a resumable graph. It cleans the transcript, extracts document material,
+plans chapters, writes the lesson, builds a glossary, and provides Markdown or PDF
+bytes.
 
 ## Invocation
 
-Transcribe audio separately and save the timestamped result before invoking Teacher. That saved transcript can be reused for every later lesson generation.
+Transcribe audio separately and save the timestamped result before invoking Teacher.
+That saved transcript can be reused for every later lesson generation.
 
 ```python
 from __future__ import annotations
@@ -69,11 +73,16 @@ async def main() -> None:
 asyncio.run(main())
 ```
 
-The application owns source clients and authentication; Teacher receives only the resulting bytes. The SQLite checkpoint and the Markdown output are explicit files, so a later process can resume or reuse the generated result.
+The application owns source clients and authentication; Teacher receives only the
+resulting bytes. The SQLite checkpoint and the Markdown output are explicit files, so a
+later process can resume or reuse the generated result.
 
-Load model environment variables in the host before calling `Models.from_environment()`; neither Teacher nor Models Provider parses `.env` files.
+Load model environment variables in the host before calling `Models.from_environment()`;
+neither Teacher nor Models Provider parses `.env` files.
 
-`models` is a ready-to-use model selection. The text model handles transcript and lesson writing. An optional vision model handles rendered document pages; when omitted, the text model is reused.
+`models` is a ready-to-use model selection. The text model handles transcript and lesson
+writing. An optional vision model handles rendered document pages; when omitted, the
+text model is reused.
 
 ```python
 ModelSelection(
@@ -82,7 +91,8 @@ ModelSelection(
 )
 ```
 
-Teacher does not load a model catalogue or resolve credentials. Models Provider owns those concerns.
+Teacher does not load a model catalogue or resolve credentials. Models Provider owns
+those concerns.
 
 ## Input contract
 
@@ -105,7 +115,9 @@ document = DocumentSource(
 )
 ```
 
-`DocumentSource.from_path(...)` is a convenience that reads bytes once. A web client, Google Drive client, or object-storage client can provide the same bytes directly. Teacher renders PDF bytes internally, so the graph does not care where they came from.
+`DocumentSource.from_path(...)` is a convenience that reads bytes once. A web client,
+Google Drive client, or object-storage client can provide the same bytes directly.
+Teacher renders PDF bytes internally, so the graph does not care where they came from.
 
 ## Output contract
 
@@ -117,7 +129,9 @@ LessonResult(
 )
 ```
 
-The run identity is generated automatically. Pass an explicit `run_id` only when an application needs a stable checkpoint key, then call `resume(run_id)` after an interruption.
+The run identity is generated automatically. Pass an explicit `run_id` only when an
+application needs a stable checkpoint key, then call `resume(run_id)` after an
+interruption.
 
 Exports are separate from graph execution:
 
@@ -139,8 +153,11 @@ pdf_bytes = export_to_bytes(lesson, format=ExportFormat.PDF)
 | `xml.py`           | Compact model XML parsing and recovery      |
 | `outputs.py`       | Markdown and PDF export                     |
 
-XML is used only at the model boundary. Teacher parses it immediately into typed values and does not store raw XML in graph state.
+XML is used only at the model boundary. Teacher parses it immediately into typed values
+and does not store raw XML in graph state.
 
 ## Visual graph
 
-Run `uv run --with "langgraph-cli[inmem]" langgraph dev --no-browser` from the repository root. The command starts a local in-memory server and prints the LangGraph Studio URL.
+Run `uv run --with "langgraph-cli[inmem]" langgraph dev --no-browser` from the
+repository root. The command starts a local in-memory server and prints the LangGraph
+Studio URL.

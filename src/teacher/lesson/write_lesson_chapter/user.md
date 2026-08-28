@@ -32,4 +32,6 @@
 
 {{ transcript.excerpts_xml }}
 
-Write this chapter in {{ language }}. Use every relevant excerpt, preserve the source's reasoning, and keep new material distinct from the repetition ledger. Use the notation rules supplied above where mathematical notation is genuinely needed.
+Write this chapter in {{ language }}. Use every relevant excerpt, preserve the source's
+reasoning, and keep new material distinct from the repetition ledger. Use the notation
+rules supplied above where mathematical notation is genuinely needed.
