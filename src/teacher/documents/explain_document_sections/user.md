@@ -12,5 +12,4 @@
 
 {{ section.pages_markdown }}
 
-Write one self-contained explanation of this section. Do not add a heading or repeat the
-page-by-page structure.
+Write one self-contained explanation of this section. Do not add a heading or repeat the page-by-page structure.

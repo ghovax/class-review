@@ -19,6 +19,4 @@
 
 {{ transcript_segments_xml }}
 
-Create the outline using only this material. Keep concept spans within the transcript,
-cover the entire timeline, and use section indices rather than page numbers in
-`DocumentSpan`.
+Create the outline using only this material. Keep concept spans within the transcript, cover the entire timeline, and use section indices rather than page numbers in `DocumentSpan`.
