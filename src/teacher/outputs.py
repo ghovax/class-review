@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from enum import StrEnum
 from importlib import resources
 from pathlib import PurePosixPath, Path
@@ -42,12 +42,10 @@ class ExportMetadata:
 
     language: str = "en"
     author: str | None = None
-    lesson_date: date | None = None
+    lesson_timestamp: datetime | None = None
     recording_urls: tuple[str, ...] = ()
     reference_documents: tuple[ReferenceDocument, ...] = ()
     share_url: str | None = None
-    include_generated_notice: bool = True
-    generated_notice: str | None = None
 
 
 class ExportError(RuntimeError):
@@ -66,37 +64,230 @@ class ExportLabels:
     reference_documents: str
     pages: str
     glossary: str
-    generated_notice: str
+    glossary_term: str
+    glossary_definition: str
     page_abbreviation: str
 
 
 _LABELS_BY_LANGUAGE = {
     "en": ExportLabels(
-        recordings="Recordings",
-        duration="Duration",
-        reference_documents="Reference documents",
-        pages="Pages",
-        glossary="Glossary",
-        generated_notice=("These notes were generated automatically - double-check them."),
-        page_abbreviation="p.",
+        "Recordings",
+        "Duration",
+        "Reference documents",
+        "Pages",
+        "Glossary",
+        "Term",
+        "Definition",
+        "p.",
     ),
     "it": ExportLabels(
-        recordings="Registrazioni",
-        duration="Durata",
-        reference_documents="Documenti di riferimento",
-        pages="Pagine",
-        glossary="Glossario",
-        generated_notice=("Questi appunti sono stati generati automaticamente - ricontrollali."),
-        page_abbreviation="p.",
+        "Registrazioni",
+        "Durata",
+        "Documenti di riferimento",
+        "Pagine",
+        "Glossario",
+        "Termine",
+        "Definizione",
+        "p.",
     ),
     "tr": ExportLabels(
-        recordings="Kayıtlar",
-        duration="Süre",
-        reference_documents="Referans belgeler",
-        pages="Sayfa",
-        glossary="Sözlük",
-        generated_notice="Bu notlar otomatik olarak oluşturuldu - bir kontrol et.",
-        page_abbreviation="s.",
+        "Kayıtlar", "Süre", "Referans belgeler", "Sayfa", "Sözlük", "Terim", "Tanım", "s."
+    ),
+    "es": ExportLabels(
+        "Grabaciones",
+        "Duración",
+        "Documentos de referencia",
+        "Páginas",
+        "Glosario",
+        "Término",
+        "Definición",
+        "p.",
+    ),
+    "fr": ExportLabels(
+        "Enregistrements",
+        "Durée",
+        "Documents de référence",
+        "Pages",
+        "Glossaire",
+        "Terme",
+        "Définition",
+        "p.",
+    ),
+    "de": ExportLabels(
+        "Aufnahmen",
+        "Dauer",
+        "Referenzdokumente",
+        "Seiten",
+        "Glossar",
+        "Begriff",
+        "Definition",
+        "S.",
+    ),
+    "pt": ExportLabels(
+        "Gravações",
+        "Duração",
+        "Documentos de referência",
+        "Páginas",
+        "Glossário",
+        "Termo",
+        "Definição",
+        "p.",
+    ),
+    "nl": ExportLabels(
+        "Opnamen",
+        "Duur",
+        "Referentiedocumenten",
+        "Pagina's",
+        "Woordenlijst",
+        "Term",
+        "Definitie",
+        "p.",
+    ),
+    "pl": ExportLabels(
+        "Nagrania",
+        "Czas trwania",
+        "Dokumenty źródłowe",
+        "Strony",
+        "Słowniczek",
+        "Termin",
+        "Definicja",
+        "s.",
+    ),
+    "ru": ExportLabels(
+        "Записи",
+        "Длительность",
+        "Справочные документы",
+        "Страницы",
+        "Глоссарий",
+        "Термин",
+        "Определение",
+        "с.",
+    ),
+    "uk": ExportLabels(
+        "Записи",
+        "Тривалість",
+        "Довідкові документи",
+        "Сторінки",
+        "Глосарій",
+        "Термін",
+        "Визначення",
+        "с.",
+    ),
+    "ja": ExportLabels("録音", "長さ", "参考資料", "ページ", "用語集", "用語", "定義", "p."),
+    "ko": ExportLabels("녹음", "재생 시간", "참고 문서", "페이지", "용어집", "용어", "정의", "쪽"),
+    "zh": ExportLabels("录音", "时长", "参考文档", "页码", "术语表", "术语", "定义", "页"),
+    "ar": ExportLabels(
+        "التسجيلات", "المدة", "المستندات المرجعية", "الصفحات", "المسرد", "المصطلح", "التعريف", "ص."
+    ),
+    "hi": ExportLabels("रिकॉर्डिंग", "अवधि", "संदर्भ दस्तावेज़", "पृष्ठ", "शब्दावली", "शब्द", "परिभाषा", "पृ."),
+    "he": ExportLabels(
+        "הקלטות", "משך", "מסמכי עזר", "עמודים", "מילון מונחים", "מונח", "הגדרה", "עמ׳"
+    ),
+    "el": ExportLabels(
+        "Ηχογραφήσεις",
+        "Διάρκεια",
+        "Έγγραφα αναφοράς",
+        "Σελίδες",
+        "Γλωσσάρι",
+        "Όρος",
+        "Ορισμός",
+        "σελ.",
+    ),
+    "sv": ExportLabels(
+        "Inspelningar",
+        "Varaktighet",
+        "Referensdokument",
+        "Sidor",
+        "Ordlista",
+        "Term",
+        "Definition",
+        "s.",
+    ),
+    "da": ExportLabels(
+        "Optagelser",
+        "Varighed",
+        "Referencedokumenter",
+        "Sider",
+        "Ordliste",
+        "Term",
+        "Definition",
+        "s.",
+    ),
+    "no": ExportLabels(
+        "Opptak", "Varighet", "Referansedokumenter", "Sider", "Ordliste", "Term", "Definisjon", "s."
+    ),
+    "fi": ExportLabels(
+        "Tallenteet", "Kesto", "Viiteasiakirjat", "Sivut", "Sanasto", "Termi", "Määritelmä", "s."
+    ),
+    "cs": ExportLabels(
+        "Nahrávky",
+        "Délka",
+        "Referenční dokumenty",
+        "Strany",
+        "Glosář",
+        "Termín",
+        "Definice",
+        "str.",
+    ),
+    "ro": ExportLabels(
+        "Înregistrări",
+        "Durată",
+        "Documente de referință",
+        "Pagini",
+        "Glosar",
+        "Termen",
+        "Definiție",
+        "p.",
+    ),
+    "hu": ExportLabels(
+        "Felvételek",
+        "Időtartam",
+        "Hivatkozási dokumentumok",
+        "Oldalak",
+        "Szójegyzék",
+        "Kifejezés",
+        "Definíció",
+        "o.",
+    ),
+    "vi": ExportLabels(
+        "Bản ghi",
+        "Thời lượng",
+        "Tài liệu tham khảo",
+        "Trang",
+        "Bảng thuật ngữ",
+        "Thuật ngữ",
+        "Định nghĩa",
+        "tr.",
+    ),
+    "id": ExportLabels(
+        "Rekaman",
+        "Durasi",
+        "Dokumen referensi",
+        "Halaman",
+        "Glosarium",
+        "Istilah",
+        "Definisi",
+        "h.",
+    ),
+    "bg": ExportLabels(
+        "Записи",
+        "Продължителност",
+        "Референтни документи",
+        "Страници",
+        "Речник",
+        "Термин",
+        "Определение",
+        "стр.",
+    ),
+    "ca": ExportLabels(
+        "Gravacions",
+        "Durada",
+        "Documents de referència",
+        "Pàgines",
+        "Glossari",
+        "Terme",
+        "Definició",
+        "p.",
     ),
 }
 
@@ -143,6 +334,318 @@ _MONTHS_BY_LANGUAGE = {
         "Kasım",
         "Aralık",
     ),
+    "es": (
+        "enero",
+        "febrero",
+        "marzo",
+        "abril",
+        "mayo",
+        "junio",
+        "julio",
+        "agosto",
+        "septiembre",
+        "octubre",
+        "noviembre",
+        "diciembre",
+    ),
+    "fr": (
+        "janvier",
+        "février",
+        "mars",
+        "avril",
+        "mai",
+        "juin",
+        "juillet",
+        "août",
+        "septembre",
+        "octobre",
+        "novembre",
+        "décembre",
+    ),
+    "de": (
+        "Januar",
+        "Februar",
+        "März",
+        "April",
+        "Mai",
+        "Juni",
+        "Juli",
+        "August",
+        "September",
+        "Oktober",
+        "November",
+        "Dezember",
+    ),
+    "pt": (
+        "janeiro",
+        "fevereiro",
+        "março",
+        "abril",
+        "maio",
+        "junho",
+        "julho",
+        "agosto",
+        "setembro",
+        "outubro",
+        "novembro",
+        "dezembro",
+    ),
+    "nl": (
+        "januari",
+        "februari",
+        "maart",
+        "april",
+        "mei",
+        "juni",
+        "juli",
+        "augustus",
+        "september",
+        "oktober",
+        "november",
+        "december",
+    ),
+    "pl": (
+        "stycznia",
+        "lutego",
+        "marca",
+        "kwietnia",
+        "maja",
+        "czerwca",
+        "lipca",
+        "sierpnia",
+        "września",
+        "października",
+        "listopada",
+        "grudnia",
+    ),
+    "ru": (
+        "января",
+        "февраля",
+        "марта",
+        "апреля",
+        "мая",
+        "июня",
+        "июля",
+        "августа",
+        "сентября",
+        "октября",
+        "ноября",
+        "декабря",
+    ),
+    "uk": (
+        "січня",
+        "лютого",
+        "березня",
+        "квітня",
+        "травня",
+        "червня",
+        "липня",
+        "серпня",
+        "вересня",
+        "жовтня",
+        "листопада",
+        "грудня",
+    ),
+    "ja": tuple(str(index) for index in range(1, 13)),
+    "ko": tuple(str(index) for index in range(1, 13)),
+    "zh": tuple(str(index) for index in range(1, 13)),
+    "ar": (
+        "يناير",
+        "فبراير",
+        "مارس",
+        "أبريل",
+        "مايو",
+        "يونيو",
+        "يوليو",
+        "أغسطس",
+        "سبتمبر",
+        "أكتوبر",
+        "نوفمبر",
+        "ديسمبر",
+    ),
+    "hi": (
+        "जनवरी",
+        "फ़रवरी",
+        "मार्च",
+        "अप्रैल",
+        "मई",
+        "जून",
+        "जुलाई",
+        "अगस्त",
+        "सितंबर",
+        "अक्टूबर",
+        "नवंबर",
+        "दिसंबर",
+    ),
+    "he": (
+        "ינואר",
+        "פברואר",
+        "מרץ",
+        "אפריל",
+        "מאי",
+        "יוני",
+        "יולי",
+        "אוגוסט",
+        "ספטמבר",
+        "אוקטובר",
+        "נובמבר",
+        "דצמבר",
+    ),
+    "el": (
+        "Ιανουαρίου",
+        "Φεβρουαρίου",
+        "Μαρτίου",
+        "Απριλίου",
+        "Μαΐου",
+        "Ιουνίου",
+        "Ιουλίου",
+        "Αυγούστου",
+        "Σεπτεμβρίου",
+        "Οκτωβρίου",
+        "Νοεμβρίου",
+        "Δεκεμβρίου",
+    ),
+    "sv": (
+        "januari",
+        "februari",
+        "mars",
+        "april",
+        "maj",
+        "juni",
+        "juli",
+        "augusti",
+        "september",
+        "oktober",
+        "november",
+        "december",
+    ),
+    "da": (
+        "januar",
+        "februar",
+        "marts",
+        "april",
+        "maj",
+        "juni",
+        "juli",
+        "august",
+        "september",
+        "oktober",
+        "november",
+        "december",
+    ),
+    "no": (
+        "januar",
+        "februar",
+        "mars",
+        "april",
+        "mai",
+        "juni",
+        "juli",
+        "august",
+        "september",
+        "oktober",
+        "november",
+        "desember",
+    ),
+    "fi": (
+        "tammikuuta",
+        "helmikuuta",
+        "maaliskuuta",
+        "huhtikuuta",
+        "toukokuuta",
+        "kesäkuuta",
+        "heinäkuuta",
+        "elokuuta",
+        "syyskuuta",
+        "lokakuuta",
+        "marraskuuta",
+        "joulukuuta",
+    ),
+    "cs": (
+        "ledna",
+        "února",
+        "března",
+        "dubna",
+        "května",
+        "června",
+        "července",
+        "srpna",
+        "září",
+        "října",
+        "listopadu",
+        "prosince",
+    ),
+    "ro": (
+        "ianuarie",
+        "februarie",
+        "martie",
+        "aprilie",
+        "mai",
+        "iunie",
+        "iulie",
+        "august",
+        "septembrie",
+        "octombrie",
+        "noiembrie",
+        "decembrie",
+    ),
+    "hu": (
+        "január",
+        "február",
+        "március",
+        "április",
+        "május",
+        "június",
+        "július",
+        "augusztus",
+        "szeptember",
+        "október",
+        "november",
+        "december",
+    ),
+    "vi": tuple(f"tháng {index}" for index in range(1, 13)),
+    "id": (
+        "Januari",
+        "Februari",
+        "Maret",
+        "April",
+        "Mei",
+        "Juni",
+        "Juli",
+        "Agustus",
+        "September",
+        "Oktober",
+        "November",
+        "Desember",
+    ),
+    "bg": (
+        "януари",
+        "февруари",
+        "март",
+        "април",
+        "май",
+        "юни",
+        "юли",
+        "август",
+        "септември",
+        "октомври",
+        "ноември",
+        "декември",
+    ),
+    "ca": (
+        "gener",
+        "febrer",
+        "març",
+        "abril",
+        "maig",
+        "juny",
+        "juliol",
+        "agost",
+        "setembre",
+        "octubre",
+        "novembre",
+        "desembre",
+    ),
 }
 
 
@@ -164,7 +667,29 @@ def format_lesson_date(lesson_date: date, language: str | None) -> str:
     month = months[lesson_date.month - 1]
     if selected_language == "en":
         return f"{month} {lesson_date.day}, {lesson_date.year}"
+    if selected_language in {"ja", "zh"}:
+        return f"{lesson_date.year}年{month}月{lesson_date.day}日"
+    if selected_language == "ko":
+        return f"{lesson_date.year}년 {month}월 {lesson_date.day}일"
+    if selected_language == "hu":
+        return f"{lesson_date.year}. {month} {lesson_date.day}."
+    if selected_language == "vi":
+        return f"Ngày {lesson_date.day} {month} năm {lesson_date.year}"
     return f"{lesson_date.day} {month} {lesson_date.year}"
+
+
+def format_lesson_timestamp(timestamp: datetime, language: str | None) -> str:
+    """Formats a lesson timestamp with a localized date and an ISO time offset."""
+    date_text = format_lesson_date(timestamp.date(), language)
+    time_text = timestamp.strftime("%H:%M:%S")
+    offset = timestamp.utcoffset()
+    if offset is not None:
+        offset_minutes = int(offset.total_seconds() // 60)
+        sign = "+" if offset_minutes >= 0 else "-"
+        hours, minutes = divmod(abs(offset_minutes), 60)
+        time_text = f"{time_text} {sign}{hours:02d}:{minutes:02d}"
+    separator = " at " if primary_language(language) == "en" else ", "
+    return f"{date_text}{separator}{time_text}"
 
 
 """Building the source-listing tables used by lesson outputs."""
@@ -256,7 +781,7 @@ def _format_duration(total_seconds: int) -> str:
 
 def _table(headers: tuple[str, str], rows: list[tuple[str, str]]) -> str:
     """Render a two-column source table through the Markdown library."""
-    return render_table(headers, rows)
+    return render_table(headers, rows, code_columns=(0,))
 
 
 """Building structured citation footnote bodies for lecture outputs."""
@@ -287,6 +812,60 @@ def _citation_definition(
     return f"{citation.content.strip()} (`{document_name}`, p. {citation.page_number})"
 
 
+def _yaml_scalar(value: str | None) -> str:
+    """Render one optional string as a valid YAML scalar."""
+    return "null" if value is None else json.dumps(value, ensure_ascii=False)
+
+
+def _yaml_sequence(values: list[str]) -> str:
+    """Render a YAML sequence using the conventional block-list form."""
+    if not values:
+        return " []"
+    return "\n" + "\n".join(f"  - {_yaml_scalar(value)}" for value in values)
+
+
+def _yaml_references(references: list[dict[str, object]]) -> str:
+    """Render reference metadata as a readable YAML list of mappings."""
+    if not references:
+        return " []"
+    lines = []
+    for reference in references:
+        pages = reference["pages"]
+        pages_value = str(pages) if pages is not None else "null"
+        lines.extend(
+            [
+                f"  - file_name: {_yaml_scalar(str(reference['file_name']))}",
+                f"    pages: {pages_value}",
+            ]
+        )
+    return "\n" + "\n".join(lines)
+
+
+def _frontmatter_variables(lesson: Lesson, metadata: ExportMetadata) -> dict[str, object]:
+    """Build the serializable metadata passed to the Markdown frontmatter template."""
+    page_counts = _citation_page_counts(lesson)
+    references = [
+        {
+            "file_name": reference_document_name(document, index),
+            "pages": page_counts.get(index),
+        }
+        for index, document in enumerate(metadata.reference_documents)
+    ]
+    return {
+        "title": _yaml_scalar(lesson.title.strip() or "Untitled"),
+        "description": _yaml_scalar(lesson.description.strip()),
+        "language": _yaml_scalar(metadata.language.strip() or "en"),
+        "author": _yaml_scalar(metadata.author.strip() if metadata.author else None),
+        "date": _yaml_scalar(
+            metadata.lesson_timestamp.isoformat() if metadata.lesson_timestamp else None
+        ),
+        "recording_urls": _yaml_sequence(list(metadata.recording_urls)),
+        "duration_seconds": str(_lecture_duration_seconds(lesson)),
+        "reference_documents": _yaml_references(references),
+        "share_url": _yaml_scalar(metadata.share_url),
+    }
+
+
 """Building the canonical Markdown export from plain lesson data."""
 
 
@@ -303,23 +882,33 @@ def render_export_template(name: str, variables: Mapping[str, object]) -> str:
 
 
 def _render_markdown(lesson: Lesson, metadata: ExportMetadata) -> str:
-    """Render a complete lesson from packaged blocks."""
-    blocks = [
-        render_export_template(
-            "lesson",
-            {
-                "title": lesson.title.strip() or "Untitled",
-                "description": lesson.description.strip(),
-            },
-        ).strip(),
-        *build_source_tables(lesson, metadata),
-    ]
-    blocks.extend(_chapter_blocks(lesson))
-    blocks.extend(_glossary_blocks(lesson, metadata))
+    """Render a complete lesson with metadata kept in YAML frontmatter."""
+    frontmatter = render_export_template("lesson", _frontmatter_variables(lesson, metadata)).strip()
+    blocks = [*_chapter_blocks(lesson), *_glossary_blocks(lesson, metadata)]
     definitions = build_citation_definitions(lesson, metadata)
     if definitions:
         blocks.extend(f"[^{number}]: {body}" for number, body in definitions.items())
-    return compose_markdown(blocks)
+    body = compose_markdown(blocks)
+    return f"{frontmatter}\n\n{body}" if body else frontmatter
+
+
+def _render_pandoc_markdown(lesson: Lesson, metadata: ExportMetadata) -> bytes:
+    """Add visual source tables only to non-Markdown presentations."""
+    markdown = MarkdownExporter().render(lesson, metadata=metadata).decode("utf-8")
+    source_tables = build_source_tables(lesson, metadata)
+    if not source_tables:
+        return markdown.encode("utf-8")
+    separator = "\n---\n"
+    frontmatter_end = markdown.find(separator)
+    if frontmatter_end < 0:
+        raise ExportError("lesson frontmatter could not be located")
+    body_start = frontmatter_end + len(separator)
+    body = markdown[body_start:].strip()
+    source = compose_markdown(source_tables)
+    presentation = markdown[:body_start] + "\n\n" + source
+    if body:
+        presentation += "\n\n" + body
+    return presentation.encode("utf-8")
 
 
 def _chapter_blocks(lecture: Lesson) -> list[str]:
@@ -340,26 +929,47 @@ def _chapter_blocks(lecture: Lesson) -> list[str]:
 
 
 def _glossary_blocks(lecture: Lesson, metadata: ExportMetadata) -> list[str]:
-    """Renders the glossary heading and entries through packaged text shapes."""
+    """Render the glossary as one dictionary-style table through packaged templates."""
     if not lecture.glossary:
         return []
     labels = export_labels(metadata.language)
-    blocks = [render_export_template("glossary", {"title": labels.glossary}).strip()]
+    entries: list[str] = []
     for entry in lecture.glossary:
         display_name = (
             f"{entry.short_form} ({entry.long_form})" if entry.long_form else entry.short_form
         )
-        blocks.append(
+        entries.append(
             render_export_template(
                 "glossary_entry",
                 {
                     "key": entry.key,
-                    "title": display_name,
-                    "description": entry.description,
+                    "title": _escape_table_cell(display_name),
+                    "description": _escape_table_cell(entry.description),
                 },
             ).strip()
         )
-    return blocks
+    return [
+        render_export_template(
+            "glossary",
+            {
+                "title": labels.glossary,
+                "term_label": labels.glossary_term,
+                "definition_label": labels.glossary_definition,
+                "entries": "\n".join(entries),
+            },
+        ).strip()
+    ]
+
+
+def _escape_table_cell(value: str) -> str:
+    """Keep interpolated glossary text inside one Markdown table cell."""
+    return (
+        value.replace("\\", "\\\\")
+        .replace("|", "\\|")
+        .replace("\r\n", "\n")
+        .replace("\r", "\n")
+        .replace("\n", "<br>")
+    )
 
 
 def _shift_headings(markdown: str, levels: int) -> str:
@@ -375,21 +985,17 @@ _PANDOC_INPUT_FORMAT: Final[str] = "markdown+smart+footnotes+raw_html+header_att
 _ANCHOR_BEFORE_HEADING: Final[re.Pattern[bytes]] = re.compile(
     rb'^<a id="([^"]+)"></a>\s*(#{1,6} .+)$', re.MULTILINE
 )
+_INTERNAL_LINK: Final[re.Pattern[bytes]] = re.compile(rb"\[([^\]]+)\]\(#[^)]+\)")
 
 
 def _pandoc_metadata(metadata: ExportMetadata) -> dict[str, str]:
     """Build the scalar metadata consumed by the packaged PDF template."""
-    labels = export_labels(metadata.language)
     values = {"lang": primary_language(metadata.language)}
     if metadata.author and metadata.author.strip():
         values["author"] = metadata.author.strip()
-    if metadata.lesson_date:
-        values["date"] = format_lesson_date(metadata.lesson_date, metadata.language)
-    if metadata.include_generated_notice:
-        values["generated-notice"] = (
-            metadata.generated_notice.strip()
-            if metadata.generated_notice and metadata.generated_notice.strip()
-            else labels.generated_notice
+    if metadata.lesson_timestamp:
+        values["lesson-date"] = format_lesson_timestamp(
+            metadata.lesson_timestamp, metadata.language
         )
     return values
 
@@ -430,7 +1036,7 @@ class PandocExporter:
         metadata: ExportMetadata | None = None,
     ) -> bytes:
         resolved_metadata = metadata or ExportMetadata()
-        markdown = MarkdownExporter().render(lesson, metadata=resolved_metadata)
+        markdown = _render_pandoc_markdown(lesson, resolved_metadata)
         return _render_pandoc(markdown, resolved_metadata, self.output_format)
 
 
@@ -492,9 +1098,15 @@ def _run_pandoc(
             )
 
         try:
+            pandoc_input = _ANCHOR_BEFORE_HEADING.sub(rb"\2 {#\1}", markdown)
+            if output_format is ExportFormat.PDF:
+                # Typst does not receive the raw HTML anchors inside table
+                # cells, so glossary links would otherwise point at labels
+                # that do not exist and make the PDF compilation fail.
+                pandoc_input = _INTERNAL_LINK.sub(rb"\1", pandoc_input)
             completed = subprocess.run(
                 command,
-                input=_ANCHOR_BEFORE_HEADING.sub(rb"\2 {#\1}", markdown),
+                input=pandoc_input,
                 cwd=working_directory,
                 capture_output=True,
                 check=False,
@@ -520,4 +1132,19 @@ def _run_pandoc(
             raise ExportError("Pandoc export produced an empty file")
         if output_format is ExportFormat.PDF and not rendered.startswith(b"%PDF-"):
             raise ExportError("Pandoc export produced bytes that are not a PDF")
+        if output_format is ExportFormat.HTML:
+            rendered = _inject_html_table_styles(rendered)
         return rendered
+
+
+def _inject_html_table_styles(rendered: bytes) -> bytes:
+    """Embed the packaged table stylesheet so HTML exports remain portable."""
+    style_resource = resources.files("teacher.output_templates").joinpath("pandoc-html.css")
+    try:
+        stylesheet = style_resource.read_text(encoding="utf-8").encode("utf-8")
+    except OSError as error:
+        raise ExportError("HTML export stylesheet could not be read") from error
+    marker = b"</head>"
+    if marker not in rendered:
+        return rendered
+    return rendered.replace(marker, b"<style>" + stylesheet + b"</style>" + marker, 1)

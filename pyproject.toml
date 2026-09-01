@@ -37,7 +37,7 @@ dev = [
 packages = ["src/teacher"]
 
 [tool.hatch.build]
-include = ["src/teacher/**/*.py", "src/teacher/**/*.md", "src/teacher/**/*.template"]
+include = ["src/teacher/**/*.py", "src/teacher/**/*.md", "src/teacher/**/*.template", "src/teacher/**/*.css"]
 
 [tool.hatch.metadata]
 allow-direct-references = true

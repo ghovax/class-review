@@ -92,7 +92,9 @@ The application can use these operations in ordinary Python, its own LangGraph, 
 
 ## Exporting
 
-Markdown is the canonical lesson representation. Pandoc converts it to other formats.
+Markdown is the canonical lesson representation. Its YAML frontmatter keeps the lesson
+metadata and source context machine-readable; the body contains only the lesson material.
+Pandoc converts it to other formats.
 
 ```python
 from teacher import ExportFormat, MarkdownExporter, PandocExporter
@@ -101,6 +103,10 @@ markdown = MarkdownExporter().render(lesson)
 pdf = PandocExporter(ExportFormat.PDF).render(lesson)
 html = PandocExporter(ExportFormat.HTML).render(lesson)
 ```
+
+Pass `ExportMetadata(lesson_timestamp=...)` when the lesson should carry an
+ISO-8601 timestamp. Markdown keeps that value, along with the other export
+context, in YAML frontmatter.
 
 `PandocExporter` runs in a private temporary directory. Its output, metadata, and optional QR image each receive unique names, and the directory is removed after rendering. PDF uses the bundled Typst template; HTML and DOCX use Pandoc's native writers.
 

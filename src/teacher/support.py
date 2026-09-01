@@ -222,5 +222,5 @@ def apply_glossary_links(content: str, links: Sequence[GlossaryLink]) -> str:
         if not 0 <= link.start < link.end <= len(result):
             continue
         text = result[link.start : link.end]
-        result = f"{result[: link.start]}[{text}](#glossary-{link.key}){result[link.end :]}"
+        result = f"{result[: link.start]}[{text}](#{link.key}){result[link.end :]}"
     return result

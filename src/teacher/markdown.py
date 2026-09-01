@@ -6,7 +6,7 @@ from collections.abc import Iterable, Iterator
 import re
 
 from wenmode import MarkdownRenderer, Wenmode
-from wenmode.nodes import Heading, Node, Parent, Root, Table, TableCell, TableRow, Text
+from wenmode.nodes import Heading, InlineCode, Node, Parent, Root, Table, TableCell, TableRow, Text
 from wenmode.presets import github
 
 
@@ -60,20 +60,32 @@ def _headings(nodes: Iterable[Node]) -> Iterator[Heading]:
             yield from _headings(node.children)
 
 
-def render_table(headers: tuple[str, str], rows: Iterable[tuple[str, str]]) -> str:
+def render_table(
+    headers: tuple[str, str],
+    rows: Iterable[tuple[str, str]],
+    *,
+    code_columns: tuple[int, ...] = (),
+) -> str:
     """Build and serialize a Markdown table with Wenmode AST nodes."""
+
+    def cell(value: str, column_index: int, *, code: bool = False) -> TableCell:
+        content = (
+            InlineCode(value=value) if code and column_index in code_columns else Text(value=value)
+        )
+        return TableCell(children=[content])
+
     table_rows: list[Node] = [
         TableRow(
             children=[
-                TableCell(children=[Text(value=headers[0])]),
-                TableCell(children=[Text(value=headers[1])]),
+                cell(headers[0], 0),
+                cell(headers[1], 1),
             ]
         ),
         *(
             TableRow(
                 children=[
-                    TableCell(children=[Text(value=left)]),
-                    TableCell(children=[Text(value=right)]),
+                    cell(left, 0, code=True),
+                    cell(right, 1, code=True),
                 ]
             )
             for left, right in rows

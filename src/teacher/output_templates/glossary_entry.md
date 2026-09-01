@@ -1,5 +1,1 @@
-<a id="glossary-{{ key }}"></a>
-
-### {{ title }}
-
-{{ description }}
+| <a id="{{ key }}"></a>{{ title }} | {{ description }} |

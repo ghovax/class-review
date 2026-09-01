@@ -282,31 +282,3 @@ def _number_citations(chapters: tuple[Chapter, ...]) -> tuple[Chapter, ...]:
         )
         offset += len(citations)
     return tuple(result)
-
-
-def _number_citations(chapters: tuple[Chapter, ...]) -> tuple[Chapter, ...]:
-    """Give citations one stable number across all chapters."""
-    offset = 0
-    result: list[Chapter] = []
-    for chapter in chapters:
-        numbers = {citation.number: citation.number + offset for citation in chapter.citations}
-        content = re.sub(
-            r"\[\^([^\]]+)\]",
-            lambda match, numbers=numbers: (
-                f"[^{numbers.get(int(match.group(1)), match.group(1))}]"
-                if match.group(1).isdigit()
-                else match.group(0)
-            ),
-            chapter.content,
-        )
-        citations = tuple(
-            Citation(
-                number + offset, citation.content, citation.document_index, citation.page_number
-            )
-            for number, citation in ((item.number, item) for item in chapter.citations)
-        )
-        result.append(
-            Chapter(chapter.title, content, chapter.concepts, citations, chapter.glossary_links)
-        )
-        offset += len(citations)
-    return tuple(result)
