@@ -1,6 +1,6 @@
 """Framework-independent operations for building structured lessons."""
 
-from teacher.interfaces import ChatModel, ChapterWritingOperation
+from teacher.interfaces import ChatModel
 from teacher.models import (
     Chapter,
     ChapterOutline,
@@ -30,7 +30,6 @@ from teacher.operations import (
     ChapterWriter,
     GlossaryWriter,
     LessonWriter,
-    LessonWritingStrategy,
     OutlineWriter,
     ReferenceReader,
     TranscriptRevision,
@@ -45,7 +44,6 @@ from teacher.outputs import (
 
 __all__ = [
     "ChatModel",
-    "ChapterWritingOperation",
     "Transcript",
     "TranscriptSegment",
     "TranscriptRevision",
@@ -70,7 +68,6 @@ __all__ = [
     "Chapter",
     "GlossaryWriter",
     "LessonWriter",
-    "LessonWritingStrategy",
     "GlossaryEntry",
     "GlossaryLink",
     "Citation",
