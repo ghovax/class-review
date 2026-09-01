@@ -10,18 +10,18 @@ Normalize obvious transcription defects, duplicated fragments, malformed numeral
 
 ## Execute the outline labels
 
-Treat `Intent`, `ExplanationDepth`, and `MustAdvanceBy` as operational instructions, not decorative tags:
+Treat treatment intent, explanation depth, and advancement mode as operational guidance, not decorative labels:
 
 | Label | Writing behavior |
 | --- | --- |
-| `Introduce` | Establish the learner's baseline: define necessary terms, explain the core idea, and supply the reasoning required for the first understanding |
-| `Deepen` | Assume the named baseline and add a substantial layer such as mechanism, constraint, distinction, edge case, consequence, or richer reasoning |
-| `Apply` | Use the established principle without re-deriving it and work through a genuinely new case, decision, comparison, or outcome |
-| `Review` | Use a short, stable reference to reconnect established material; do not rebuild the explanation or pretend it is new |
+| introduce | Establish the learner's baseline: define necessary terms, explain the core idea, and supply the reasoning required for the first understanding |
+| deepen | Assume the named baseline and add a substantial layer such as mechanism, constraint, distinction, edge case, consequence, or richer reasoning |
+| apply | Use the established principle without re-deriving it and work through a genuinely new case, decision, comparison, or outcome |
+| review | Use a short, stable reference to reconnect established material; do not rebuild the explanation or pretend it is new |
 
-For depth, `High` preserves a dense mechanism, causal argument, meaningful nuance, or edge-case analysis; `Medium` explains the core idea and its main implication with useful detail; `Low` stays concise because the source only sketches or mentions the point. Depth is qualitative, not proportional to airtime. For advancement, `Mechanism` explains how the result is produced, `Constraint` explains where or why the idea is limited, `Tradeoff` explains a competing choice, and `Evidence` supplies the observation or source support that tests the idea.
+For depth, high preserves a dense mechanism, causal argument, meaningful nuance, or edge-case analysis; medium explains the core idea and its main implication with useful detail; low stays concise because the source only sketches or mentions the point. Depth is qualitative, not proportional to airtime. For advancement, mechanism explains how the result is produced, constraint explains where or why the idea is limited, trade-off explains a competing choice, and evidence supplies the observation or source support that tests the idea.
 
-If the transcript revisits an established point, compare it against the prior prose and ledger before writing. Keep the recap to the minimum needed for the new intent, and write only the net-new advancement at the selected depth. Do not label a restatement `Deepen`, a repeated toy example `Apply`, or an extensive treatment `High` when the source provides no corresponding reasoning.
+If the transcript revisits an established point, compare it against the prior prose and ledger before writing. Keep the recap to the minimum needed for the new intent, and write only the net-new advancement at the selected depth. Do not label a restatement deepen, a repeated toy example apply, or an extensive treatment high when the source provides no corresponding reasoning.
 
 ## Flexible writing units
 

@@ -33,8 +33,8 @@ For each chapter or writing unit, record:
 - the owned transcript time span and source excerpts;
 - one or more concepts in chronological order;
 - the objective and the advancement mode for each concept;
-- the treatment intent: `Introduce`, `Deepen`, `Apply`, or `Review`;
-- the qualitative depth: `High`, `Medium`, or `Low`;
+- the treatment intent: introduce, deepen, apply, or review;
+- the qualitative depth: high, medium, or low;
 - the rationale for that intent and depth;
 - claims established for the first time and a substantive do-not-repeat ledger;
 - relevant reference documents and page ranges;
@@ -42,49 +42,49 @@ For each chapter or writing unit, record:
 
 ## Decide treatment intent
 
-`Intent` describes the learner-facing job of the concept in this location, not how important the topic is overall. Decide it by comparing the current treatment with what the outline has already established.
+Treatment intent describes the learner-facing job of the concept in this location, not how important the topic is overall. Decide it by comparing the current treatment with what the outline has already established.
 
 | Intent | Use when | The writing must do | Do not use when |
 | --- | --- | --- | --- |
-| `Introduce` | The concept is first established for this lesson or the learner has no usable prior foundation | Define the necessary terms, establish the baseline mechanism or idea, and provide the minimum reasoning needed to understand later material | The concept was already established and the passage only revisits it |
-| `Deepen` | The concept appeared earlier and the current material adds a non-trivial layer | Extend the established idea with a new mechanism, constraint, distinction, edge case, consequence, or substantially richer reasoning | The passage merely rephrases, summarizes, or adds a small detail without changing understanding |
-| `Apply` | An established concept is used to analyze a genuinely new case, decision, comparison, or worked example | Use the prior principle as a known baseline and develop the new case, outcome, trade-off, or decision logic | The example repeats the introductory derivation, uses toy values without a new insight, or requires re-teaching the mechanism from scratch |
-| `Review` | The concept is revisited for orientation, comparison, connection, or light reinforcement without material new depth | Refer to the established idea briefly by its stable name and connect it to the current point | The passage introduces a new layer, requires a full explanation, or is only being labeled `Review` to avoid choosing a more accurate intent |
+| introduce | The concept is first established for this lesson or the learner has no usable prior foundation | Define the necessary terms, establish the baseline mechanism or idea, and provide the minimum reasoning needed to understand later material | The concept was already established and the passage only revisits it |
+| deepen | The concept appeared earlier and the current material adds a non-trivial layer | Extend the established idea with a new mechanism, constraint, distinction, edge case, consequence, or substantially richer reasoning | The passage merely rephrases, summarizes, or adds a small detail without changing understanding |
+| apply | An established concept is used to analyze a genuinely new case, decision, comparison, or worked example | Use the prior principle as a known baseline and develop the new case, outcome, trade-off, or decision logic | The example repeats the introductory derivation, uses toy values without a new insight, or requires re-teaching the mechanism from scratch |
+| review | The concept is revisited for orientation, comparison, connection, or light reinforcement without material new depth | Refer to the established idea briefly by its stable name and connect it to the current point | The passage introduces a new layer, requires a full explanation, or is only being labeled review to avoid choosing a more accurate intent |
 
-When a passage contains both a recap and a new contribution, classify the owned concept by the new contribution and make the recap a brief prerequisite reference. When the new contribution cannot stand without a complete re-explanation, merge the material with the earlier concept or move the boundary; do not call a duplicate treatment `Deepen` or `Apply`.
+When a passage contains both a recap and a new contribution, classify the owned concept by the new contribution and make the recap a brief prerequisite reference. When the new contribution cannot stand without a complete re-explanation, merge the material with the earlier concept or move the boundary; do not call a duplicate treatment deepen or apply.
 
 ## Decide explanation depth
 
-`ExplanationDepth` measures qualitative treatment per moment, not the amount of airtime. A short passage can be `High` when it develops a dense mechanism; a long passage can be `Low` when it repeats a simple point. Judge the reasoning, nuance, and learner burden actually present in the transcript.
+Explanation depth measures qualitative treatment per moment, not the amount of airtime. A short passage can be high when it develops a dense mechanism; a long passage can be low when it repeats a simple point. Judge the reasoning, nuance, and learner burden actually present in the transcript.
 
 | Depth | Evidence in the transcript | Outline and writing consequence |
 | --- | --- | --- |
-| `High` | The lecturer works through a mechanism or argument step by step, preserves causal links, handles meaningful nuance, exceptions, edge cases, competing explanations, or operational consequences | Reserve enough space to preserve the chain of reasoning and its qualifications; do not flatten it into a definition or list of conclusions |
-| `Medium` | The lecturer gives a clear explanation with the core reason, mechanism, example, or implication, but explores limited nuance or few edge cases | Explain the complete core idea and its main consequence with meaningful detail, without importing a deeper textbook treatment |
-| `Low` | The lecturer names, sketches, contrasts, or briefly mentions the idea with little unpacking or support | Keep the treatment concise and faithful; do not expand it merely because the topic is important in the wider field |
+| high | The lecturer works through a mechanism or argument step by step, preserves causal links, handles meaningful nuance, exceptions, edge cases, competing explanations, or operational consequences | Reserve enough space to preserve the chain of reasoning and its qualifications; do not flatten it into a definition or list of conclusions |
+| medium | The lecturer gives a clear explanation with the core reason, mechanism, example, or implication, but explores limited nuance or few edge cases | Explain the complete core idea and its main consequence with meaningful detail, without importing a deeper textbook treatment |
+| low | The lecturer names, sketches, contrasts, or briefly mentions the idea with little unpacking or support | Keep the treatment concise and faithful; do not expand it merely because the topic is important in the wider field |
 
 Do not infer depth from chapter length, number of transcript sentences, repetition count, or document richness. Score the kind of explanation the source provides. The rationale should state which source signals led to the selected intent and depth.
 
 ## Decide the advancement mode
 
-`MustAdvanceBy` identifies what makes the concept new relative to earlier concepts:
+The advancement mode identifies what makes the concept new relative to earlier concepts:
 
 | Mode | The new contribution is primarily |
 | --- | --- |
-| `Mechanism` | How a process, system, or argument produces its result, including the causal steps that make the result intelligible |
-| `Constraint` | A boundary, condition, exception, limitation, requirement, or failure mode that changes when the established idea applies |
-| `Tradeoff` | A choice among competing goals, costs, benefits, risks, or outcomes, including the reasoning used to choose |
-| `Evidence` | An observation, measurement, example, experiment, quotation, or source-grounded fact that supports or tests an idea |
+| mechanism | How a process, system, or argument produces its result, including the causal steps that make the result intelligible |
+| constraint | A boundary, condition, exception, limitation, requirement, or failure mode that changes when the established idea applies |
+| trade-off | A choice among competing goals, costs, benefits, risks, or outcomes, including the reasoning used to choose |
+| evidence | An observation, measurement, example, experiment, quotation, or source-grounded fact that supports or tests an idea |
 
 Choose the mode that best describes the actual net-new work of the concept, not a generic label for its subject. If several modes are present, choose the one carrying the main advancement and record the others in the rationale or concept notes.
 
-Every later objective must be net-new relative to every earlier concept, not merely the immediately preceding one. A later concept may rely on an established mechanism, value, or example, but its objective must advance, constrain, apply, compare, or evidence it rather than re-derive it. Use `Deepen` only for a material increase in understanding, `Apply` only for a genuinely new case, and `Review` for a concise connective revisit without new depth.
+Every later objective must be net-new relative to every earlier concept, not merely the immediately preceding one. A later concept may rely on an established mechanism, value, or example, but its objective must advance, constrain, apply, compare, or evidence it rather than re-derive it. Use deepen only for a material increase in understanding, apply only for a genuinely new case, and review for a concise connective revisit without new depth.
 
 For every concept, including the first, write a substantive do-not-repeat ledger. Name the terms and acronyms introduced, exact values and units, formulas, named examples, mechanism steps, and causal conclusions that the concept establishes for the first time. Phrase the ledger as guidance for later writing: later units may refer to an established item by name, but must not redefine it, rebuild its derivation, or restate its conclusion. An empty ledger is not a neutral choice; it removes the boundary information needed to keep later material additive.
 
 Keep concept boundaries aligned to real transcript segments where possible. Do not bisect a segment simply to manufacture a new concept; group its connected subtopics and assign any internal structure during chapter writing. Keep chapter spans chronological and non-overlapping, allowing only negligible timing uncertainty at a boundary.
 
-Choose `DocumentSpan`-like references by the actual document section or page identity supplied with the material. Never confuse a section ordinal with a page number or timestamp. Omit a reference when the concept is not substantively grounded in it.
+Choose document references by the actual document section or page identity supplied with the material. Never confuse a section ordinal with a page number or timestamp. Omit a reference when the concept is not substantively grounded in it.
 
 ## Outline quality check
 
