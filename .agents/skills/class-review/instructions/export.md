@@ -26,7 +26,7 @@ reference_documents:
 
 The description in the frontmatter is the paper-style abstract. It must provide a substantive, self-contained synthesis of the lesson's subject, scope, central question or problem, approach or framework, principal mechanisms or findings, implications, and meaningful limitations. It is not a tagline or a shallow overview. Let its length follow the complexity of the lesson while keeping every statement grounded in the source.
 
-Preserve the timestamp in machine-readable frontmatter, but display it pleasantly in rendered formats: localized date and hour/minute, without seconds, timezone offsets, or raw ISO punctuation in the visible title block. Use locale-aware date and time libraries rather than handwritten month names. Keep export labels together in a language-keyed dictionary or the selected locale resource so translations remain consistent across the document.
+Preserve the timestamp in machine-readable frontmatter, but display it pleasantly in rendered formats: derive a separate localized display date with the date and hour/minute, without seconds, timezone offsets, or raw ISO punctuation in the visible title block, and pass that display value to the template's date placeholder. Use locale-aware date and time libraries rather than handwritten month names. Keep export labels together in a language-keyed dictionary or the selected locale resource so translations remain consistent across the document. Never render the machine-readable timestamp directly as visible text.
 
 Use ordinary Markdown footnotes or the citation syntax selected by Pandoc. Put citations next to the claims they support and preserve source identity, page, and claim alignment. Do not embed transport markup in the body.
 
@@ -42,6 +42,10 @@ command -v typst
 For PDF, use Pandoc with the provided `pandoc-typst.template` when Typst is available. For HTML, DOCX, or another Pandoc-supported format, use the native writer and its normal styling facilities. If a requested renderer is unavailable, report the missing dependency and use another available format only with the user's agreement.
 
 The Typst template should provide a centered `Abstract` heading above the description, a calm title block, localized date/time, coherent heading hierarchy, and no unexpected automatic section numbering. Tables use a lightly blue-tinted header with rules above and below the header only, no body grid borders, left/top alignment, and comfortable spacing. The glossary is a dictionary-style table with a compact term column and the definition column taking the remaining width. Filenames in source tables use a monospaced font.
+
+Always include a table of contents in the PDF when the lesson has headings. Use the chapter and concept hierarchy, keep the entry styling consistent with the body, and make the contents readable rather than dense. Do not rely on an optional renderer flag to decide whether the contents exists.
+
+Apply the same professional style system throughout the export: title and abstract, table of contents, headings, paragraphs, lists, tables, equations, citations, footnotes, page numbering, and spacing should look like parts of one publication. Do not mix ad hoc styles between chapters or allow the renderer's defaults to override the chosen template selectively.
 
 Keep equivalent visual intent for HTML without relying on a repository CSS asset: blue-tinted headers, header rules only, no body borders, compact glossary terms, and monospaced filenames. Preserve links and footnotes in every format.
 

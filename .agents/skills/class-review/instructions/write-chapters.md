@@ -49,6 +49,8 @@ Do not repeat the same information in prose, a list, and a table merely to creat
 
 Write like a polished paper, textbook chapter, or professional study handout. Do not use ASCII art, boxed diagrams, decorative separators, Mermaid or other diagram syntax, emoji, chat-style labels, fake quotations, pseudo-UI, or response scaffolding such as `Answer:` and `Here is a summary:`. Do not turn the lesson into a transcript of the agent's work or into a stream of status updates.
 
+Use one coherent publication system across the entire lesson: the same heading hierarchy, typography, list treatment, table treatment, citation style, spacing logic, and level of formality. Do not improvise a different visual or rhetorical style for each chapter. Let content determine structure while the shared style system keeps the document visibly unified.
+
 Do not represent ordinary causal, procedural, or chronological sequences as ASCII arrow chains such as `A -> B -> C`, or as LaTeX arrow series such as `$A \to B \to C$`. Prefer a numbered or labeled list when the steps are separate, or connected prose when the relationship is continuous; lists are clearer for learners and make each step auditable. Keep arrow notation only when it is genuinely part of the subject matter—for example, a chemical reaction or transformation, a mathematical mapping, or another formal relation that the source actually teaches. Even then, use it sparingly and do not decorate ordinary exposition with it.
 
 ## Human-readable expression
