@@ -54,6 +54,14 @@ Write like a polished paper, textbook chapter, or professional study handout. Do
 
 Do not represent ordinary causal, procedural, or chronological sequences as ASCII arrow chains such as `A -> B -> C`, or as LaTeX arrow series such as `$A \to B \to C$`. Prefer a numbered or labeled list when the steps are separate, or connected prose when the relationship is continuous; lists are clearer for learners and make each step auditable. Keep arrow notation only when it is genuinely part of the subject matter—for example, a chemical reaction or transformation, a mathematical mapping, or another formal relation that the source actually teaches. Even then, use it sparingly and do not decorate ordinary exposition with it.
 
+## Human-readable prose
+
+Write as a careful human instructor would write for an intelligent learner. Cover the full supported substance and preserve its precision, but give the reader one manageable logical move at a time. Prefer short or medium-length sentences, concrete verbs, and clear paragraph boundaries. Split a sentence when it contains several nested clauses, qualifications, or independent conclusions; use a list when the material contains separate parallel steps or cases.
+
+Use technical language when the lesson requires it, but do not use jargon to sound authoritative. Define a necessary term at its first important use, then use it consistently. Replace avoidable specialist wording with ordinary language, without replacing a precise technical distinction with a vague simplification. Keep the complete reasoning intact while making the path through it easy to follow.
+
+The goal is complete, precise understanding with minimal cognitive friction—not maximal compression, ornamental complexity, or an artificially simplified summary.
+
 ## Language and notation
 
 Write all learner-facing prose, headings, labels, and citation text in the requested BCP 47 language. Keep terminology stable across the lesson and use canonical textbook forms for technical terms, identifiers, units, formulas, and symbols. A spoken acronym becomes its standard written acronym; a verbally described formula becomes canonical notation; a colloquial entity name becomes its formal name without changing the underlying fact.
