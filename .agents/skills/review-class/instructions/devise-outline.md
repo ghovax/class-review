@@ -32,51 +32,51 @@ For each chapter or writing unit, record:
 - a clean topical title and a one-sentence purpose;
 - the owned transcript time span and source excerpts;
 - one or more concepts in chronological order;
-- the objective and the advancement emphasis for each concept;
-- the treatment emphasis, which may combine introduction, deepening, application, and review;
-- the relative explanatory emphasis, which may range from low through medium to high;
-- the rationale for the observed mixture of emphasis;
+- the objective and the main advancement for each concept;
+- the treatment intent, which may combine introduction, deepening, application, and review;
+- the relative explanatory depth, which may range from low through medium to high;
+- the rationale for the observed mixture of intent and depth;
 - claims established for the first time and a substantive do-not-repeat ledger;
 - relevant reference documents and page ranges;
 - uncertainties, source conflicts, and citation targets.
 
-## Assess treatment emphasis
+## Assess treatment intent
 
-Treatment emphasis describes the learner-facing work a passage does in this location, not how important the topic is overall. Introduction, deepening, application, and review are overlapping descriptions rather than mutually exclusive classes: one concept can partly introduce, deepen, apply, and review an idea, with one of those emphases more prominent than the others. Compare the current treatment with what the outline has already established.
+Treatment intent describes the learner-facing work a passage does in this location, not how important the topic is overall. Introduction, deepening, application, and review are overlapping descriptions rather than mutually exclusive classes: one concept can partly introduce, deepen, apply, and review an idea, with one intent more prominent than the others. Treatment intent answers what the passage is doing for the learner; explanatory depth answers how thoroughly it does that work; attention answers how much space or effort the material receives. Compare the current treatment with what the outline has already established.
 
-| Emphasis | What it usually means | What it tends to contribute |
+| Treatment intent | What it usually means | What it tends to contribute |
 | --- | --- | --- |
 | Introduce | The idea is being established for the learner, or a prior foundation is not usable here | Define necessary terms, establish the baseline idea or mechanism, and provide the reasoning needed for first understanding |
 | Deepen | The idea is already available and the passage adds a meaningful layer | Extend it with a new mechanism, constraint, distinction, edge case, consequence, or richer reasoning |
 | Apply | An available principle is used in a genuinely new case, decision, comparison, or worked example | Develop the new case, outcome, trade-off, or decision logic while treating the principle as a baseline |
 | Review | An established idea is revisited for orientation, connection, comparison, or light reinforcement | Reconnect to it briefly by its stable name so the current material can proceed |
 
-When a passage contains several emphases, describe the combination and identify the dominant one only if the outline needs a compact summary. A passage may be mostly review with a small deepening element, or mostly introduction while also applying an idea to an example. If the new contribution is substantial, let it receive the space and reasoning it deserves; if it is slight, keep it slight rather than forcing a new category.
+When a passage contains several intents, describe the combination and identify the predominant intent only if the outline needs a compact summary. A passage may be mostly review with a small deepening element, or mostly introduction while also applying an idea to an example. If the new contribution is substantial, let it receive the space and reasoning it deserves; if it is slight, keep it slight rather than forcing a category.
 
-## Assess explanation emphasis
+## Assess explanatory depth
 
-Explanation emphasis measures qualitative treatment per moment, not the amount of airtime. High, medium, and low are useful points on a continuum, not hard boundaries. A short passage can carry high emphasis when it develops a dense mechanism; a long passage can carry low emphasis when it repeats a simple point. Judge the reasoning, nuance, qualification, and learner burden actually present in the transcript.
+Explanatory depth measures the thoroughness of the treatment per moment, not the amount of airtime or the importance of the topic. High, medium, and low are useful points on a continuum, not hard boundaries. A short passage can have high depth when it develops a dense mechanism; a long passage can have low depth when it repeats a simple point. Judge the reasoning, nuance, qualification, and learner burden actually present in the transcript.
 
-| Relative emphasis | Evidence in the transcript | Outline and writing consequence |
+| Depth | Evidence in the transcript | Outline and writing consequence |
 | --- | --- | --- |
 | High | The lecturer works through a mechanism or argument step by step, preserves causal links, handles meaningful nuance, exceptions, edge cases, competing explanations, or operational consequences | Reserve enough space to preserve the chain of reasoning and its qualifications; do not flatten it into a definition or list of conclusions |
 | Medium | The lecturer gives a clear explanation with the core reason, mechanism, example, or implication, but explores limited nuance or few edge cases | Explain the complete core idea and its main consequence with meaningful detail, without importing a deeper textbook treatment |
 | Low | The lecturer names, sketches, contrasts, or briefly mentions the idea with little unpacking or support | Keep the treatment concise and faithful; do not expand it merely because the topic is important in the wider field |
 
-Do not infer emphasis from chapter length, number of transcript sentences, repetition count, or document richness. A concept may contain a range—for example, a medium explanation with one high-emphasis mechanism and a low-emphasis aside. If one summary value is needed, use the center of gravity of the treatment and preserve the internal variation in the rationale or notes. Explain which source signals led to the assessment.
+Do not infer depth from chapter length, number of transcript sentences, repetition count, or document richness. A concept may contain a range—for example, a medium treatment with one deeply developed mechanism and a lightly mentioned aside. If one summary value is needed, use the center of gravity of the treatment and preserve the internal variation in the rationale or notes. Explain which source signals led to the assessment, and keep attention proportional to the material rather than using attention as a substitute for depth.
 
-## Assess advancement emphasis
+## Describe the main advancement
 
-Advancement emphasis identifies what makes the concept new relative to earlier concepts. These lenses can overlap: a mechanism may also be evidenced, and a constraint may create a trade-off. Use the one that best names the main contribution when a compact summary is needed, while preserving the other dimensions in the explanation.
+The main advancement describes what makes the concept new relative to earlier concepts. The following perspectives can overlap: a mechanism may also be evidenced, and a constraint may create a trade-off. Use the perspective that best names the main contribution when a compact summary is needed, while preserving the other dimensions in the explanation.
 
-| Mode | The new contribution is primarily |
+| Perspective | The new contribution is primarily |
 | --- | --- |
 | Mechanism | How a process, system, or argument produces its result, including the causal steps that make the result intelligible |
 | Constraint | A boundary, condition, exception, limitation, requirement, or failure mode that changes when the established idea applies |
 | Trade-off | A choice among competing goals, costs, benefits, risks, or outcomes, including the reasoning used to choose |
 | Evidence | An observation, measurement, example, experiment, quotation, or source-grounded fact that supports or tests an idea |
 
-Choose the emphasis that best describes the actual net-new work of the concept, not a generic label for its subject. If several modes are present, describe their relationship and, only when necessary, identify the one carrying the main advancement.
+Choose the perspective that best describes the actual net-new work of the concept, not a generic label for its subject. If several perspectives are present, describe their relationship and, only when necessary, identify the one carrying the main advancement.
 
 Every later objective must be net-new relative to every earlier concept, not merely the immediately preceding one. A later concept may rely on an established mechanism, value, or example, but its objective must advance, constrain, apply, compare, or evidence it rather than re-derive it. Let the objective express the actual mixture of new contribution and connective review instead of forcing the passage into a single treatment category.
 
@@ -88,4 +88,4 @@ Choose document references by the actual document section or page identity suppl
 
 ## Outline quality check
 
-Before writing, verify complete source coverage, chronological order, coherent dependencies, non-uniform content allocation, net-new objectives, substantive do-not-repeat ledgers, an honest description of mixed emphasis, and no unsupported expansion from reference documents. Continue to [write-chapters.md](write-chapters.md) only after those checks pass.
+Before writing, verify complete source coverage, chronological order, coherent dependencies, non-uniform content allocation, net-new objectives, substantive do-not-repeat ledgers, an honest description of mixed intent and depth, and no unsupported expansion from reference documents. Continue to [write-chapters.md](write-chapters.md) only after those checks pass.

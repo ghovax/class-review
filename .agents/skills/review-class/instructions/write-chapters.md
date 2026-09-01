@@ -8,18 +8,18 @@ The transcript controls substance, order, reasoning, and depth. References may c
 
 Normalize obvious transcription defects, duplicated fragments, malformed numerals, and surface terminology only when the intended reading is supported by the surrounding argument. Do not assign one component's properties to another, broaden a sub-case into a universal law, or turn a deliberate unknown into a fact.
 
-## Follow the outline's emphasis
+## Follow treatment intent and depth
 
-Treat treatment intent, explanation depth, and advancement mode as descriptive guidance, not switches. A writing unit may contain a mixture of emphases; let the source determine how much of each is present and give the dominant contribution the most space.
+Treat treatment intent, explanation depth, and advancement mode as descriptive guidance, not switches. A writing unit may contain a mixture of intents and varying depth; let the source determine how much of each is present and give the main contribution the space and reasoning it needs.
 
-| Emphasis | Writing behavior |
+| Treatment intent | Writing behavior |
 | --- | --- |
 | Introduce | Establish the learner's baseline: define necessary terms, explain the core idea, and supply the reasoning required for the first understanding |
 | Deepen | Assume the named baseline and add a substantial layer such as mechanism, constraint, distinction, edge case, consequence, or richer reasoning |
 | Apply | Use the established principle without re-deriving it and work through a genuinely new case, decision, comparison, or outcome |
 | Review | Use a short, stable reference to reconnect established material; do not rebuild the explanation or pretend it is new |
 
-For explanatory emphasis, high preserves a dense mechanism, causal argument, meaningful nuance, or edge-case analysis; medium explains the core idea and its main implication with useful detail; low stays concise because the source only sketches or mentions the point. These are points on a continuum, not hard bins: one concept can contain a high-emphasis mechanism, medium-emphasis explanation, and low-emphasis aside. Depth is qualitative, not proportional to airtime. For advancement, mechanism explains how the result is produced, constraint explains where or why the idea is limited, trade-off explains a competing choice, and evidence supplies the observation or source support that tests the idea. These advancement perspectives can also coexist in one passage.
+For explanatory depth, high preserves a dense mechanism, causal argument, meaningful nuance, or edge-case analysis; medium explains the core idea and its main implication with useful detail; low stays concise because the source only sketches or mentions the point. These are points on a continuum, not hard bins: one concept can contain a high-depth mechanism, medium-depth explanation, and low-depth aside. Depth is qualitative, not proportional to airtime. For advancement, mechanism explains how the result is produced, constraint explains where or why the idea is limited, trade-off explains a competing choice, and evidence supplies the observation or source support that tests the idea. These advancement perspectives can also coexist in one passage.
 
 If the transcript revisits an established point, compare it against the prior prose and ledger before writing. Keep the recap proportionate to the new contribution, then develop whatever is genuinely new. A passage can be mostly review while adding a small deepening or application, or mostly introduction while using a familiar idea as an example. Describe and write that mixture honestly instead of forcing a single category.
 
