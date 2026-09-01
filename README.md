@@ -57,17 +57,18 @@ lesson = Lesson.from_parts(outline=outline, chapters=chapters, glossary=glossary
 ```
 
 `ChapterWriter` is the low-level choice when a caller wants one chapter as an
-independent unit. `LessonWriter` accepts the complete outline as one lesson
-operation and owns its internal coordination:
+independent unit. `LessonWriter` accepts the complete outline and lets the
+caller choose sequential or concurrent chapter execution:
 
 ```python
-chapters = await LessonWriter(text_model).write_lesson(
+chapters = await LessonWriter(text_model).write(
     outline,
     materials,
+    strategy="sequential",
 )
 ```
 
-Each operation is independent. Callers may skip transcript revision, provide a hand-written outline, subclass `LessonWriter` for a different lesson-level implementation, or use `ChapterWriter` directly when they want to control chapter grouping.
+Each operation is independent. Callers may skip transcript revision, provide a hand-written outline, choose how chapters are grouped, or replace an operation with a compatible class.
 
 ## Operations
 
