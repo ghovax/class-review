@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import datetime
 from enum import StrEnum
 from importlib import resources
 from pathlib import PurePosixPath, Path
@@ -21,6 +21,8 @@ import re
 import subprocess
 
 import segno
+from babel.core import UnknownLocaleError
+from babel.dates import format_datetime
 
 """Lesson export to Markdown, PDF, and JSON."""
 
@@ -291,363 +293,6 @@ _LABELS_BY_LANGUAGE = {
     ),
 }
 
-_MONTHS_BY_LANGUAGE = {
-    "en": (
-        "January",
-        "February",
-        "March",
-        "April",
-        "May",
-        "June",
-        "July",
-        "August",
-        "September",
-        "October",
-        "November",
-        "December",
-    ),
-    "it": (
-        "gennaio",
-        "febbraio",
-        "marzo",
-        "aprile",
-        "maggio",
-        "giugno",
-        "luglio",
-        "agosto",
-        "settembre",
-        "ottobre",
-        "novembre",
-        "dicembre",
-    ),
-    "tr": (
-        "Ocak",
-        "Şubat",
-        "Mart",
-        "Nisan",
-        "Mayıs",
-        "Haziran",
-        "Temmuz",
-        "Ağustos",
-        "Eylül",
-        "Ekim",
-        "Kasım",
-        "Aralık",
-    ),
-    "es": (
-        "enero",
-        "febrero",
-        "marzo",
-        "abril",
-        "mayo",
-        "junio",
-        "julio",
-        "agosto",
-        "septiembre",
-        "octubre",
-        "noviembre",
-        "diciembre",
-    ),
-    "fr": (
-        "janvier",
-        "février",
-        "mars",
-        "avril",
-        "mai",
-        "juin",
-        "juillet",
-        "août",
-        "septembre",
-        "octobre",
-        "novembre",
-        "décembre",
-    ),
-    "de": (
-        "Januar",
-        "Februar",
-        "März",
-        "April",
-        "Mai",
-        "Juni",
-        "Juli",
-        "August",
-        "September",
-        "Oktober",
-        "November",
-        "Dezember",
-    ),
-    "pt": (
-        "janeiro",
-        "fevereiro",
-        "março",
-        "abril",
-        "maio",
-        "junho",
-        "julho",
-        "agosto",
-        "setembro",
-        "outubro",
-        "novembro",
-        "dezembro",
-    ),
-    "nl": (
-        "januari",
-        "februari",
-        "maart",
-        "april",
-        "mei",
-        "juni",
-        "juli",
-        "augustus",
-        "september",
-        "oktober",
-        "november",
-        "december",
-    ),
-    "pl": (
-        "stycznia",
-        "lutego",
-        "marca",
-        "kwietnia",
-        "maja",
-        "czerwca",
-        "lipca",
-        "sierpnia",
-        "września",
-        "października",
-        "listopada",
-        "grudnia",
-    ),
-    "ru": (
-        "января",
-        "февраля",
-        "марта",
-        "апреля",
-        "мая",
-        "июня",
-        "июля",
-        "августа",
-        "сентября",
-        "октября",
-        "ноября",
-        "декабря",
-    ),
-    "uk": (
-        "січня",
-        "лютого",
-        "березня",
-        "квітня",
-        "травня",
-        "червня",
-        "липня",
-        "серпня",
-        "вересня",
-        "жовтня",
-        "листопада",
-        "грудня",
-    ),
-    "ja": tuple(str(index) for index in range(1, 13)),
-    "ko": tuple(str(index) for index in range(1, 13)),
-    "zh": tuple(str(index) for index in range(1, 13)),
-    "ar": (
-        "يناير",
-        "فبراير",
-        "مارس",
-        "أبريل",
-        "مايو",
-        "يونيو",
-        "يوليو",
-        "أغسطس",
-        "سبتمبر",
-        "أكتوبر",
-        "نوفمبر",
-        "ديسمبر",
-    ),
-    "hi": (
-        "जनवरी",
-        "फ़रवरी",
-        "मार्च",
-        "अप्रैल",
-        "मई",
-        "जून",
-        "जुलाई",
-        "अगस्त",
-        "सितंबर",
-        "अक्टूबर",
-        "नवंबर",
-        "दिसंबर",
-    ),
-    "he": (
-        "ינואר",
-        "פברואר",
-        "מרץ",
-        "אפריל",
-        "מאי",
-        "יוני",
-        "יולי",
-        "אוגוסט",
-        "ספטמבר",
-        "אוקטובר",
-        "נובמבר",
-        "דצמבר",
-    ),
-    "el": (
-        "Ιανουαρίου",
-        "Φεβρουαρίου",
-        "Μαρτίου",
-        "Απριλίου",
-        "Μαΐου",
-        "Ιουνίου",
-        "Ιουλίου",
-        "Αυγούστου",
-        "Σεπτεμβρίου",
-        "Οκτωβρίου",
-        "Νοεμβρίου",
-        "Δεκεμβρίου",
-    ),
-    "sv": (
-        "januari",
-        "februari",
-        "mars",
-        "april",
-        "maj",
-        "juni",
-        "juli",
-        "augusti",
-        "september",
-        "oktober",
-        "november",
-        "december",
-    ),
-    "da": (
-        "januar",
-        "februar",
-        "marts",
-        "april",
-        "maj",
-        "juni",
-        "juli",
-        "august",
-        "september",
-        "oktober",
-        "november",
-        "december",
-    ),
-    "no": (
-        "januar",
-        "februar",
-        "mars",
-        "april",
-        "mai",
-        "juni",
-        "juli",
-        "august",
-        "september",
-        "oktober",
-        "november",
-        "desember",
-    ),
-    "fi": (
-        "tammikuuta",
-        "helmikuuta",
-        "maaliskuuta",
-        "huhtikuuta",
-        "toukokuuta",
-        "kesäkuuta",
-        "heinäkuuta",
-        "elokuuta",
-        "syyskuuta",
-        "lokakuuta",
-        "marraskuuta",
-        "joulukuuta",
-    ),
-    "cs": (
-        "ledna",
-        "února",
-        "března",
-        "dubna",
-        "května",
-        "června",
-        "července",
-        "srpna",
-        "září",
-        "října",
-        "listopadu",
-        "prosince",
-    ),
-    "ro": (
-        "ianuarie",
-        "februarie",
-        "martie",
-        "aprilie",
-        "mai",
-        "iunie",
-        "iulie",
-        "august",
-        "septembrie",
-        "octombrie",
-        "noiembrie",
-        "decembrie",
-    ),
-    "hu": (
-        "január",
-        "február",
-        "március",
-        "április",
-        "május",
-        "június",
-        "július",
-        "augusztus",
-        "szeptember",
-        "október",
-        "november",
-        "december",
-    ),
-    "vi": tuple(f"tháng {index}" for index in range(1, 13)),
-    "id": (
-        "Januari",
-        "Februari",
-        "Maret",
-        "April",
-        "Mei",
-        "Juni",
-        "Juli",
-        "Agustus",
-        "September",
-        "Oktober",
-        "November",
-        "Desember",
-    ),
-    "bg": (
-        "януари",
-        "февруари",
-        "март",
-        "април",
-        "май",
-        "юни",
-        "юли",
-        "август",
-        "септември",
-        "октомври",
-        "ноември",
-        "декември",
-    ),
-    "ca": (
-        "gener",
-        "febrer",
-        "març",
-        "abril",
-        "maig",
-        "juny",
-        "juliol",
-        "agost",
-        "setembre",
-        "octubre",
-        "novembre",
-        "desembre",
-    ),
-}
-
 
 def primary_language(language: str | None) -> str:
     """Extracts the normalized leading subtag of a BCP 47 language tag."""
@@ -658,38 +303,6 @@ def primary_language(language: str | None) -> str:
 def export_labels(language: str | None) -> ExportLabels:
     """Resolves export labels, falling back to English."""
     return _LABELS_BY_LANGUAGE.get(primary_language(language), _LABELS_BY_LANGUAGE["en"])
-
-
-def format_lesson_date(lesson_date: date, language: str | None) -> str:
-    """Formats a calendar date for the supported export language."""
-    selected_language = primary_language(language)
-    months = _MONTHS_BY_LANGUAGE.get(selected_language, _MONTHS_BY_LANGUAGE["en"])
-    month = months[lesson_date.month - 1]
-    if selected_language == "en":
-        return f"{month} {lesson_date.day}, {lesson_date.year}"
-    if selected_language in {"ja", "zh"}:
-        return f"{lesson_date.year}年{month}月{lesson_date.day}日"
-    if selected_language == "ko":
-        return f"{lesson_date.year}년 {month}월 {lesson_date.day}일"
-    if selected_language == "hu":
-        return f"{lesson_date.year}. {month} {lesson_date.day}."
-    if selected_language == "vi":
-        return f"Ngày {lesson_date.day} {month} năm {lesson_date.year}"
-    return f"{lesson_date.day} {month} {lesson_date.year}"
-
-
-def format_lesson_timestamp(timestamp: datetime, language: str | None) -> str:
-    """Formats a lesson timestamp with a localized date and an ISO time offset."""
-    date_text = format_lesson_date(timestamp.date(), language)
-    time_text = timestamp.strftime("%H:%M:%S")
-    offset = timestamp.utcoffset()
-    if offset is not None:
-        offset_minutes = int(offset.total_seconds() // 60)
-        sign = "+" if offset_minutes >= 0 else "-"
-        hours, minutes = divmod(abs(offset_minutes), 60)
-        time_text = f"{time_text} {sign}{hours:02d}:{minutes:02d}"
-    separator = " at " if primary_language(language) == "en" else ", "
-    return f"{date_text}{separator}{time_text}"
 
 
 """Building the source-listing tables used by lesson outputs."""
@@ -881,6 +494,15 @@ def render_export_template(name: str, variables: Mapping[str, object]) -> str:
         raise ExportError(f"export template {name!r} could not be rendered") from error
 
 
+def _set_glossary_column_width(markdown: str, metadata: ExportMetadata) -> str:
+    """Preserve a compact glossary width after the Markdown AST normalizes tables."""
+    labels = export_labels(metadata.language)
+    header = f"| {labels.glossary_term} | {labels.glossary_definition} |"
+    normalized = f"## {labels.glossary}\n\n{header}\n| --- | --- |"
+    compact = f"## {labels.glossary}\n\n{header}\n| -------- | ------------------------ |"
+    return markdown.replace(normalized, compact, 1)
+
+
 def _render_markdown(lesson: Lesson, metadata: ExportMetadata) -> str:
     """Render a complete lesson with metadata kept in YAML frontmatter."""
     frontmatter = render_export_template("lesson", _frontmatter_variables(lesson, metadata)).strip()
@@ -888,7 +510,7 @@ def _render_markdown(lesson: Lesson, metadata: ExportMetadata) -> str:
     definitions = build_citation_definitions(lesson, metadata)
     if definitions:
         blocks.extend(f"[^{number}]: {body}" for number, body in definitions.items())
-    body = compose_markdown(blocks)
+    body = _set_glossary_column_width(compose_markdown(blocks), metadata)
     return f"{frontmatter}\n\n{body}" if body else frontmatter
 
 
@@ -994,9 +616,19 @@ def _pandoc_metadata(metadata: ExportMetadata) -> dict[str, str]:
     if metadata.author and metadata.author.strip():
         values["author"] = metadata.author.strip()
     if metadata.lesson_timestamp:
-        values["lesson-date"] = format_lesson_timestamp(
-            metadata.lesson_timestamp, metadata.language
-        )
+        locale = (metadata.language or "en").replace("-", "_")
+        try:
+            values["lesson-date"] = format_datetime(
+                metadata.lesson_timestamp,
+                format="long",
+                locale=locale,
+            )
+        except (UnknownLocaleError, ValueError):
+            values["lesson-date"] = format_datetime(
+                metadata.lesson_timestamp,
+                format="long",
+                locale="en",
+            )
     return values
 
 
