@@ -1,6 +1,0 @@
-{
-  "dependencies": ["."],
-  "graphs": {
-    "teacher": "./src/teacher/studio.py:graph"
-  }
-}

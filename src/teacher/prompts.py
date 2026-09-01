@@ -7,7 +7,7 @@ import re
 from collections.abc import Mapping
 from importlib import resources
 
-from teacher.support import PipelineError
+from teacher.support import OperationError
 
 _PLACEHOLDER = re.compile(r"\{\{\s+([A-Za-z0-9_.-]+)\s+\}\}")
 
@@ -20,11 +20,11 @@ class Prompts:
 
     def render(self, name: str, variables: Mapping[str, object] | None = None) -> str:
         if name.startswith("/") or ".." in name.split("/"):
-            raise PipelineError.terminal("invalid prompt name", {"name": name})
+            raise OperationError.terminal("invalid prompt name", {"name": name})
         try:
             template = resources.files(self.package).joinpath(f"{name}.md").read_text()
         except (FileNotFoundError, ModuleNotFoundError, OSError) as error:
-            raise PipelineError.terminal(
+            raise OperationError.terminal(
                 "prompt could not be read", {"name": name}, cause=error
             ) from error
         supplied = variables or {}
@@ -36,11 +36,16 @@ class Prompts:
             if not any(item == used or item.startswith(f"{used}.") for used in names)
         )
         if missing or unused:
-            raise PipelineError.terminal(
+            raise OperationError.terminal(
                 "prompt values do not match its placeholders",
                 {"name": name, "missing": missing, "unused": unused},
             )
         return _PLACEHOLDER.sub(lambda match: _render(_value(supplied, match.group(1))), template)
+
+
+def get_prompts(value: Prompts | None = None) -> Prompts:
+    """Return the caller's prompt collection or the packaged defaults."""
+    return value or Prompts()
 
 
 def _value(values: Mapping[str, object], dotted_name: str) -> object | None:

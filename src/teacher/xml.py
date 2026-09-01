@@ -1,4 +1,4 @@
-"""Consolidated Teacher implementation."""
+"""Recover, validate, and build XML exchanged with models."""
 
 from __future__ import annotations
 
@@ -7,14 +7,9 @@ from datetime import datetime
 from enum import StrEnum
 from lxml import etree
 from pydantic import BaseModel, BeforeValidator, ValidationError
-from teacher.support import PipelineError, get_logger
+from teacher.support import OperationError, get_logger
 from typing import Any, Final, Annotated
 import re
-
-"""XML recovery, schema validation, and document construction."""
-
-"""Recovering usable XML from a model's answer."""
-
 
 logger = get_logger(__name__)
 
@@ -52,7 +47,7 @@ def extract_element_text(
     opening = re.compile(rf"<{re.escape(root_tag)}\b[^>]*>")
     opening_match = opening.search(content)
     if opening_match is None:
-        raise PipelineError.retryable(
+        raise OperationError.retryable(
             f"model answer contains no <{root_tag}> element",
             {**(metadata or {}), "error_code": "xml_parse", "root_tag": root_tag},
         )
@@ -92,16 +87,16 @@ def parse_recovering(
     try:
         root = etree.fromstring(repaired.encode("utf-8"), parser=parser)
     except etree.XMLSyntaxError as error:
-        raise PipelineError.retryable(
+        raise OperationError.retryable(
             "model answer could not be parsed as XML even with recovery",
             error_context,
             error,
         ) from error
 
     if root is None:
-        raise PipelineError.retryable("XML recovery produced no root element", error_context)
+        raise OperationError.retryable("XML recovery produced no root element", error_context)
     if root.tag != root_tag:
-        raise PipelineError.retryable(
+        raise OperationError.retryable(
             f"recovered root element is <{root.tag}>, expected <{root_tag}>",
             {**error_context, "recovered_root_tag": str(root.tag)},
         )
@@ -158,9 +153,6 @@ def _escape_stray_markup_characters(element_text: str) -> str:
         escaped = escaped.replace("]]>", "]]&gt;")
         segments[index] = _STRAY_LESS_THAN.sub("&lt;", escaped)
     return "".join(segments)
-
-
-"""Validating recovered XML against a schema, and the coercions it needs."""
 
 
 logger = get_logger(__name__)
@@ -252,7 +244,7 @@ def parse_xml_with_schema[SchemaType: BaseModel](
                 f"{first_failure['message']}"
             )
         )
-        raise PipelineError.retryable(
+        raise OperationError.retryable(
             message, {**error_context, "schema_failures": failures}, error
         ) from error
 
@@ -278,9 +270,6 @@ def _format_field_path(location: Sequence[Any]) -> str:
         else:
             rendered += f".{segment}" if rendered else str(segment)
     return rendered
-
-
-"""Building the XML documents that carry structured content into a prompt."""
 
 
 def build_xml_document(

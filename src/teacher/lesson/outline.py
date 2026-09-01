@@ -1,226 +1,111 @@
-"""Plan the lesson outline from transcript and document material."""
+"""Draft lesson outlines from transcript and reference material."""
 
 from __future__ import annotations
 
 from langchain_core.messages import HumanMessage, SystemMessage
-from langgraph.config import get_stream_writer
-from langgraph.runtime import Runtime
 from pydantic import BaseModel, Field
-from teacher.configuration import GraphRuntime, LessonPolicy, TranscriptPolicy
+
+from teacher.interfaces import ChatModel
 from teacher.models import (
+    ChapterOutline,
     Concept,
-    PlannedChapter,
-    PipelineStage,
-    PlanCreated,
-    StageChanged,
     ConceptDocumentSpan,
+    LessonMaterials,
+    LessonOutline,
+    ProgressionAxis,
     ConceptIntent,
     ExplanationDepth,
-    LessonPlan,
-    ProgressionAxis,
+    ReferenceMaterial,
     TimeSpan,
+    Transcript,
 )
-from teacher.state import LessonState
-from teacher.lesson.context import split_into_sentences
-from teacher.support import PipelineError, get_logger, call_chat_model
-from teacher.xml import (
-    OneOrMany,
-    RequiredText,
-    build_xml_document,
-    case_insensitive_with_fallback,
-    parse_xml_with_schema,
-)
-from typing import Annotated
+from teacher.prompts import Prompts, get_prompts
+from teacher.support import call_chat_model
+from teacher.xml import OneOrMany, RequiredText, build_xml_document, parse_xml_with_schema
 
 
-logger = get_logger(__name__)
+class OutlineWriter:
+    """Writes a proposed lesson outline from assembled materials."""
 
-_PLAN_SYSTEM_TEMPLATE = "lesson/plan_lesson_outline/system"
-_PLAN_USER_TEMPLATE = "lesson/plan_lesson_outline/user"
-_PLAN_ROOT_TAG = "LessonOutline"
+    def __init__(
+        self,
+        text_model: ChatModel,
+        *,
+        prompts: Prompts | None = None,
+    ) -> None:
+        self.text_model = text_model
+        self.prompts = get_prompts(prompts)
 
-
-class _DocumentSpanSchema(BaseModel):
-    """The document sections one concept draws on."""
-
-    document_index: int = Field(alias="DocumentIndex", ge=0)
-    section_indices: OneOrMany[int] = Field(alias="SectionIndex", default_factory=list)
-
-
-class _DurationSchema(BaseModel):
-    """The transcript context selected for one concept."""
-
-    start_seconds: float = Field(alias="Beginning", ge=0)
-    end_seconds: float = Field(alias="End", ge=0)
-
-
-class _ConceptSchema(BaseModel):
-    """One concept the plan declared."""
-
-    topic_title: RequiredText = Field(alias="TopicTitle")
-    learning_objective: RequiredText = Field(alias="LearningObjective")
-    must_advance_by: Annotated[
-        ProgressionAxis,
-        case_insensitive_with_fallback(ProgressionAxis, ProgressionAxis.MECHANISM),
-    ] = Field(alias="MustAdvanceBy")
-    intent: Annotated[
-        ConceptIntent,
-        case_insensitive_with_fallback(ConceptIntent, ConceptIntent.INTRODUCE),
-    ] = Field(alias="Intent")
-    explanation_depth: Annotated[
-        ExplanationDepth,
-        case_insensitive_with_fallback(ExplanationDepth, ExplanationDepth.MEDIUM),
-    ] = Field(alias="ExplanationDepth")
-    rationale: RequiredText = Field(alias="Rationale")
-    duration: _DurationSchema = Field(alias="Duration")
-    establishes: RequiredText = Field(alias="DoNotRepeat")
-    document_spans: OneOrMany[_DocumentSpanSchema] = Field(
-        alias="DocumentSpan", default_factory=list
-    )
-
-
-class _ChapterSchema(BaseModel):
-    """One chapter the plan declared."""
-
-    title: RequiredText = Field(alias="Title")
-    concepts: OneOrMany[_ConceptSchema] = Field(alias="Concept")
-
-
-class _OutlineSchema(BaseModel):
-    """The element a plan call is expected to answer with."""
-
-    title: RequiredText = Field(alias="Title")
-    description: RequiredText = Field(alias="Description")
-    chapters: OneOrMany[_ChapterSchema] = Field(alias="Chapter")
-
-
-async def plan_lesson_outline(
-    state: LessonState, runtime: Runtime[GraphRuntime]
-) -> dict[str, object]:
-    """Drafts the plan the chapters will be written against."""
-    segments = state.get("clean_transcript", [])
-    if not segments:
-        raise PipelineError.terminal(
-            "there is no transcript to plan a lesson from", {"segment_count": 0}
+    async def draft(self, materials: LessonMaterials) -> LessonOutline:
+        """Draft a lesson outline from the corrected transcript and references."""
+        prompts = self.prompts
+        start = min(item.start_seconds for item in materials.transcript.segments)
+        end = max(item.end_seconds for item in materials.transcript.segments)
+        answer = await call_chat_model(
+            self.text_model,
+            [
+                SystemMessage(
+                    prompts.render(
+                        "lesson/plan_lesson_outline/system",
+                        {
+                            "language": materials.language,
+                            "language_policy": prompts.render("shared_prompts/language_policy"),
+                            "xml_policy": prompts.render("shared_prompts/xml_policy"),
+                            "mathematics_notation_rules": prompts.render(
+                                "shared_prompts/mathematics_notation_rules"
+                            ),
+                        },
+                    )
+                ),
+                HumanMessage(
+                    prompts.render(
+                        "lesson/plan_lesson_outline/user",
+                        {
+                            "language": materials.language,
+                            "metadata": {
+                                "document_count": len(materials.references.documents),
+                                "lesson_start_seconds": round(start, 1),
+                                "lesson_end_seconds": round(end, 1),
+                                "lesson_duration_seconds": round(end - start, 1),
+                            },
+                            "transcript_segments_xml": _render_transcript(materials.transcript),
+                            "document_section_map_xml": _render_reference_sections(
+                                materials.references
+                            ),
+                            "section_explanations_xml": _render_reference_notes(
+                                materials.references
+                            ),
+                        },
+                    )
+                ),
+            ],
         )
-
-    stream_writer = get_stream_writer()
-    stream_writer(StageChanged(stage=PipelineStage.PLANNING_LESSON))
-
-    prompts = runtime.context.prompts
-    start_seconds = min(segment.start_seconds for segment in segments)
-    end_seconds = max(segment.end_seconds for segment in segments)
-    duration_seconds = max(0.0, end_seconds - start_seconds)
-    documents = state.get("documents", [])
-
-    logger.info(
-        "plan drafting started",
-        segment_count=len(segments),
-        document_count=len(documents),
-        duration_seconds=duration_seconds,
-    )
-
-    system_prompt = prompts.render(
-        _PLAN_SYSTEM_TEMPLATE,
-        {
-            "language": state["output_language"],
-            "language_policy": prompts.render("shared_prompts/language_policy"),
-            "xml_policy": prompts.render("shared_prompts/xml_policy"),
-            "mathematics_notation_rules": prompts.render(
-                "shared_prompts/mathematics_notation_rules"
-            ),
-        },
-    )
-    user_prompt = prompts.render(
-        _PLAN_USER_TEMPLATE,
-        {
-            "language": state["output_language"],
-            "metadata": {
-                "document_count": len(documents),
-                "lesson_start_seconds": round(start_seconds, 1),
-                "lesson_end_seconds": round(end_seconds, 1),
-                "lesson_duration_seconds": round(duration_seconds, 1),
-            },
-            "transcript_segments_xml": _render_transcript(state, runtime.context.transcript),
-            "document_section_map_xml": _render_section_map(state),
-            "section_explanations_xml": _render_notes(state),
-        },
-    )
-    _check_request_size(
-        character_count=len(system_prompt) + len(user_prompt),
-        segment_count=len(segments),
-        duration_seconds=duration_seconds,
-        policy=runtime.context.lesson,
-    )
-
-    answer = await call_chat_model(
-        runtime.context.models.text,
-        [SystemMessage(system_prompt), HumanMessage(user_prompt)],
-        metadata={"segment_count": len(segments)},
-    )
-
-    plan = _read_plan(
-        answer.text,
-        transcript_start_seconds=start_seconds,
-        transcript_end_seconds=end_seconds,
-        policy=runtime.context.lesson,
-    )
-    logger.info(
-        "plan drafted",
-        lecture_title=plan.title,
-        chapter_count=len(plan.chapters),
-        concept_count=sum(len(chapter.concepts) for chapter in plan.chapters),
-    )
-    stream_writer(PlanCreated(plan=plan))
-
-    return {"plan": plan, "usage_by_model": answer.usage_by_model}
+        parsed = parse_xml_with_schema(
+            content=answer.text, root_tag="LessonOutline", schema=_OutlineSchema
+        )
+        return _make_outline(parsed, start, end)
 
 
-def _render_transcript(state: LessonState, policy: TranscriptPolicy) -> str:
-    """Renders the transcript with its sentences, for the plan to plan over."""
-    clean_transcript = state.get("clean_transcript")
-    if clean_transcript is None:
-        raise PipelineError.terminal("the corrected transcript is missing")
+def _render_transcript(transcript: Transcript) -> str:
     return build_xml_document(
         "TranscriptSegments",
         {
             "Segment": [
-                {
-                    "Beginning": round(segment.start_seconds, policy.timestamp_decimals),
-                    "End": round(segment.end_seconds, policy.timestamp_decimals),
-                    "Sentence": [
-                        {
-                            "Beginning": round(
-                                sentence.start_seconds,
-                                policy.timestamp_decimals,
-                            ),
-                            "End": round(
-                                sentence.end_seconds,
-                                policy.timestamp_decimals,
-                            ),
-                            "Text": sentence.content,
-                        }
-                        for sentence in split_into_sentences(segment)
-                    ],
-                }
-                for segment in clean_transcript
+                {"Beginning": item.start_seconds, "End": item.end_seconds, "Sentence": item.content}
+                for item in transcript.segments
             ]
         },
     )
 
 
-def _render_section_map(state: LessonState) -> str:
-    """Renders how the documents divide into sections."""
-    section_map = state.get("section_map")
-    if section_map is None or not section_map.documents:
-        return build_xml_document("DocumentSections", {})
+def _render_reference_sections(material: ReferenceMaterial) -> str:
     return build_xml_document(
         "DocumentSections",
         {
             "Document": [
                 {
-                    "DocumentIndex": entry.document_index,
-                    "FileName": entry.file_name,
+                    "DocumentIndex": item.document_index,
+                    "FileName": item.file_name,
                     "Section": [
                         {
                             "SectionIndex": section.section_index,
@@ -229,168 +114,90 @@ def _render_section_map(state: LessonState) -> str:
                             "SectionTitle": section.title,
                             "Description": section.description,
                         }
-                        for section in entry.sections
+                        for section in item.sections
                     ],
                 }
-                for entry in section_map.documents
+                for item in material.sections
             ]
         },
     )
 
 
-def _render_notes(state: LessonState) -> str:
-    """Renders the section explanations."""
-    notes = state.get("section_notes", [])
-    if not notes:
-        return build_xml_document("SectionExplanations", {})
+def _render_reference_notes(material: ReferenceMaterial) -> str:
     return build_xml_document(
         "SectionExplanations",
         {
             "Section": [
                 {
-                    "DocumentIndex": note.document_index,
-                    "SectionIndex": note.section_index,
-                    "Explanation": note.content,
+                    "DocumentIndex": item.document_index,
+                    "SectionIndex": item.section_index,
+                    "Explanation": item.content,
                 }
-                for note in notes
+                for item in material.notes
             ]
         },
     )
 
 
-def _read_plan(
-    answer_text: str,
-    *,
-    transcript_start_seconds: float,
-    transcript_end_seconds: float,
-    policy: LessonPolicy,
-) -> LessonPlan:
-    """Read the answer into a plan, held to the transcript that exists."""
-    parsed = parse_xml_with_schema(
-        content=answer_text, root_tag=_PLAN_ROOT_TAG, schema=_OutlineSchema
-    )
-    if not parsed.chapters:
-        raise PipelineError.retryable("the plan declares no chapters")
-    _check_asserted_values(parsed, policy)
-
+def _make_outline(parsed: _OutlineSchema, start: float, end: float) -> LessonOutline:
+    chapters: list[ChapterOutline] = []
     global_index = 0
-    chapters_list: list[PlannedChapter] = []
     for chapter in parsed.chapters:
-        concepts: list[Concept] = []
-        for concept_index, concept in enumerate(chapter.concepts):
+        concepts = []
+        for index, item in enumerate(chapter.concepts):
+            first, second = sorted((item.duration.start_seconds, item.duration.end_seconds))
+            span = TimeSpan(min(max(first, start), end), min(max(second, start), end))
             concepts.append(
                 Concept(
-                    concept_index=concept_index,
-                    global_index=global_index,
-                    topic_title=concept.topic_title,
-                    learning_objective=concept.learning_objective,
-                    must_advance_by=concept.must_advance_by,
-                    intent=concept.intent,
-                    explanation_depth=concept.explanation_depth,
-                    rationale=concept.rationale,
-                    transcript_span=_clamp_span(
-                        concept.duration.start_seconds,
-                        concept.duration.end_seconds,
-                        transcript_start_seconds,
-                        transcript_end_seconds,
-                    ),
-                    establishes=concept.establishes,
-                    document_spans=tuple(
-                        ConceptDocumentSpan(
-                            document_index=span.document_index,
-                            section_indices=tuple(span.section_indices),
-                        )
-                        for span in concept.document_spans
+                    index,
+                    global_index,
+                    item.topic_title,
+                    item.learning_objective,
+                    item.must_advance_by,
+                    item.intent,
+                    item.explanation_depth,
+                    item.rationale,
+                    span,
+                    item.establishes,
+                    tuple(
+                        ConceptDocumentSpan(span.document_index, tuple(span.section_indices))
+                        for span in item.document_spans
                     ),
                 )
             )
             global_index += 1
-        chapters_list.append(PlannedChapter(title=chapter.title, concepts=tuple(concepts)))
-    chapters = tuple(chapters_list)
-
-    if not any(chapter.concepts for chapter in chapters):
-        raise PipelineError.retryable("the plan declares no concepts")
-
-    return LessonPlan(title=parsed.title, description=parsed.description, chapters=chapters)
+        chapters.append(ChapterOutline(chapter.title, tuple(concepts)))
+    return LessonOutline(parsed.title, parsed.description, tuple(chapters))
 
 
-def _clamp_span(first: float, second: float, lower: float, upper: float) -> TimeSpan:
-    """Brings one concept's span inside the recording that exists."""
-    start = min(first, second)
-    end = max(first, second)
-    clamped_start = min(max(start, lower), upper)
-    clamped_end = min(max(end, clamped_start), upper)
-    if (start, end) != (clamped_start, clamped_end):
-        logger.warning(
-            "plan named a stretch outside the recording, bringing it inside",
-            named_start_seconds=start,
-            named_end_seconds=end,
-            clamped_start_seconds=clamped_start,
-            clamped_end_seconds=clamped_end,
-        )
-    return TimeSpan(start_seconds=clamped_start, end_seconds=clamped_end)
+class _Duration(BaseModel):
+    start_seconds: float = Field(alias="Beginning", ge=0)
+    end_seconds: float = Field(alias="End", ge=0)
 
 
-def _check_request_size(
-    *,
-    character_count: int,
-    segment_count: int,
-    duration_seconds: float,
-    policy: LessonPolicy,
-) -> None:
-    """Refuses a request no provider will accept, naming why it grew."""
-    logger.info(
-        "plan request assembled",
-        request_character_count=character_count,
-        segment_count=segment_count,
-        duration_seconds=round(duration_seconds, 1),
-    )
-    if character_count <= policy.maximum_plan_request_characters:
-        return
-    raise PipelineError.terminal(
-        "the transcript is too long to draft a plan from in one request",
-        {
-            "request_character_count": character_count,
-            "maximum_request_characters": policy.maximum_plan_request_characters,
-            "segment_count": segment_count,
-            "duration_seconds": round(duration_seconds, 1),
-            "duration_hours": round(duration_seconds / 3600, 2),
-        },
-    )
+class _DocumentSpan(BaseModel):
+    document_index: int = Field(alias="DocumentIndex", ge=0)
+    section_indices: OneOrMany[int] = Field(alias="SectionIndex", default_factory=list)
 
 
-def _check_asserted_values(parsed: _OutlineSchema, policy: LessonPolicy) -> None:
-    """Holds every number the answer states to a plausible range."""
-    for chapter in parsed.chapters:
-        for concept in chapter.concepts:
-            for label, value, ceiling in (
-                (
-                    "start_seconds",
-                    concept.duration.start_seconds,
-                    policy.maximum_model_seconds,
-                ),
-                (
-                    "end_seconds",
-                    concept.duration.end_seconds,
-                    policy.maximum_model_seconds,
-                ),
-            ):
-                if value > ceiling:
-                    raise PipelineError.retryable(
-                        "the plan states a value beyond what could be real",
-                        {
-                            "field_name": label,
-                            "stated_value": value,
-                            "maximum_value": ceiling,
-                            "chapter_title": chapter.title,
-                        },
-                    )
-            for span in concept.document_spans:
-                if span.document_index > policy.maximum_model_index:
-                    raise PipelineError.retryable(
-                        "the plan states a document beyond what could be real",
-                        {
-                            "stated_value": span.document_index,
-                            "maximum_value": policy.maximum_model_index,
-                        },
-                    )
+class _Concept(BaseModel):
+    topic_title: RequiredText = Field(alias="TopicTitle")
+    learning_objective: RequiredText = Field(alias="LearningObjective")
+    must_advance_by: ProgressionAxis = Field(alias="MustAdvanceBy")
+    intent: ConceptIntent = Field(alias="Intent")
+    explanation_depth: ExplanationDepth = Field(alias="ExplanationDepth")
+    rationale: RequiredText = Field(alias="Rationale")
+    duration: _Duration = Field(alias="Duration")
+    establishes: RequiredText = Field(alias="DoNotRepeat")
+    document_spans: OneOrMany[_DocumentSpan] = Field(alias="DocumentSpan", default_factory=list)
+
+
+class _OutlineChapter(BaseModel):
+    title: RequiredText = Field(alias="Title")
+    concepts: OneOrMany[_Concept] = Field(alias="Concept")
+
+
+class _OutlineSchema(BaseModel):
+    title: RequiredText = Field(alias="Title")
+    description: RequiredText = Field(alias="Description")
+    chapters: OneOrMany[_OutlineChapter] = Field(alias="Chapter")

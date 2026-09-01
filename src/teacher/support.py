@@ -1,13 +1,13 @@
-"""Consolidated Teacher implementation."""
+"""Shared errors, logging, model calls, and lesson helpers."""
 
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from langchain_core.callbacks import get_usage_metadata_callback
-from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage
 from models_provider import ModelUsage
+from teacher.interfaces import ChatModel
 from teacher.models import GlossaryEntry, GlossaryLink
 from typing import Any, Final, Self, Literal
 import logging
@@ -16,13 +16,9 @@ import traceback
 
 import structlog
 
-"""Shared errors, logging, model calls, and graph material rendering."""
 
-"""Error types and retry classification shared by every graph node."""
-
-
-class PipelineError(Exception):
-    """A failure raised by a graph node."""
+class OperationError(Exception):
+    """A failure raised by an operation."""
 
     def __init__(
         self,
@@ -30,7 +26,7 @@ class PipelineError(Exception):
         metadata: dict[str, Any] | None = None,
         cause: BaseException | None = None,
     ) -> None:
-        """Builds a pipeline error carrying structured context."""
+        """Build an operation error carrying structured context."""
         super().__init__(message)
         self.metadata: dict[str, Any] = dict(metadata or {})
         if cause is not None:
@@ -53,7 +49,7 @@ class PipelineError(Exception):
         metadata: dict[str, Any] | None = None,
         cause: BaseException | None = None,
     ) -> Self:
-        """Builds an error that short-circuits retries and aborts the run."""
+        """Builds an error that marks an operation failure as terminal."""
         return cls(message, {**(metadata or {}), "retryable": False}, cause)
 
     @property
@@ -62,40 +58,20 @@ class PipelineError(Exception):
         return bool(self.metadata.get("retryable", False))
 
 
-# Deliberately not suffixed "Error": a cancellation is an outcome the caller asked
-# for, not a fault, and callers distinguish the two by type.
-class GenerationCancelled(PipelineError):  # noqa: N818
-    """Raised when a caller aborts a run in progress."""
-
-    def __init__(self, message: str = "cancelled by the caller") -> None:
-        """Builds a cancellation signal."""
-        super().__init__(message, {"retryable": False})
-
-
-# Transport-level error codes that indicate a transient fault rather than a
-# contract violation.
 TRANSIENT_ERROR_CODES: Final[frozenset[str]] = frozenset(
     {"ETIMEDOUT", "ECONNRESET", "ECONNREFUSED", "EAI_AGAIN"}
 )
 
 
 def classify_retryable(error: BaseException) -> bool:
-    """Decides whether a failed node attempt should be retried."""
-    if isinstance(error, GenerationCancelled):
-        return False
-    if isinstance(error, PipelineError):
+    """Decide whether an operation failure is likely transient."""
+    if isinstance(error, OperationError):
         return error.is_retryable
-
     status_code = _read_status_code(error)
     if status_code is not None:
-        if status_code == 429:
-            return True
-        return 500 <= status_code < 600
-
+        return status_code == 429 or 500 <= status_code < 600
     error_code = getattr(error, "code", None)
-    if isinstance(error_code, str) and error_code in TRANSIENT_ERROR_CODES:
-        return True
-    return True
+    return isinstance(error_code, str) and error_code in TRANSIENT_ERROR_CODES
 
 
 def describe_error(error: BaseException) -> dict[str, Any]:
@@ -112,7 +88,7 @@ def describe_error(error: BaseException) -> dict[str, Any]:
             for frame in traceback.extract_tb(error.__traceback__)
         ],
     }
-    if isinstance(error, PipelineError) and error.metadata:
+    if isinstance(error, OperationError) and error.metadata:
         described["error_metadata"] = error.metadata
     cause = error.__cause__
     if cause is not None:
@@ -131,9 +107,6 @@ def _read_status_code(error: BaseException) -> int | None:
     if isinstance(candidate, int) and candidate > 0:
         return candidate
     return None
-
-
-"""Structured logging conventions used throughout the pipeline."""
 
 
 RenderingStyle = Literal["console", "json"]
@@ -173,9 +146,6 @@ def configure_logging(
     logging.basicConfig(format="%(message)s", level=level)
 
 
-"""Calling a chat model and reporting what the call consumed."""
-
-
 @dataclass(frozen=True, slots=True)
 class ModelAnswer:
     """One model answer with the usage the call consumed."""
@@ -185,7 +155,7 @@ class ModelAnswer:
 
 
 async def call_chat_model(
-    chat_model: BaseChatModel,
+    chat_model: ChatModel,
     messages: Sequence[BaseMessage],
     *,
     metadata: dict[str, Any] | None = None,
@@ -197,7 +167,7 @@ async def call_chat_model(
     # `text` is a property returning a string subclass.
     trimmed = response.text.strip()
     if not trimmed:
-        raise PipelineError.retryable("the model returned an empty answer", dict(metadata or {}))
+        raise OperationError.retryable("the model returned an empty answer", dict(metadata or {}))
 
     return ModelAnswer(text=trimmed, usage_by_model=_read_usage(usage_callback.usage_metadata))
 
@@ -212,9 +182,6 @@ def _read_usage(usage_metadata: Any) -> dict[str, ModelUsage]:  # noqa: ANN401
     return converted
 
 
-"""Find and render glossary links with plain text operations."""
-
-
 def compute_glossary_links(
     chapter_contents: Sequence[str], glossary_entries: Sequence[GlossaryEntry]
 ) -> list[tuple[GlossaryLink, ...]]:
@@ -222,7 +189,7 @@ def compute_glossary_links(
     remaining = {entry.key for entry in glossary_entries if entry.short_form.strip()}
     links_per_chapter: list[tuple[GlossaryLink, ...]] = []
     for content in chapter_contents:
-        chapter_links: list[GlossaryLink] = []
+        candidates: list[GlossaryLink] = []
         for entry in glossary_entries:
             if entry.key not in remaining:
                 continue
@@ -230,18 +197,34 @@ def compute_glossary_links(
             match = re.search(rf"(?<!\w){re.escape(phrase)}(?!\w)", content, re.IGNORECASE)
             if match is None:
                 continue
-            chapter_links.append(GlossaryLink(key=entry.key, start=match.start(), end=match.end()))
-            remaining.remove(entry.key)
-        links_per_chapter.append(tuple(sorted(chapter_links, key=lambda link: link.start)))
+            candidates.append(GlossaryLink(key=entry.key, start=match.start(), end=match.end()))
+        chapter_links = _select_non_overlapping_links(content, candidates)
+        remaining.difference_update(link.key for link in chapter_links)
+        links_per_chapter.append(chapter_links)
     return links_per_chapter
 
 
 def apply_glossary_links(content: str, links: Sequence[GlossaryLink]) -> str:
-    """Wrap stored character ranges in ordinary Markdown links."""
+    """Link stored character ranges to the glossary section."""
     result = content
-    for link in sorted(links, key=lambda item: item.start, reverse=True):
-        if not 0 <= link.start < link.end <= len(result):
-            continue
+    for link in reversed(_select_non_overlapping_links(content, links)):
         text = result[link.start : link.end]
-        result = f"{result[: link.start]}[{text}](#glossary-{link.key}){result[link.end :]}"
+        result = f"{result[: link.start]}[{text}](#glossary){result[link.end :]}"
     return result
+
+
+def _select_non_overlapping_links(
+    content: str, links: Sequence[GlossaryLink]
+) -> tuple[GlossaryLink, ...]:
+    """Select valid, longest-first links so nested ranges cannot corrupt Markdown."""
+    selected: list[GlossaryLink] = []
+    for link in sorted(
+        links,
+        key=lambda item: (-(item.end - item.start), item.start, item.end, item.key),
+    ):
+        if not 0 <= link.start < link.end <= len(content):
+            continue
+        if any(link.start < other.end and other.start < link.end for other in selected):
+            continue
+        selected.append(link)
+    return tuple(sorted(selected, key=lambda item: (item.start, item.end, item.key)))

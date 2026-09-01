@@ -1,0 +1,38 @@
+/* Compact, borderless tables with a restrained blue header band. */
+table {
+  width: 100%;
+  margin: 1.5em 0;
+  border-collapse: collapse;
+}
+
+thead {
+  background: #eef2f7;
+  border-top: 1px solid #9aa4af;
+  border-bottom: 1px solid #9aa4af;
+}
+
+th,
+td {
+  padding: 0.55em 0.75em;
+  border: 0;
+  text-align: left;
+  vertical-align: top;
+}
+
+tbody,
+tbody tr {
+  border: 0;
+}
+
+#glossary + table col:first-child {
+  width: 28% !important;
+}
+
+#glossary + table col:last-child {
+  width: 72% !important;
+}
+
+code {
+  font-family: "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
+  white-space: nowrap;
+}

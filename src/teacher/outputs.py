@@ -1,35 +1,36 @@
-"""Consolidated Teacher implementation."""
+"""Render structured lessons as Markdown, HTML, DOCX, and PDF."""
 
 from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import date
+from datetime import datetime
 from enum import StrEnum
 from importlib import resources
 from pathlib import PurePosixPath, Path
-from teacher.models import DocumentSource, Recording, Lesson, Citation
+from teacher.models import ReferenceDocument, Lesson, Citation
 from teacher.markdown import compose_markdown, render_table, shift_headings
 from teacher.prompts import Prompts
-from teacher.support import PipelineError, apply_glossary_links
+from teacher.support import OperationError, apply_glossary_links
 from tempfile import TemporaryDirectory
 from typing import Final
 from urllib.parse import unquote, urlsplit
+from uuid import uuid4
 import json
 import re
 import subprocess
 
 import segno
-
-"""Lesson export to Markdown, PDF, and JSON."""
-
-"""Values shared across the public export API and its renderers."""
+from babel.core import UnknownLocaleError
+from babel.dates import format_date, format_time, get_datetime_format
 
 
 class ExportFormat(StrEnum):
     """A representation the exporter can emit."""
 
     MARKDOWN = "markdown"
+    HTML = "html"
+    DOCX = "docx"
     PDF = "pdf"
 
 
@@ -39,19 +40,14 @@ class ExportMetadata:
 
     language: str = "en"
     author: str | None = None
-    lesson_date: date | None = None
-    recordings: tuple[Recording, ...] = ()
-    reference_documents: tuple[DocumentSource, ...] = ()
+    lesson_timestamp: datetime | None = None
+    recording_urls: tuple[str, ...] = ()
+    reference_documents: tuple[ReferenceDocument, ...] = ()
     share_url: str | None = None
-    include_generated_notice: bool = True
-    generated_notice: str | None = None
 
 
 class ExportError(RuntimeError):
     """Reports that a requested representation could not be rendered."""
-
-
-"""Localized labels and dates used by exported documents."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -63,82 +59,230 @@ class ExportLabels:
     reference_documents: str
     pages: str
     glossary: str
-    generated_notice: str
+    glossary_term: str
+    glossary_definition: str
     page_abbreviation: str
 
 
 _LABELS_BY_LANGUAGE = {
     "en": ExportLabels(
-        recordings="Recordings",
-        duration="Duration",
-        reference_documents="Reference documents",
-        pages="Pages",
-        glossary="Glossary",
-        generated_notice=("These notes were generated automatically - double-check them."),
-        page_abbreviation="p.",
+        "Recordings",
+        "Duration",
+        "Reference documents",
+        "Pages",
+        "Glossary",
+        "Term",
+        "Definition",
+        "p.",
     ),
     "it": ExportLabels(
-        recordings="Registrazioni",
-        duration="Durata",
-        reference_documents="Documenti di riferimento",
-        pages="Pagine",
-        glossary="Glossario",
-        generated_notice=("Questi appunti sono stati generati automaticamente - ricontrollali."),
-        page_abbreviation="p.",
+        "Registrazioni",
+        "Durata",
+        "Documenti di riferimento",
+        "Pagine",
+        "Glossario",
+        "Termine",
+        "Definizione",
+        "p.",
     ),
     "tr": ExportLabels(
-        recordings="Kayıtlar",
-        duration="Süre",
-        reference_documents="Referans belgeler",
-        pages="Sayfa",
-        glossary="Sözlük",
-        generated_notice="Bu notlar otomatik olarak oluşturuldu - bir kontrol et.",
-        page_abbreviation="s.",
+        "Kayıtlar", "Süre", "Referans belgeler", "Sayfa", "Sözlük", "Terim", "Tanım", "s."
     ),
-}
-
-_MONTHS_BY_LANGUAGE = {
-    "en": (
-        "January",
-        "February",
-        "March",
-        "April",
-        "May",
-        "June",
-        "July",
-        "August",
-        "September",
-        "October",
-        "November",
-        "December",
+    "es": ExportLabels(
+        "Grabaciones",
+        "Duración",
+        "Documentos de referencia",
+        "Páginas",
+        "Glosario",
+        "Término",
+        "Definición",
+        "p.",
     ),
-    "it": (
-        "gennaio",
-        "febbraio",
-        "marzo",
-        "aprile",
-        "maggio",
-        "giugno",
-        "luglio",
-        "agosto",
-        "settembre",
-        "ottobre",
-        "novembre",
-        "dicembre",
+    "fr": ExportLabels(
+        "Enregistrements",
+        "Durée",
+        "Documents de référence",
+        "Pages",
+        "Glossaire",
+        "Terme",
+        "Définition",
+        "p.",
     ),
-    "tr": (
-        "Ocak",
-        "Şubat",
-        "Mart",
-        "Nisan",
-        "Mayıs",
-        "Haziran",
-        "Temmuz",
-        "Ağustos",
-        "Eylül",
-        "Ekim",
-        "Kasım",
-        "Aralık",
+    "de": ExportLabels(
+        "Aufnahmen",
+        "Dauer",
+        "Referenzdokumente",
+        "Seiten",
+        "Glossar",
+        "Begriff",
+        "Definition",
+        "S.",
+    ),
+    "pt": ExportLabels(
+        "Gravações",
+        "Duração",
+        "Documentos de referência",
+        "Páginas",
+        "Glossário",
+        "Termo",
+        "Definição",
+        "p.",
+    ),
+    "nl": ExportLabels(
+        "Opnamen",
+        "Duur",
+        "Referentiedocumenten",
+        "Pagina's",
+        "Woordenlijst",
+        "Term",
+        "Definitie",
+        "p.",
+    ),
+    "pl": ExportLabels(
+        "Nagrania",
+        "Czas trwania",
+        "Dokumenty źródłowe",
+        "Strony",
+        "Słowniczek",
+        "Termin",
+        "Definicja",
+        "s.",
+    ),
+    "ru": ExportLabels(
+        "Записи",
+        "Длительность",
+        "Справочные документы",
+        "Страницы",
+        "Глоссарий",
+        "Термин",
+        "Определение",
+        "с.",
+    ),
+    "uk": ExportLabels(
+        "Записи",
+        "Тривалість",
+        "Довідкові документи",
+        "Сторінки",
+        "Глосарій",
+        "Термін",
+        "Визначення",
+        "с.",
+    ),
+    "ja": ExportLabels("録音", "長さ", "参考資料", "ページ", "用語集", "用語", "定義", "p."),
+    "ko": ExportLabels("녹음", "재생 시간", "참고 문서", "페이지", "용어집", "용어", "정의", "쪽"),
+    "zh": ExportLabels("录音", "时长", "参考文档", "页码", "术语表", "术语", "定义", "页"),
+    "ar": ExportLabels(
+        "التسجيلات", "المدة", "المستندات المرجعية", "الصفحات", "المسرد", "المصطلح", "التعريف", "ص."
+    ),
+    "hi": ExportLabels("रिकॉर्डिंग", "अवधि", "संदर्भ दस्तावेज़", "पृष्ठ", "शब्दावली", "शब्द", "परिभाषा", "पृ."),
+    "he": ExportLabels(
+        "הקלטות", "משך", "מסמכי עזר", "עמודים", "מילון מונחים", "מונח", "הגדרה", "עמ׳"
+    ),
+    "el": ExportLabels(
+        "Ηχογραφήσεις",
+        "Διάρκεια",
+        "Έγγραφα αναφοράς",
+        "Σελίδες",
+        "Γλωσσάρι",
+        "Όρος",
+        "Ορισμός",
+        "σελ.",
+    ),
+    "sv": ExportLabels(
+        "Inspelningar",
+        "Varaktighet",
+        "Referensdokument",
+        "Sidor",
+        "Ordlista",
+        "Term",
+        "Definition",
+        "s.",
+    ),
+    "da": ExportLabels(
+        "Optagelser",
+        "Varighed",
+        "Referencedokumenter",
+        "Sider",
+        "Ordliste",
+        "Term",
+        "Definition",
+        "s.",
+    ),
+    "no": ExportLabels(
+        "Opptak", "Varighet", "Referansedokumenter", "Sider", "Ordliste", "Term", "Definisjon", "s."
+    ),
+    "fi": ExportLabels(
+        "Tallenteet", "Kesto", "Viiteasiakirjat", "Sivut", "Sanasto", "Termi", "Määritelmä", "s."
+    ),
+    "cs": ExportLabels(
+        "Nahrávky",
+        "Délka",
+        "Referenční dokumenty",
+        "Strany",
+        "Glosář",
+        "Termín",
+        "Definice",
+        "str.",
+    ),
+    "ro": ExportLabels(
+        "Înregistrări",
+        "Durată",
+        "Documente de referință",
+        "Pagini",
+        "Glosar",
+        "Termen",
+        "Definiție",
+        "p.",
+    ),
+    "hu": ExportLabels(
+        "Felvételek",
+        "Időtartam",
+        "Hivatkozási dokumentumok",
+        "Oldalak",
+        "Szójegyzék",
+        "Kifejezés",
+        "Definíció",
+        "o.",
+    ),
+    "vi": ExportLabels(
+        "Bản ghi",
+        "Thời lượng",
+        "Tài liệu tham khảo",
+        "Trang",
+        "Bảng thuật ngữ",
+        "Thuật ngữ",
+        "Định nghĩa",
+        "tr.",
+    ),
+    "id": ExportLabels(
+        "Rekaman",
+        "Durasi",
+        "Dokumen referensi",
+        "Halaman",
+        "Glosarium",
+        "Istilah",
+        "Definisi",
+        "h.",
+    ),
+    "bg": ExportLabels(
+        "Записи",
+        "Продължителност",
+        "Референтни документи",
+        "Страници",
+        "Речник",
+        "Термин",
+        "Определение",
+        "стр.",
+    ),
+    "ca": ExportLabels(
+        "Gravacions",
+        "Durada",
+        "Documents de referència",
+        "Pàgines",
+        "Glossari",
+        "Terme",
+        "Definició",
+        "p.",
     ),
 }
 
@@ -154,24 +298,11 @@ def export_labels(language: str | None) -> ExportLabels:
     return _LABELS_BY_LANGUAGE.get(primary_language(language), _LABELS_BY_LANGUAGE["en"])
 
 
-def format_lesson_date(lesson_date: date, language: str | None) -> str:
-    """Formats a calendar date for the supported export language."""
-    selected_language = primary_language(language)
-    months = _MONTHS_BY_LANGUAGE.get(selected_language, _MONTHS_BY_LANGUAGE["en"])
-    month = months[lesson_date.month - 1]
-    if selected_language == "en":
-        return f"{month} {lesson_date.day}, {lesson_date.year}"
-    return f"{lesson_date.day} {month} {lesson_date.year}"
-
-
-"""Building the source-listing tables used by lesson outputs."""
-
-
 def build_source_tables(lecture: Lesson, metadata: ExportMetadata) -> list[str]:
     """Builds recording and reference-document tables as text blocks."""
     labels = export_labels(metadata.language)
     blocks: list[str] = []
-    recordings = tuple(metadata.recordings)
+    recordings = tuple(metadata.recording_urls)
     if recordings:
         total_duration = _lecture_duration_seconds(lecture)
         recording_rows = [
@@ -190,7 +321,7 @@ def build_source_tables(lecture: Lesson, metadata: ExportMetadata) -> list[str]:
         page_counts = _citation_page_counts(lecture)
         document_rows = [
             (
-                source_document_name(document, document_index),
+                reference_document_name(document, document_index),
                 f"{page_counts[document_index]} {labels.page_abbreviation}"
                 if document_index in page_counts
                 else "",
@@ -201,16 +332,14 @@ def build_source_tables(lecture: Lesson, metadata: ExportMetadata) -> list[str]:
     return blocks
 
 
-def source_document_name(document: DocumentSource, document_index: int) -> str:
+def reference_document_name(document: ReferenceDocument, document_index: int) -> str:
     """Resolves a stable display name for one reference document."""
     return document.file_name or f"Document {document_index + 1}"
 
 
-def _recording_name(recording: Recording, recording_index: int) -> str:
+def _recording_name(recording: str, recording_index: int) -> str:
     """Resolves a stable display name for one source recording."""
-    return (
-        recording.file_name or _url_file_name(recording.url) or f"Recording {recording_index + 1}"
-    )
+    return _url_file_name(recording) or f"Recording {recording_index + 1}"
 
 
 def _url_file_name(url: str) -> str:
@@ -255,10 +384,7 @@ def _format_duration(total_seconds: int) -> str:
 
 def _table(headers: tuple[str, str], rows: list[tuple[str, str]]) -> str:
     """Render a two-column source table through the Markdown library."""
-    return render_table(headers, rows)
-
-
-"""Building structured citation footnote bodies for lecture outputs."""
+    return render_table(headers, rows, code_columns=(0,))
 
 
 def build_citation_definitions(lecture: Lesson, metadata: ExportMetadata) -> dict[str, str]:
@@ -274,11 +400,11 @@ def build_citation_definitions(lecture: Lesson, metadata: ExportMetadata) -> dic
 
 
 def _citation_definition(
-    citation: Citation, reference_documents: tuple[DocumentSource, ...]
+    citation: Citation, reference_documents: tuple[ReferenceDocument, ...]
 ) -> str:
     """Builds one citation definition from typed data."""
     if 0 <= citation.document_index < len(reference_documents):
-        document_name = source_document_name(
+        document_name = reference_document_name(
             reference_documents[citation.document_index], citation.document_index
         )
     else:
@@ -286,7 +412,27 @@ def _citation_definition(
     return f"{citation.content.strip()} (`{document_name}`, p. {citation.page_number})"
 
 
-"""Building the canonical Markdown export from plain lesson data."""
+def _frontmatter_data(lesson: Lesson, metadata: ExportMetadata) -> dict[str, object]:
+    """Build typed metadata for the Markdown frontmatter AST."""
+    page_counts = _citation_page_counts(lesson)
+    references = [
+        {
+            "file_name": reference_document_name(document, index),
+            "pages": page_counts.get(index),
+        }
+        for index, document in enumerate(metadata.reference_documents)
+    ]
+    return {
+        "title": lesson.title.strip() or "Untitled",
+        "description": lesson.description.strip(),
+        "language": metadata.language.strip() or "en",
+        "author": metadata.author.strip() if metadata.author else None,
+        "date": metadata.lesson_timestamp.isoformat() if metadata.lesson_timestamp else None,
+        "recording_urls": list(metadata.recording_urls),
+        "duration_seconds": _lecture_duration_seconds(lesson),
+        "reference_documents": references,
+        "share_url": metadata.share_url,
+    }
 
 
 _TEMPLATES = Prompts(package="teacher.output_templates")
@@ -297,28 +443,33 @@ def render_export_template(name: str, variables: Mapping[str, object]) -> str:
 
     try:
         return _TEMPLATES.render(name, variables)
-    except PipelineError as error:
+    except OperationError as error:
         raise ExportError(f"export template {name!r} could not be rendered") from error
 
 
-def render_export_markdown(lesson: Lesson, metadata: ExportMetadata) -> str:
-    """Render a complete lesson from packaged blocks."""
+def _render_markdown(lesson: Lesson, metadata: ExportMetadata) -> str:
+    """Render a complete lesson with metadata kept in YAML frontmatter."""
+    return _render_lesson_markdown(lesson, metadata)
+
+
+def _render_lesson_markdown(
+    lesson: Lesson, metadata: ExportMetadata, *, include_source_tables: bool = False
+) -> str:
+    """Render lesson blocks and attach typed metadata through the Markdown AST."""
     blocks = [
-        render_export_template(
-            "lesson",
-            {
-                "title": lesson.title.strip() or "Untitled",
-                "description": lesson.description.strip(),
-            },
-        ).strip(),
-        *build_source_tables(lesson, metadata),
+        *(build_source_tables(lesson, metadata) if include_source_tables else ()),
+        *_chapter_blocks(lesson),
+        *_glossary_blocks(lesson, metadata),
     ]
-    blocks.extend(_chapter_blocks(lesson))
-    blocks.extend(_glossary_blocks(lesson, metadata))
     definitions = build_citation_definitions(lesson, metadata)
     if definitions:
         blocks.extend(f"[^{number}]: {body}" for number, body in definitions.items())
-    return compose_markdown(blocks)
+    return compose_markdown(blocks, frontmatter_data=_frontmatter_data(lesson, metadata))
+
+
+def _render_pandoc_markdown(lesson: Lesson, metadata: ExportMetadata) -> bytes:
+    """Add visual source tables only to non-Markdown presentations."""
+    return _render_lesson_markdown(lesson, metadata, include_source_tables=True).encode("utf-8")
 
 
 def _chapter_blocks(lecture: Lesson) -> list[str]:
@@ -339,26 +490,24 @@ def _chapter_blocks(lecture: Lesson) -> list[str]:
 
 
 def _glossary_blocks(lecture: Lesson, metadata: ExportMetadata) -> list[str]:
-    """Renders the glossary heading and entries through packaged text shapes."""
+    """Render the glossary as one dictionary-style table through packaged templates."""
     if not lecture.glossary:
         return []
     labels = export_labels(metadata.language)
-    blocks = [render_export_template("glossary", {"title": labels.glossary}).strip()]
+    rows: list[tuple[str, str]] = []
     for entry in lecture.glossary:
         display_name = (
             f"{entry.short_form} ({entry.long_form})" if entry.long_form else entry.short_form
         )
-        blocks.append(
-            render_export_template(
-                "glossary_entry",
-                {
-                    "key": entry.key,
-                    "title": display_name,
-                    "description": entry.description,
-                },
-            ).strip()
-        )
-    return blocks
+        rows.append((display_name, entry.description))
+    return [
+        render_export_template("glossary", {"title": labels.glossary}).strip(),
+        render_table(
+            (labels.glossary_term, labels.glossary_definition),
+            rows,
+            align=(None, None),
+        ),
+    ]
 
 
 def _shift_headings(markdown: str, levels: int) -> str:
@@ -366,45 +515,116 @@ def _shift_headings(markdown: str, levels: int) -> str:
     return shift_headings(markdown, levels)
 
 
-"""Converting canonical lecture Markdown into PDF bytes with Pandoc and Typst."""
-
-
 _PANDOC_TIMEOUT_SECONDS: Final[int] = 40
 _PANDOC_INPUT_FORMAT: Final[str] = "markdown+smart+footnotes+raw_html+header_attributes"
 _ANCHOR_BEFORE_HEADING: Final[re.Pattern[bytes]] = re.compile(
     rb'^<a id="([^"]+)"></a>\s*(#{1,6} .+)$', re.MULTILINE
 )
+_INTERNAL_LINK: Final[re.Pattern[bytes]] = re.compile(rb"\[([^\]]+)\]\(#[^)]+\)")
 
 
-def render_pdf(markdown: bytes, metadata: ExportMetadata) -> bytes:
-    """Converts canonical Markdown into PDF bytes."""
+def _pandoc_metadata(metadata: ExportMetadata) -> dict[str, str]:
+    """Build the scalar metadata consumed by the packaged PDF template."""
+    values = {"lang": primary_language(metadata.language)}
+    if metadata.author and metadata.author.strip():
+        values["author"] = metadata.author.strip()
+    if metadata.lesson_timestamp:
+        locale = (metadata.language or "en").replace("-", "_")
+        try:
+            date_text = format_date(
+                metadata.lesson_timestamp.date(),
+                format="long",
+                locale=locale,
+            )
+            time_text = format_time(
+                metadata.lesson_timestamp,
+                format="short",
+                locale=locale,
+            )
+            datetime_pattern = str(get_datetime_format("short", locale=locale))
+            values["lesson-date"] = datetime_pattern.replace("{1}", date_text).replace(
+                "{0}", time_text
+            )
+        except (UnknownLocaleError, ValueError):
+            date_text = format_date(metadata.lesson_timestamp.date(), format="long", locale="en")
+            time_text = format_time(metadata.lesson_timestamp, format="short", locale="en")
+            datetime_pattern = str(get_datetime_format("short", locale="en"))
+            values["lesson-date"] = datetime_pattern.replace("{1}", date_text).replace(
+                "{0}", time_text
+            )
+    return values
+
+
+class MarkdownExporter:
+    """Render a lesson as canonical Markdown bytes."""
+
+    def render(
+        self,
+        lesson: Lesson,
+        *,
+        metadata: ExportMetadata | None = None,
+    ) -> bytes:
+        return _render_markdown(lesson, metadata or ExportMetadata()).encode("utf-8")
+
+
+class PandocExporter:
+    """Render canonical Markdown in a selected Pandoc output format."""
+
+    def __init__(self, output_format: ExportFormat | str) -> None:
+        try:
+            selected = ExportFormat(output_format)
+        except ValueError as error:
+            supported = ", ".join(
+                item.value for item in ExportFormat if item is not ExportFormat.MARKDOWN
+            )
+            raise ExportError(
+                f"unsupported Pandoc format {output_format!r}; expected one of: {supported}"
+            ) from error
+        if selected is ExportFormat.MARKDOWN:
+            raise ExportError("PandocExporter does not render Markdown; use MarkdownExporter")
+        self.output_format = selected
+
+    def render(
+        self,
+        lesson: Lesson,
+        *,
+        metadata: ExportMetadata | None = None,
+    ) -> bytes:
+        resolved_metadata = metadata or ExportMetadata()
+        markdown = _render_pandoc_markdown(lesson, resolved_metadata)
+        return _render_pandoc(markdown, resolved_metadata, self.output_format)
+
+
+def _render_pandoc(
+    markdown: bytes,
+    metadata: ExportMetadata,
+    output_format: ExportFormat,
+) -> bytes:
+    """Convert Markdown using a private temporary directory."""
     template_resource = resources.files("teacher.output_templates").joinpath(
         "pandoc-typst.template"
     )
     with resources.as_file(template_resource) as template_path:
-        return _run_pandoc(markdown, metadata, template_path)
+        return _run_pandoc(markdown, metadata, template_path, output_format)
 
 
 def _run_pandoc(
     markdown: bytes,
     metadata: ExportMetadata,
     template_path: Path,
+    output_format: ExportFormat,
 ) -> bytes:
-    """Runs one bounded Pandoc-to-Typst conversion in an isolated directory."""
-    with TemporaryDirectory(prefix="teacher-export-") as temporary_directory:
+    """Run Pandoc with unique temporary names and return its result."""
+    with TemporaryDirectory(prefix="teacher-pandoc-") as temporary_directory:
         working_directory = Path(temporary_directory)
-        output_path = working_directory / "lesson.pdf"
-        metadata_path = working_directory / "metadata.json"
+        output_path = working_directory / f"teacher-export-{uuid4().hex}.{output_format.value}"
+        metadata_path = working_directory / f"teacher-metadata-{uuid4().hex}.json"
         pandoc_metadata = _pandoc_metadata(metadata)
 
-        if metadata.share_url:
-            qr_code_path = working_directory / "share-qr.svg"
+        if metadata.share_url and output_format is ExportFormat.PDF:
+            qr_code_path = working_directory / f"teacher-qr-{uuid4().hex}.svg"
             segno.make_qr(metadata.share_url, error="m").save(
-                str(qr_code_path),
-                scale=4,
-                border=1,
-                dark="#000000",
-                light="#ffffff",
+                str(qr_code_path), scale=4, border=1, dark="#000000", light="#ffffff"
             )
             pandoc_metadata["qr-image-path"] = qr_code_path.name
 
@@ -414,97 +634,72 @@ def _run_pandoc(
             "--sandbox",
             "--from",
             _PANDOC_INPUT_FORMAT,
-            "--shift-heading-level-by=-1",
-            "--toc",
-            "--toc-depth=2",
-            "--pdf-engine=typst",
-            f"--template={template_path}",
-            f"--metadata-file={metadata_path}",
+            "--standalone",
+            "--to",
+            output_format.value,
             "--output",
             str(output_path),
+            f"--metadata-file={metadata_path}",
         ]
+        if output_format is ExportFormat.PDF:
+            command.extend(
+                [
+                    "--shift-heading-level-by=-1",
+                    "--toc",
+                    "--toc-depth=2",
+                    "--pdf-engine=typst",
+                    f"--template={template_path}",
+                ]
+            )
+
         try:
+            pandoc_input = _ANCHOR_BEFORE_HEADING.sub(rb"\2 {#\1}", markdown)
+            if output_format is ExportFormat.PDF:
+                # Typst does not receive the raw HTML anchors inside table
+                # cells, so glossary links would otherwise point at labels
+                # that do not exist and make the PDF compilation fail.
+                pandoc_input = _INTERNAL_LINK.sub(rb"\1", pandoc_input)
             completed = subprocess.run(
                 command,
-                input=_ANCHOR_BEFORE_HEADING.sub(rb"\2 {#\1}", markdown),
+                input=pandoc_input,
                 cwd=working_directory,
                 capture_output=True,
                 check=False,
                 timeout=_PANDOC_TIMEOUT_SECONDS,
             )
         except FileNotFoundError as error:
-            raise ExportError("PDF export requires pandoc and typst on PATH") from error
+            raise ExportError("Pandoc export requires pandoc on PATH") from error
         except OSError as error:
-            raise ExportError("PDF export could not start pandoc") from error
+            raise ExportError("Pandoc export could not start") from error
         except subprocess.TimeoutExpired as error:
-            raise ExportError(f"PDF export exceeded {_PANDOC_TIMEOUT_SECONDS} seconds") from error
+            raise ExportError(
+                f"Pandoc export exceeded {_PANDOC_TIMEOUT_SECONDS} seconds"
+            ) from error
 
         if completed.returncode != 0:
             details = completed.stderr.decode("utf-8", errors="replace").strip()
-            reason = details or "pandoc exited unsuccessfully"
-            raise ExportError(f"PDF export failed: {reason}")
+            raise ExportError(f"Pandoc export failed: {details or 'pandoc exited unsuccessfully'}")
         try:
             rendered = output_path.read_bytes()
         except OSError as error:
-            raise ExportError("PDF export completed without an output file") from error
-        if not rendered.startswith(b"%PDF-"):
-            raise ExportError("PDF export produced bytes that are not a PDF")
+            raise ExportError("Pandoc export completed without an output file") from error
+        if not rendered:
+            raise ExportError("Pandoc export produced an empty file")
+        if output_format is ExportFormat.PDF and not rendered.startswith(b"%PDF-"):
+            raise ExportError("Pandoc export produced bytes that are not a PDF")
+        if output_format is ExportFormat.HTML:
+            rendered = _inject_html_table_styles(rendered)
         return rendered
 
 
-def _pandoc_metadata(metadata: ExportMetadata) -> dict[str, str]:
-    """Builds the scalar metadata consumed by the packaged Typst template."""
-    labels = export_labels(metadata.language)
-    values = {"lang": primary_language(metadata.language)}
-    if metadata.author and metadata.author.strip():
-        values["author"] = metadata.author.strip()
-    if metadata.lesson_date:
-        values["date"] = format_lesson_date(metadata.lesson_date, metadata.language)
-    if metadata.include_generated_notice:
-        values["generated-notice"] = (
-            metadata.generated_notice.strip()
-            if metadata.generated_notice and metadata.generated_notice.strip()
-            else labels.generated_notice
-        )
-    return values
-
-
-"""File-oriented output API."""
-
-
-class PdfExporter:
-    """Writes the bundled Pandoc and Typst PDF representation."""
-
-    def save(
-        self,
-        lesson: Lesson,
-        destination: str | Path,
-        *,
-        metadata: ExportMetadata | None = None,
-    ) -> Path:
-        path = Path(destination)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(export_to_bytes(lesson, format=ExportFormat.PDF, metadata=metadata))
-        return path
-
-
-def export_to_bytes(
-    lesson: Lesson,
-    *,
-    format: ExportFormat | str,  # noqa: A002
-    metadata: ExportMetadata | None = None,
-) -> bytes:
-    """Render a lesson as Markdown or PDF bytes."""
-
+def _inject_html_table_styles(rendered: bytes) -> bytes:
+    """Embed the packaged table stylesheet so HTML exports remain portable."""
+    style_resource = resources.files("teacher.output_templates").joinpath("pandoc-html.css")
     try:
-        selected = ExportFormat(format)
-    except ValueError as error:
-        supported = ", ".join(item.value for item in ExportFormat)
-        raise ExportError(
-            f"unsupported export format {format!r}; expected one of: {supported}"
-        ) from error
-    resolved_metadata = metadata or ExportMetadata()
-    markdown = render_export_markdown(lesson, resolved_metadata).encode("utf-8")
-    return (
-        markdown if selected is ExportFormat.MARKDOWN else render_pdf(markdown, resolved_metadata)
-    )
+        stylesheet = style_resource.read_text(encoding="utf-8").encode("utf-8")
+    except OSError as error:
+        raise ExportError("HTML export stylesheet could not be read") from error
+    marker = b"</head>"
+    if marker not in rendered:
+        return rendered
+    return rendered.replace(marker, b"<style>" + stylesheet + b"</style>" + marker, 1)

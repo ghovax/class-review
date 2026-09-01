@@ -1,35 +1,34 @@
-#let horizontalrule = line(start: (12.5%,0%), end: (87.5%,0%), stroke: 0.5pt)
-
-#show terms.item: it => block(breakable: false)[
-  #text(weight: "bold")[#it.term]
-  #block(inset: (left: 1.5em, top: -0.4em))[#it.description]
-]
-
-#set table(
-  align: (left + horizon),
-  inset: (x: 0.75em, y: 0.55em),
-  stroke: none,
-  fill: (_, y) => if y == 0 { rgb("EEF2F7") },
-)
-// Pandoc emits `align(center)[#table(align: (auto, ...))]`, so every cell
-// inherits centre alignment from the wrapper. Force left so numbers and
-// text sit flush at the start of their column (a small value no longer
-// floats in the middle of a column widened by a long header) and wrapped
-// prose justifies cleanly. A cell-level show rule overrides the per-table
-// `auto`, which a `#set table(align:)` cannot.
-#show table.cell: set align(left + top)
-#show table.cell: set par(justify: true)
-// Bold the header row and give horizontal rules a thin, muted stroke so
-// tables read as clean banded blocks rather than heavy grids.
-#show table.cell.where(y: 0): set text(weight: "bold")
-#set table.hline(stroke: 0.6pt + rgb("9AA4AF"))
-
-#show math.equation: set text(font: "Libertinus Math")
-
-// Accent palette — a deep slate-blue echoing the table-header tint, used
-// for the title and headings, with a light blue for hairline rules.
+// Accent palette — a deep slate-blue for the title and headings, with a
+// restrained tint available to the document's other rules.
 #let accent-blue = rgb("21496E")
 #let accent-tint = rgb("CBD8E8")
+
+#set table(
+  columns: (auto, 1fr),
+  align: (left + horizon),
+  inset: (x: 0.75em, y: 0.55em),
+  stroke: (_, y) => if y == 0 {
+    (top: 0.6pt + rgb("9AA4AF"), bottom: 0.6pt + rgb("9AA4AF"))
+  } else {
+    none
+  },
+  fill: (_, y) => if y == 0 { rgb("EEF2F7") } else { none },
+)
+#set table.hline(stroke: none)
+// Pandoc gives equal-width tables explicit 50/50 tracks. The glossary uses
+// that shape in Markdown; rebuild its table element with a compact term track
+// while preserving the original cell content and header semantics.
+#show table.where(columns: (50%, 50%)): it => table(
+  columns: (auto, 1fr),
+  ..it.fields().children,
+)
+// Force every table cell to the left and top. This keeps dictionary terms
+// and definitions aligned like a reference table rather than a text grid.
+#show table.cell: set align(left + top)
+#show table.cell.where(y: 0): set text(weight: "bold", fill: accent-blue)
+#show table.cell.where(x: 0): set text(weight: "semibold")
+
+#show math.equation: set text(font: "Libertinus Math")
 
 // Headings in the accent blue. Chapter headings sit above a thin
 // blue hairline, giving each chapter a clean divider; deeper levels are
@@ -57,22 +56,6 @@
   kind: image
 ): set figure.caption(position: $if(figure-caption-position)$$figure-caption-position$$else$bottom$endif$)
 
-$if(glossary)$
-// Glossary (vendored `glossarium` under typst-packages/, resolved offline via
-// --package-cache-path). `make-glossary` installs show rules for references and
-// the printed entries; it is applied AFTER the figure show rules above to avoid
-// the documented figure-rule conflict. Entries are registered here from the
-// `glossary` metadata so in-body `#gls(...)` calls (injected by the PDF Lua
-// filter) and the printed glossary after the body both resolve.
-#import "@preview/glossarium:0.5.10": make-glossary, register-glossary, print-glossary, gls, glspl
-#show: make-glossary
-#let glossary-entries = (
-$for(glossary)$
-  ( key: "$it.key$", short: [$it.short$],$if(it.long)$ long: [$it.long$],$endif$ description: [$it.description$] ),
-$endfor$
-)
-#register-glossary(glossary-entries)
-$endif$
 $if(highlighting-definitions)$
 // syntax highlighting functions from skylighting:
 $highlighting-definitions$
@@ -133,9 +116,7 @@ $endif$
 $if(linestretch)$
   linestretch: $linestretch$,
 $endif$
-$if(section-numbering)$
-  sectionnumbering: "$section-numbering$",
-$endif$
+  sectionnumbering: none,
   pagenumbering: $if(page-numbering)$"$page-numbering$"$else$none$endif$,
 $if(linkcolor)$
   linkcolor: [$linkcolor$],
@@ -157,7 +138,7 @@ $if(author)$
 $endif$
 // Title block, rendered here (not by conf) for full styling control: a
 // larger, calmer title, a thin centred accent rule, and a muted subtitle
-// and date. The abstract follows in a justified, slightly smaller block.
+// and date.
 #block(width: 100%, below: 1.6em)[
   #align(center)[
     #block(below: 1.2em)[
@@ -174,15 +155,19 @@ $if(author)$
       #text(size: 1em, hyphenate: false)[$for(author)$$if(author.name)$$author.name$$else$$author$$endif$$sep$, $endfor$]
     ]
 $endif$
-$if(date)$
+$if(lesson-date)$
+    #block(above: 0.7em)[#text(size: 0.9em)[$lesson-date$]]
+$elseif(date)$
     #block(above: 0.7em)[#text(size: 0.9em)[$date$]]
 $endif$
-$if(generated-notice)$
-    // EU AI Act Art. 50(2): a small, muted marking that this document is
-    // machine-generated study material. Rendered on the title page so the
-    // disclosure travels with every exported / shared copy, kept quiet so it
-    // never competes with the title block.
-    #block(above: 0.9em)[#text(size: 0.78em, fill: luma(110), style: "italic")[$generated-notice$]]
+$if(description)$
+    #block(above: 1.1em, below: 0.45em)[
+      #text(size: 0.92em, weight: "bold", fill: accent-blue)[Abstract]
+    ]
+    #block(width: 100%)[
+      #set par(justify: true)
+      #text(size: 0.95em)[$description$]
+    ]
 $endif$
 $if(qr-image-path)$
     // Share QR for the publicly hosted copy of this PDF. Centred, below the
@@ -193,13 +178,6 @@ $if(qr-image-path)$
     ]
 $endif$
   ]
-$if(abstract)$
-  #block(width: 100%, inset: (x: 1.7em), above: 1.4em)[
-    #set par(justify: true)
-    #set text(size: 0.93em)
-    #text(weight: "semibold")[$abstract-title$.]#h(0.5em)$abstract$
-  ]
-$endif$
 ]
 $endif$
 
@@ -207,28 +185,6 @@ $for(include-before)$
 $include-before$
 
 $endfor$
-$if(audio-files)$
-// Source-file listing tables. Column headers use translated labels passed
-// as metadata (with English fallbacks) and adopt the document's normal
-// table-header styling (blue tint + rule) via the global table rules —
-// ordinary table headers, not bold standalone titles.
-#table(
-  columns: (1fr, auto),
-  table.header([$if(recordings-label)$$recordings-label$$else$Recordings$endif$], [$if(duration-label)$$duration-label$$else$Duration$endif$]),
-  table.hline(),
-$for(audio-files)$  [#text(font: "DejaVu Sans Mono", size: 0.76125em)[$it.name$]], [$if(it.duration)$$it.duration$$endif$],
-$endfor$)
-
-$endif$
-$if(reference-files)$
-#table(
-  columns: (1fr, auto),
-  table.header([$if(reference-documents-label)$$reference-documents-label$$else$Reference documents$endif$], [$if(pages-label)$$pages-label$$else$Pages$endif$]),
-  table.hline(),
-$for(reference-files)$  [#text(font: "DejaVu Sans Mono", size: 0.76125em)[$it.name$]], [$if(it.pages)$$it.pages$$endif$],
-$endfor$)
-
-$endif$
 $if(toc)$
 // Table of contents: chapter entries bold with breathing room
 // above each entry; concept entries lighter, muted and smaller;
@@ -259,19 +215,6 @@ $endif$
 
 $body$
 
-$if(glossary)$
-// Printed glossary as a final top-level section. A thematic-break rule (the
-// same one chapters are separated by) divides it from the last chapter so the
-// section doesn't butt straight against the preceding body. `show-all: true`
-// prints every registered term whether or not it is referenced in the body;
-// `disable-back-references: true` drops the per-entry "used on page N" pointers
-// — the in-body `#gls(...)` links already provide forward navigation, so the
-// reverse pointers were redundant clutter (and ragged, since only linked terms
-// had one).
-#horizontalrule
-= $if(glossary-title)$$glossary-title$$else$Glossary$endif$
-#print-glossary(glossary-entries, show-all: true, disable-back-references: true)
-$endif$
 $if(citations)$
 $for(nocite-ids)$
 #cite(label("${it}"), form: none)
