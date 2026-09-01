@@ -15,6 +15,13 @@
   fill: (_, y) => if y == 0 { rgb("EEF2F7") } else { none },
 )
 #set table.hline(stroke: none)
+// Pandoc gives equal-width tables explicit 50/50 tracks. The glossary uses
+// that shape in Markdown; rebuild its table element with a compact term track
+// while preserving the original cell content and header semantics.
+#show table.where(columns: (50%, 50%)): it => table(
+  columns: (auto, 1fr),
+  ..it.fields().children,
+)
 // Force every table cell to the left and top. This keeps dictionary terms
 // and definitions aligned like a reference table rather than a text grid.
 #show table.cell: set align(left + top)
@@ -131,7 +138,7 @@ $if(author)$
 $endif$
 // Title block, rendered here (not by conf) for full styling control: a
 // larger, calmer title, a thin centred accent rule, and a muted subtitle
-// and date. The abstract follows in a justified, slightly smaller block.
+// and date.
 #block(width: 100%, below: 1.6em)[
   #align(center)[
     #block(below: 1.2em)[
@@ -154,7 +161,10 @@ $elseif(date)$
     #block(above: 0.7em)[#text(size: 0.9em)[$date$]]
 $endif$
 $if(description)$
-    #block(above: 1.1em, width: 100%)[
+    #block(above: 1.1em, below: 0.45em)[
+      #text(size: 0.92em, weight: "bold", fill: accent-blue)[Abstract]
+    ]
+    #block(width: 100%)[
       #set par(justify: true)
       #text(size: 0.95em)[$description$]
     ]
@@ -168,13 +178,6 @@ $if(qr-image-path)$
     ]
 $endif$
   ]
-$if(abstract)$
-  #block(width: 100%, inset: (x: 1.7em), above: 1.4em)[
-    #set par(justify: true)
-    #set text(size: 0.93em)
-    #text(weight: "semibold")[$abstract-title$.]#h(0.5em)$abstract$
-  ]
-$endif$
 ]
 $endif$
 

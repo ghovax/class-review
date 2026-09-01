@@ -6,8 +6,11 @@ import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from teacher.configuration import LessonConfiguration, TranscriptConfiguration
 from teacher.models import ChapterOutline, TranscriptSegment
+
+
+_CHAPTER_CONTEXT_MARGIN_SECONDS = 45.0
+_ZERO_DURATION_SECONDS = 1e-6
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,9 +41,8 @@ class ChapterContext:
     concept_slices: tuple[ConceptSlice, ...]
 
 
-def split_into_sentences(
-    segment: TranscriptSegment, zero_duration_seconds: float = 1e-6
-) -> list[TimedSentence]:
+def split_into_sentences(segment: TranscriptSegment) -> list[TimedSentence]:
+    """Split one transcript segment into proportionally timed sentences."""
     text = segment.content.strip()
     if not text:
         return []
@@ -52,7 +54,7 @@ def split_into_sentences(
         return [
             TimedSentence(
                 segment.start_seconds,
-                max(segment.end_seconds, segment.start_seconds + zero_duration_seconds),
+                max(segment.end_seconds, segment.start_seconds + _ZERO_DURATION_SECONDS),
                 text,
             )
         ]
@@ -76,22 +78,19 @@ def build_chapter_context(
     *,
     chapter: ChapterOutline,
     segments: Sequence[TranscriptSegment],
-    lesson_configuration: LessonConfiguration,
-    transcript_configuration: TranscriptConfiguration,
 ) -> ChapterContext:
+    """Collect transcript sentences around the concepts in one chapter."""
     if not chapter.concepts:
         return ChapterContext(0.0, 0.0, ())
     start = min(item.transcript_span.start_seconds for item in chapter.concepts)
     end = max(item.transcript_span.end_seconds for item in chapter.concepts)
-    start = max(0.0, start - lesson_configuration.chapter_context_margin_seconds)
-    end += lesson_configuration.chapter_context_margin_seconds
+    start = max(0.0, start - _CHAPTER_CONTEXT_MARGIN_SECONDS)
+    end += _CHAPTER_CONTEXT_MARGIN_SECONDS
     sentences = [
         sentence
         for segment in segments
         if segment.end_seconds > start and segment.start_seconds < end
-        for sentence in split_into_sentences(
-            segment, transcript_configuration.zero_duration_seconds
-        )
+        for sentence in split_into_sentences(segment)
         if start <= (sentence.start_seconds + sentence.end_seconds) / 2 < end
     ]
     slices = []

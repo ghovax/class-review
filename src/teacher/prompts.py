@@ -43,6 +43,11 @@ class Prompts:
         return _PLACEHOLDER.sub(lambda match: _render(_value(supplied, match.group(1))), template)
 
 
+def get_prompts(value: Prompts | None = None) -> Prompts:
+    """Return the caller's prompt collection or the packaged defaults."""
+    return value or Prompts()
+
+
 def _value(values: Mapping[str, object], dotted_name: str) -> object | None:
     current: object = values
     for part in dotted_name.split("."):

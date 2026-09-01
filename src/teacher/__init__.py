@@ -1,11 +1,6 @@
 """Framework-independent operations for building structured lessons."""
 
-from teacher.configuration import (
-    ChatModel,
-    LessonConfiguration,
-    RetryConfiguration,
-    TranscriptConfiguration,
-)
+from teacher.interfaces import ChatModel
 from teacher.models import (
     Chapter,
     ChapterOutline,
@@ -48,9 +43,6 @@ from teacher.outputs import (
 
 __all__ = [
     "ChatModel",
-    "RetryConfiguration",
-    "TranscriptConfiguration",
-    "LessonConfiguration",
     "Transcript",
     "TranscriptSegment",
     "TranscriptRevision",

@@ -22,7 +22,7 @@ import subprocess
 
 import segno
 from babel.core import UnknownLocaleError
-from babel.dates import format_datetime
+from babel.dates import format_date, format_time, get_datetime_format
 
 """Lesson export to Markdown, PDF, and JSON."""
 
@@ -425,37 +425,8 @@ def _citation_definition(
     return f"{citation.content.strip()} (`{document_name}`, p. {citation.page_number})"
 
 
-def _yaml_scalar(value: str | None) -> str:
-    """Render one optional string as a valid YAML scalar."""
-    return "null" if value is None else json.dumps(value, ensure_ascii=False)
-
-
-def _yaml_sequence(values: list[str]) -> str:
-    """Render a YAML sequence using the conventional block-list form."""
-    if not values:
-        return " []"
-    return "\n" + "\n".join(f"  - {_yaml_scalar(value)}" for value in values)
-
-
-def _yaml_references(references: list[dict[str, object]]) -> str:
-    """Render reference metadata as a readable YAML list of mappings."""
-    if not references:
-        return " []"
-    lines = []
-    for reference in references:
-        pages = reference["pages"]
-        pages_value = str(pages) if pages is not None else "null"
-        lines.extend(
-            [
-                f"  - file_name: {_yaml_scalar(str(reference['file_name']))}",
-                f"    pages: {pages_value}",
-            ]
-        )
-    return "\n" + "\n".join(lines)
-
-
-def _frontmatter_variables(lesson: Lesson, metadata: ExportMetadata) -> dict[str, object]:
-    """Build the serializable metadata passed to the Markdown frontmatter template."""
+def _frontmatter_data(lesson: Lesson, metadata: ExportMetadata) -> dict[str, object]:
+    """Build typed metadata for the Markdown frontmatter AST."""
     page_counts = _citation_page_counts(lesson)
     references = [
         {
@@ -465,17 +436,15 @@ def _frontmatter_variables(lesson: Lesson, metadata: ExportMetadata) -> dict[str
         for index, document in enumerate(metadata.reference_documents)
     ]
     return {
-        "title": _yaml_scalar(lesson.title.strip() or "Untitled"),
-        "description": _yaml_scalar(lesson.description.strip()),
-        "language": _yaml_scalar(metadata.language.strip() or "en"),
-        "author": _yaml_scalar(metadata.author.strip() if metadata.author else None),
-        "date": _yaml_scalar(
-            metadata.lesson_timestamp.isoformat() if metadata.lesson_timestamp else None
-        ),
-        "recording_urls": _yaml_sequence(list(metadata.recording_urls)),
-        "duration_seconds": str(_lecture_duration_seconds(lesson)),
-        "reference_documents": _yaml_references(references),
-        "share_url": _yaml_scalar(metadata.share_url),
+        "title": lesson.title.strip() or "Untitled",
+        "description": lesson.description.strip(),
+        "language": metadata.language.strip() or "en",
+        "author": metadata.author.strip() if metadata.author else None,
+        "date": metadata.lesson_timestamp.isoformat() if metadata.lesson_timestamp else None,
+        "recording_urls": list(metadata.recording_urls),
+        "duration_seconds": _lecture_duration_seconds(lesson),
+        "reference_documents": references,
+        "share_url": metadata.share_url,
     }
 
 
@@ -494,43 +463,29 @@ def render_export_template(name: str, variables: Mapping[str, object]) -> str:
         raise ExportError(f"export template {name!r} could not be rendered") from error
 
 
-def _set_glossary_column_width(markdown: str, metadata: ExportMetadata) -> str:
-    """Preserve a compact glossary width after the Markdown AST normalizes tables."""
-    labels = export_labels(metadata.language)
-    header = f"| {labels.glossary_term} | {labels.glossary_definition} |"
-    normalized = f"## {labels.glossary}\n\n{header}\n| --- | --- |"
-    compact = f"## {labels.glossary}\n\n{header}\n| -------- | ------------------------ |"
-    return markdown.replace(normalized, compact, 1)
-
-
 def _render_markdown(lesson: Lesson, metadata: ExportMetadata) -> str:
     """Render a complete lesson with metadata kept in YAML frontmatter."""
-    frontmatter = render_export_template("lesson", _frontmatter_variables(lesson, metadata)).strip()
-    blocks = [*_chapter_blocks(lesson), *_glossary_blocks(lesson, metadata)]
+    return _render_lesson_markdown(lesson, metadata)
+
+
+def _render_lesson_markdown(
+    lesson: Lesson, metadata: ExportMetadata, *, include_source_tables: bool = False
+) -> str:
+    """Render lesson blocks and attach typed metadata through the Markdown AST."""
+    blocks = [
+        *(build_source_tables(lesson, metadata) if include_source_tables else ()),
+        *_chapter_blocks(lesson),
+        *_glossary_blocks(lesson, metadata),
+    ]
     definitions = build_citation_definitions(lesson, metadata)
     if definitions:
         blocks.extend(f"[^{number}]: {body}" for number, body in definitions.items())
-    body = _set_glossary_column_width(compose_markdown(blocks), metadata)
-    return f"{frontmatter}\n\n{body}" if body else frontmatter
+    return compose_markdown(blocks, frontmatter_data=_frontmatter_data(lesson, metadata))
 
 
 def _render_pandoc_markdown(lesson: Lesson, metadata: ExportMetadata) -> bytes:
     """Add visual source tables only to non-Markdown presentations."""
-    markdown = MarkdownExporter().render(lesson, metadata=metadata).decode("utf-8")
-    source_tables = build_source_tables(lesson, metadata)
-    if not source_tables:
-        return markdown.encode("utf-8")
-    separator = "\n---\n"
-    frontmatter_end = markdown.find(separator)
-    if frontmatter_end < 0:
-        raise ExportError("lesson frontmatter could not be located")
-    body_start = frontmatter_end + len(separator)
-    body = markdown[body_start:].strip()
-    source = compose_markdown(source_tables)
-    presentation = markdown[:body_start] + "\n\n" + source
-    if body:
-        presentation += "\n\n" + body
-    return presentation.encode("utf-8")
+    return _render_lesson_markdown(lesson, metadata, include_source_tables=True).encode("utf-8")
 
 
 def _chapter_blocks(lecture: Lesson) -> list[str]:
@@ -618,16 +573,26 @@ def _pandoc_metadata(metadata: ExportMetadata) -> dict[str, str]:
     if metadata.lesson_timestamp:
         locale = (metadata.language or "en").replace("-", "_")
         try:
-            values["lesson-date"] = format_datetime(
-                metadata.lesson_timestamp,
+            date_text = format_date(
+                metadata.lesson_timestamp.date(),
                 format="long",
                 locale=locale,
             )
-        except (UnknownLocaleError, ValueError):
-            values["lesson-date"] = format_datetime(
+            time_text = format_time(
                 metadata.lesson_timestamp,
-                format="long",
-                locale="en",
+                format="short",
+                locale=locale,
+            )
+            datetime_pattern = str(get_datetime_format("short", locale=locale))
+            values["lesson-date"] = datetime_pattern.replace("{1}", date_text).replace(
+                "{0}", time_text
+            )
+        except (UnknownLocaleError, ValueError):
+            date_text = format_date(metadata.lesson_timestamp.date(), format="long", locale="en")
+            time_text = format_time(metadata.lesson_timestamp, format="short", locale="en")
+            datetime_pattern = str(get_datetime_format("short", locale="en"))
+            values["lesson-date"] = datetime_pattern.replace("{1}", date_text).replace(
+                "{0}", time_text
             )
     return values
 

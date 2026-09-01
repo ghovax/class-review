@@ -2,15 +2,29 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Mapping
+from functools import partial
 import re
 
+import yaml
 from wenmode import MarkdownRenderer, Wenmode
 from wenmode.nodes import Heading, InlineCode, Node, Parent, Root, Table, TableCell, TableRow, Text
+from wenmode.plugins import frontmatter
 from wenmode.presets import github
 
 
-_MARKDOWN = Wenmode(rules=github, renderer=MarkdownRenderer())
+_FRONTMATTER_DUMP = partial(
+    yaml.safe_dump,
+    sort_keys=False,
+    allow_unicode=True,
+    default_flow_style=False,
+    width=1000,
+)
+_MARKDOWN = Wenmode(
+    rules=github,
+    renderer=MarkdownRenderer(),
+    plugins=[frontmatter.configure(load=yaml.safe_load, dump=_FRONTMATTER_DUMP)],
+)
 _FOOTNOTE_MARKER = re.compile(r"\[\^([^\]]+)\]")
 
 
@@ -38,9 +52,15 @@ def _serialize(document: Root, footnotes: dict[str, str]) -> str:
     return rendered
 
 
-def compose_markdown(parts: Iterable[str]) -> str:
-    """Parse Markdown blocks into one AST, then serialize that AST."""
+def compose_markdown(
+    parts: Iterable[str], *, frontmatter_data: Mapping[str, object] | None = None
+) -> str:
+    """Parse Markdown blocks into one AST, optionally attaching YAML frontmatter."""
     document, footnotes = _parse(parts)
+    if frontmatter_data is not None:
+        frontmatter_document = Root(data={"frontmatter": dict(frontmatter_data)})
+        frontmatter_document.children.extend(document.children)
+        document = frontmatter_document
     return _serialize(document, footnotes)
 
 
