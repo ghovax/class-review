@@ -133,9 +133,6 @@ $endif$
 
 $if(title)$
 #set document(title: [$title$])
-$if(author)$
-#set document(author: ($for(author)$"$if(author.name)$$author.name$$else$$author$$endif$", $endfor$))
-$endif$
 // Title block, rendered here (not by conf) for full styling control: a
 // larger, calmer title, a thin centred accent rule, and a muted subtitle
 // and date.
@@ -150,11 +147,6 @@ $if(subtitle)$
     ]
 $endif$
     #line(length: 37.5%, stroke: 0.5pt + luma(40))
-$if(author)$
-    #block(above: 1.2em)[
-      #text(size: 1em, hyphenate: false)[$for(author)$$if(author.name)$$author.name$$else$$author$$endif$$sep$, $endfor$]
-    ]
-$endif$
 $if(lesson-date)$
     #block(above: 0.7em)[#text(size: 0.9em)[$lesson-date$]]
 $elseif(date)$
@@ -162,7 +154,7 @@ $elseif(date)$
 $endif$
 $if(description)$
     #block(above: 1.1em, below: 0.45em)[
-      #text(size: 0.92em, weight: "bold", fill: accent-blue)[Abstract]
+      #text(size: 1.1em, weight: "bold", fill: accent-blue)[Abstract]
     ]
     #block(width: 100%)[
       #set par(justify: true)

@@ -29,7 +29,7 @@ Let semantic topic flow, changes in objective, and changes in reasoning determin
 
 For each chapter or writing unit, record:
 
-- a clean topical title and a one-sentence purpose;
+- a clean topical title and a substantive abstract-like description of the lesson;
 - the owned transcript time span and source excerpts;
 - one or more concepts in chronological order;
 - the objective and the main advancement for each concept;
@@ -39,6 +39,10 @@ For each chapter or writing unit, record:
 - claims established for the first time and a substantive do-not-repeat ledger;
 - relevant reference documents and page ranges;
 - uncertainties, source conflicts, and citation targets.
+
+## Write the abstract
+
+Treat the lesson description as a paper-style abstract, not a short promotional blurb. It should synthesize the whole lesson by stating the subject and scope, the central question or problem when one exists, the approach or framework used in the lecture, the main mechanisms or relationships developed, the principal conclusions or practical implications, and the important limitations or unresolved points. Base every part on the transcript and relevant references. Use as much space as the lesson genuinely needs; do not force a fixed sentence count, pad it with generalities, or reduce a complex lesson to a title-like summary.
 
 ## Assess treatment intent
 

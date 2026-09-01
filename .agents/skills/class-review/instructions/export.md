@@ -9,7 +9,11 @@ Keep the body limited to the lesson and place its metadata in YAML frontmatter. 
 ```yaml
 ---
 title: Calculus fundamentals
-description: An introduction to derivatives.
+description: >-
+  This review class examines how derivatives describe local change, how their
+  mechanism supports optimization, and which assumptions limit their use.
+  It connects the lecture's definitions, examples, evidence, and practical
+  implications in one coherent account.
 language: en
 date: 2026-09-01T17:50:00+02:00
 recording_urls:
@@ -19,6 +23,8 @@ reference_documents:
     pages: 7
 ---
 ```
+
+The description in the frontmatter is the paper-style abstract. It must provide a substantive, self-contained synthesis of the lesson's subject, scope, central question or problem, approach or framework, principal mechanisms or findings, implications, and meaningful limitations. It is not a tagline or a shallow overview. Let its length follow the complexity of the lesson while keeping every statement grounded in the source.
 
 Preserve the timestamp in machine-readable frontmatter, but display it pleasantly in rendered formats: localized date and hour/minute, without seconds, timezone offsets, or raw ISO punctuation in the visible title block. Use locale-aware date and time libraries rather than handwritten month names. Keep export labels together in a language-keyed dictionary or the selected locale resource so translations remain consistent across the document.
 
