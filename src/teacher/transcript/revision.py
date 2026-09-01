@@ -157,7 +157,6 @@ class TranscriptRevision:
 def _split_transcript(segments: Sequence[TranscriptSegment]) -> list[list[TranscriptSegment]]:
     pieces: list[list[TranscriptSegment]] = []
     maximum = _MAX_TRANSCRIPT_REQUEST_SECONDS
-    maximum = 1800.0
     for segment in segments:
         if not pieces or segment.end_seconds - pieces[-1][0].start_seconds > maximum:
             pieces.append([segment])

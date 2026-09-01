@@ -502,7 +502,11 @@ def _glossary_blocks(lecture: Lesson, metadata: ExportMetadata) -> list[str]:
         rows.append((display_name, entry.description))
     return [
         render_export_template("glossary", {"title": labels.glossary}).strip(),
-        render_table((labels.glossary_term, labels.glossary_definition), rows),
+        render_table(
+            (labels.glossary_term, labels.glossary_definition),
+            rows,
+            align=(None, None),
+        ),
     ]
 
 

@@ -85,6 +85,7 @@ def render_table(
     rows: Iterable[tuple[str, str]],
     *,
     code_columns: tuple[int, ...] = (),
+    align: tuple[str | None, str | None] = (None, "right"),
 ) -> str:
     """Build and serialize a Markdown table with Wenmode AST nodes."""
 
@@ -111,5 +112,5 @@ def render_table(
             for left, right in rows
         ),
     ]
-    table = Table(align=[None, "right"], children=table_rows)
+    table = Table(align=list(align), children=table_rows)
     return _MARKDOWN.render_node(Root(children=[table])).strip()

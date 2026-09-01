@@ -189,7 +189,7 @@ def compute_glossary_links(
     remaining = {entry.key for entry in glossary_entries if entry.short_form.strip()}
     links_per_chapter: list[tuple[GlossaryLink, ...]] = []
     for content in chapter_contents:
-        chapter_links: list[GlossaryLink] = []
+        candidates: list[GlossaryLink] = []
         for entry in glossary_entries:
             if entry.key not in remaining:
                 continue
@@ -197,18 +197,34 @@ def compute_glossary_links(
             match = re.search(rf"(?<!\w){re.escape(phrase)}(?!\w)", content, re.IGNORECASE)
             if match is None:
                 continue
-            chapter_links.append(GlossaryLink(key=entry.key, start=match.start(), end=match.end()))
-            remaining.remove(entry.key)
-        links_per_chapter.append(tuple(sorted(chapter_links, key=lambda link: link.start)))
+            candidates.append(GlossaryLink(key=entry.key, start=match.start(), end=match.end()))
+        chapter_links = _select_non_overlapping_links(content, candidates)
+        remaining.difference_update(link.key for link in chapter_links)
+        links_per_chapter.append(chapter_links)
     return links_per_chapter
 
 
 def apply_glossary_links(content: str, links: Sequence[GlossaryLink]) -> str:
     """Link stored character ranges to the glossary section."""
     result = content
-    for link in sorted(links, key=lambda item: item.start, reverse=True):
-        if not 0 <= link.start < link.end <= len(result):
-            continue
+    for link in reversed(_select_non_overlapping_links(content, links)):
         text = result[link.start : link.end]
         result = f"{result[: link.start]}[{text}](#glossary){result[link.end :]}"
     return result
+
+
+def _select_non_overlapping_links(
+    content: str, links: Sequence[GlossaryLink]
+) -> tuple[GlossaryLink, ...]:
+    """Select valid, longest-first links so nested ranges cannot corrupt Markdown."""
+    selected: list[GlossaryLink] = []
+    for link in sorted(
+        links,
+        key=lambda item: (-(item.end - item.start), item.start, item.end, item.key),
+    ):
+        if not 0 <= link.start < link.end <= len(content):
+            continue
+        if any(link.start < other.end and other.start < link.end for other in selected):
+            continue
+        selected.append(link)
+    return tuple(sorted(selected, key=lambda item: (item.start, item.end, item.key)))
