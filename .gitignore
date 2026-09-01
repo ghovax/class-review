@@ -1,12 +1,5 @@
 .venv/
-.mypy_cache/
 .pytest_cache/
 .ruff_cache/
 __pycache__/
 *.py[cod]
-*.log
-*.pid
-dist/
-build/
-.tmp/
-.langgraph_api/

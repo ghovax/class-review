@@ -4,7 +4,7 @@ Read the finished lesson as structured content before serializing it. Prefer a M
 
 ## Canonical Markdown
 
-Keep metadata in YAML frontmatter and keep the body limited to the lesson. Use block-style YAML sequences, not JavaScript notation:
+Keep the body limited to the lesson and place its metadata in YAML frontmatter. Use block-style sequences:
 
 ```yaml
 ---
@@ -20,25 +20,25 @@ reference_documents:
 ---
 ```
 
-Use only `language`, never a duplicate `lang` field. Preserve the timestamp in machine-readable frontmatter, but display it pleasantly in rendered formats: localized date and hour/minute, without seconds, timezone offsets, or raw ISO punctuation in the visible title block.
+Preserve the timestamp in machine-readable frontmatter, but display it pleasantly in rendered formats: localized date and hour/minute, without seconds, timezone offsets, or raw ISO punctuation in the visible title block. Use locale-aware date and time libraries rather than handwritten month names. Keep export labels together in a language-keyed dictionary or the selected locale resource so translations remain consistent across the document.
 
-Use ordinary Markdown footnotes or the citation syntax selected by Pandoc. Do not embed XML citation envelopes or any other transport markup in the body.
+Use ordinary Markdown footnotes or the citation syntax selected by Pandoc. Put citations next to the claims they support and preserve source identity, page, and claim alignment. Do not embed transport markup in the body.
 
 ## Pandoc and Typst
 
-Check availability before choosing a renderer:
+Check the available renderers before choosing the output path:
 
 ```bash
 command -v pandoc
 command -v typst
 ```
 
-For PDF, use Pandoc with the provided [pandoc-typst.template](../assets/pandoc-typst.template) when Typst is available. For HTML, DOCX, or another Pandoc-supported format, use the native Pandoc writer and the format's stylesheet/template when available. If Pandoc or Typst is unavailable, report the missing dependency and use another available renderer rather than silently emitting a different format.
+For PDF, use Pandoc with the provided `pandoc-typst.template` when Typst is available. For HTML, DOCX, or another Pandoc-supported format, use the native writer and its normal styling facilities. If a requested renderer is unavailable, report the missing dependency and use another available format only with the user's agreement.
 
-The PDF template must provide a centered `Abstract` heading above the description, pleasant localized date/time, coherent heading hierarchy, and a calm table style. Tables should have a lightly blue-tinted header, header rules above and below, no body grid borders, left/top alignment, and enough spacing for readability. The glossary is a dictionary-like table: keep the term column compact and give the definition column the remaining width. Filenames in the recordings/reference table use a monospaced font.
+The Typst template should provide a centered `Abstract` heading above the description, a calm title block, localized date/time, coherent heading hierarchy, and no unexpected automatic section numbering. Tables use a lightly blue-tinted header with rules above and below the header only, no body grid borders, left/top alignment, and comfortable spacing. The glossary is a dictionary-style table with a compact term column and the definition column taking the remaining width. Filenames in source tables use a monospaced font.
 
-Improve HTML to follow the same visual rules: blue-tinted header, rules around the header only, no body borders, compact glossary term column, and monospaced filenames. Preserve links and footnotes in every format.
+Keep equivalent visual intent for HTML without relying on a repository CSS asset: blue-tinted headers, header rules only, no body borders, compact glossary terms, and monospaced filenames. Preserve links and footnotes in every format.
 
-Save reviewable exports to the user's requested location; when no location is specified, use a clearly named file in `~/Downloads` and keep temporary Pandoc/Typst inputs under the system temporary directory. Never leave generated test files in the repository.
+Save reviewable exports to the user's requested location. When no location is specified, use a clearly named file in the user's Downloads folder and keep temporary Pandoc and Typst inputs under the system temporary directory. Never leave generated tests or temporary renderer files in the repository.
 
-Before handing the artifact over, inspect the rendered PDF/HTML/DOCX when the format supports visual checking. Confirm the source transcript is absent, metadata remains in frontmatter, headings are not unexpectedly numbered, the abstract heading is centered, glossary definitions receive most of the table width, filenames are monospaced, and no automatic-generation disclaimer appears.
+Before handing the artifact over, inspect the rendered PDF, HTML, or DOCX when the format supports visual checking. Confirm that the transcript is absent from the body, metadata remains frontmatter, headings are not unexpectedly numbered, the abstract heading is centered, glossary definitions receive most of the table width, filenames are monospaced, citations survive conversion, and no generation-process boilerplate appears.

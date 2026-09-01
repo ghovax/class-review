@@ -1,41 +1,47 @@
 # Source the lecture
 
-Obtain a timestamped transcript before lesson planning. Keep the original transcript and every revision as separate intermediate artifacts; never replace the source irreversibly.
+Obtain a timestamped transcript before planning the lesson. Keep the original recording or user submission, the raw transcription response, and each normalized or corrected transcript as separate artifacts. Never overwrite the source while cleaning it.
 
-## Preferred decision
+## Choose the source path
 
-Use Modal first for audio transcription. The bundled scripts are:
+Prefer Modal for audio transcription. The skill contains two self-contained deployments:
 
-- [modal_parakeet.py](../scripts/modal_parakeet.py) for NVIDIA Parakeet.
-- [modal_whisperx.py](../scripts/modal_whisperx.py) for WhisperX with word-aware segmenting and same-language input.
+- `modal_parakeet.py` runs NVIDIA Parakeet for timestamped segments.
+- `modal_whisperx.py` runs WhisperX with controlled decoding and sentence-oriented segments; it accepts an optional language hint.
 
-Deploy the selected script from the repository root:
+Deploy the selected script with the Modal CLI. A deployment creates or updates a persistent app and prints the authenticated Web Function URL:
 
 ```bash
-modal deploy .agents/skills/review-class/scripts/modal_parakeet.py
-modal deploy .agents/skills/review-class/scripts/modal_whisperx.py
+modal deploy <script>
 ```
 
-The deploy command creates or updates a persistent Modal App and prints the Web Function URL; the URL is also available in the Modal dashboard. For a deliberate one-off smoke test, use the registered local entrypoint with `modal run` instead of creating a persistent deployment. The endpoints require the authentication configured by the script (`requires_proxy_auth=True`); use the credentials and HTTP client convention from the user's Modal environment rather than making the endpoint public.
+For a one-off smoke test, use the script's local entrypoint:
 
-The scripts expose an authenticated POST endpoint. Send a JSON body with an `items` list containing stable integer indices and audio URLs. WhisperX also accepts an optional BCP 47 `language` value. Keep the returned item indices so multiple recordings can be reassembled deterministically.
+```bash
+modal run <script> --url "https://example.test/lecture.m4a"
+```
+
+The endpoint is protected by Modal proxy authentication. Use the credentials and HTTP client already configured for the user's Modal workspace; do not make the endpoint public merely to simplify testing. Keep the deployment name, URL, request payload, response, and any errors in the run record.
+
+Submit an `items` list with stable integer indices. WhisperX may receive a BCP 47 language hint when the recording is known to be one language:
 
 ```json
 {
   "items": [
-    {"url": "https://example.test/lecture-01.m4a", "index": 0}
+    {"url": "https://example.test/lecture-01.m4a", "index": 0},
+    {"url": "https://example.test/lecture-02.m4a", "index": 1}
   ],
   "language": "en"
 }
 ```
 
-The local entrypoint is useful for a deliberate local run or a smoke test, but it is not the preferred production path. Local execution requires the model's dependencies, FFmpeg, and a compatible GPU; do not silently fall back to a slow or incomplete CPU transcription for a long lecture.
+Keep the returned indices when combining multiple recordings. Normalize each result to ordered segments with `start_seconds`, `end_seconds`, and `content`; preserve detected language and the raw response beside the normalized form. Reject empty or malformed items rather than silently dropping them.
 
-Normalize the endpoint response before planning: map each returned `start`, `end`, and `text` field to `start_seconds`, `end_seconds`, and `content`, retain `detected_language` when WhisperX supplies it, and preserve the raw response alongside the normalized transcript.
+Use local transcription only when the machine has the required compatible GPU, model dependencies, and FFmpeg, or when the user explicitly chooses it. Do not silently run a long lecture on an inadequate CPU setup. Check that a local fallback produces the same normalized segment shape as the Modal path.
 
-## If audio is not available
+## If the user provides the transcript
 
-Ask the user for a timestamped transcript. Accept JSON, Markdown, plain text with timestamps, or another clearly structured format, then normalize it into ordered segments without changing the words. A useful normalized shape is:
+If there is no usable recording, ask for a timestamped transcript. Accept JSON, Markdown, plain text with timestamps, or another clearly structured format, then normalize it without changing the spoken words. A useful internal shape is:
 
 ```json
 {
@@ -50,6 +56,10 @@ Ask the user for a timestamped transcript. Accept JSON, Markdown, plain text wit
 }
 ```
 
-If the user provides reference PDFs or notes, preserve their filenames and page boundaries. Use them to clarify or verify the lecture, not to expand the lesson beyond what the lecture supports.
+Preserve the user's wording and mark uncertain portions instead of guessing. If correction is requested, make corrections in a new transcript version and retain a record of what changed.
 
-Before moving to planning, verify that timestamps are ordered, non-negative, and non-empty; that the recording language is known or clearly marked as detected; and that the transcript can be traced back to its source recording or user submission.
+## Validate the source
+
+Before outlining, confirm that segments are non-empty, timestamps are non-negative and ordered, each end follows its start, and the complete recording timeline is covered. Keep the recording language and output language distinct. Preserve reference PDFs or notes with their original filenames, page numbers, and provenance.
+
+Treat the transcript as the authority for what was said, its order, and its qualitative depth. Treat reference documents as secondary evidence for terminology, clarification, and citations. Do not let a rich reference document expand a lecture beyond its stated scope.

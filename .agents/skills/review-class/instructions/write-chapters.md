@@ -1,26 +1,52 @@
 # Write the lesson
 
-Read the outline, owned transcript excerpts, references, and the applicable macro-classification notes. Write a coherent review class in the requested language. The lesson should teach the material directly; it should not mention prompts, agents, internal classifications, transcripts, or behind-the-scenes processing.
+Read the outline, the transcript excerpts owned by the current writing unit, the relevant references, and the accumulated visible lesson context. Write a coherent review class in the requested language. The learner should see a direct academic explanation, not a description of the source material or the generation process.
+
+## Source fidelity
+
+The transcript controls substance, order, reasoning, and depth. References may clarify or verify a point already supported by the lecture, but they do not authorize new scope. Preserve exact values, units, signs, identifiers, distinctions, and named entities whenever they are retained. Resolve transcript/reference conflicts before writing, and make the body claim and its citation agree on the same resolved value.
+
+Normalize obvious transcription defects, duplicated fragments, malformed numerals, and surface terminology only when the intended reading is supported by the surrounding argument. Do not assign one component's properties to another, broaden a sub-case into a universal law, or turn a deliberate unknown into a fact.
 
 ## Flexible writing units
 
-Choose the writing unit from the material and the available context window. You may write one complete lesson, a group of chapters, or individual chapters. Atomic chapter writing is an implementation choice, not a required public strategy. When writing in multiple iterations, carry forward the completed visible prose, established claims, terminology decisions, unresolved uncertainties, and citation mapping.
+Choose the writing unit from the material and the available context window. It may be the whole lesson, a group of chapters, one chapter, or a smaller coherent unit. Atomic chapter writing is an implementation detail, not a required public strategy. When writing iteratively, carry forward the completed visible prose, terminology decisions, established claims, unresolved uncertainties, and citation mapping.
 
 For each unit:
 
-1. Read only the source excerpts and references owned by that unit, plus the accumulated visible lesson context that must remain consistent.
-2. Develop the new contribution at the depth indicated by the outline; compress already-established material to a brief reference by name.
-3. Preserve causal and procedural reasoning instead of reducing the source to disconnected conclusions.
-4. Use prose for connected reasoning, lists for genuinely parallel items, tables for real comparisons, and equations only where mathematical structure is necessary.
-5. Keep headings topical and let the content determine whether subsections are useful. Do not add automatic numbering merely because a renderer can add it.
-6. Cite claims with the ordinary citation syntax supported by the selected Markdown/Pandoc workflow. Put each citation next to the claim it supports and keep the cited source, page, and claim aligned.
+1. Identify the unit's owned concepts and use their objectives, intent, depth, and rationale as binding editorial guidance.
+2. Compare every new passage with all earlier visible prose and the do-not-repeat ledger. Treat earlier prose as the ground truth when it is richer than the ledger.
+3. Develop only the net-new contribution. When a later passage relies on an established term, mechanism, value, or example, refer to it by name and advance from it instead of redefining it.
+4. Preserve the source's causal, procedural, and evidentiary reasoning. Do not compress a chain until its conclusion becomes an unsupported fact.
+5. Write in direct professor-to-learner voice. Do not mention the transcript, recording, pages, slides, prompt, metadata, outline, or lesson position.
+6. Open directly on substance. Avoid contents previews, progress announcements, backward pointers, forward references, and transition sentences whose only job is to announce where the reader is.
+7. End each concept on its last substantive sentence. Do not append a recap, a setup for the next concept, an offer to elaborate, or generation commentary.
 
-Do not paste the entire source transcript into the lesson. The lesson contains the teaching derived from it, not a transcript dump. Do not add a bibliography unless the requested output needs one. Do not add the automatic-notes disclaimer or an equivalent sentence.
+## Shape follows content
+
+Use the smallest structure that makes the relationship clear. One content unit should have one didactic function.
+
+- Use argumentative prose for a connected mechanism, explanation, implication, or causal chain. Each sentence should refine, support, contrast, or follow from the preceding one.
+- Use a labeled list for genuinely parallel types, properties, requirements, cases, or procedural steps. Give each item enough explanation to carry its real substance; do not duplicate the list in preceding prose.
+- Use a table for a multidimensional comparison: two or more entities described by two or more shared attributes. Keep headers and cells concise and do not repeat the matrix as prose.
+- Use a hybrid mechanism–list/table–consequence shape when a causal explanation naturally produces an enumerable set and then resumes its reasoning.
+- Use subsections when a concept contains distinct sub-mechanisms or phases. Do not create headings for every paragraph or use headings as a substitute for an explanation.
+- Use equations only for genuine mathematical structure. Keep them inline unless the requested format clearly benefits from display math.
+
+## Language and notation
+
+Write all learner-facing prose, headings, labels, and citation text in the requested BCP 47 language. Keep terminology stable across the lesson and use canonical textbook forms for technical terms, identifiers, units, formulas, and symbols. A spoken acronym becomes its standard written acronym; a verbally described formula becomes canonical notation; a colloquial entity name becomes its formal name without changing the underlying fact.
+
+Use inline LaTeX for genuine mathematics, including equations, relations, indices, exponents, units, Greek symbols, charges, and mathematical operators. Keep ordinary words, names, acronyms, gene/protein identifiers, and multi-letter labels as plain prose. Do not paste raw mathematical glyphs such as arrows, Greek letters, superscripts, or relation signs. Write causal relationships as sentences, not symbol chains.
+
+## Evidence and citations
+
+Cite a claim where the chosen output format supports citations, placing the citation immediately after the sentence it supports. Cite the page or source that supports that specific claim, not a topical neighbor. When the lecture supplies the claim but no reference supports it, do not attach an unrelated citation. Keep citation text in the requested language and make it agree with the body on every relevant value and identifier.
 
 ## Intermediate call data
 
-When using a model, retain the exact request messages, response object, visible output, response metadata, tool calls, token usage, cache counters, and provider-exposed reasoning fields in the run's intermediate record. Use the complete assistant response as context for later units when the model interface supports it. If a provider exposes hidden reasoning, keep it opaque and separate from the student-facing lesson; never invent, paraphrase, or publish private chain-of-thought.
+For every model call, retain the exact request messages, response object, visible output, response metadata, tool calls, token usage, cache counters, and provider-exposed reasoning fields when the runtime exposes them. Use the complete assistant response as context for later writing units when the model interface supports it. Keep private reasoning opaque and separate from the student-facing lesson; never invent, paraphrase, or publish hidden chain-of-thought.
 
-If a unit fails and is retried, retain the successful result and the failure metadata. A later unit must never silently replace an earlier unit's source, terminology, or citations without recording the change.
+If a call is retried, retain the successful result and the failure metadata. Never silently replace an earlier unit's source, terminology, citation, or established claim without recording the change. Preserve the raw transcript and intermediate artifacts even when a normalized lesson is produced.
 
-Before exporting, validate that the lesson has no source transcript dump, no unsupported claims, no duplicate language fields, no raw internal classification, no XML, and no forbidden automatic-generation disclaimer. Then continue to [export.md](export.md).
+Before exporting, verify complete coverage, coherent progression, no transcript dump, no unsupported claims, no duplicated or drifting terminology, no accidental numbering, no raw internal classifications, no transport markup, and no automatic-generation boilerplate. Continue to [export.md](export.md).
