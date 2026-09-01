@@ -58,18 +58,27 @@ lesson = Lesson.from_parts(outline=outline, chapters=chapters, glossary=glossary
 
 `ChapterWriter` is the low-level choice when a caller wants one chapter as an
 independent unit. `LessonWriter` accepts the complete outline as one lesson
-operation and owns its internal coordination:
+and owns its internal coordination:
 
 ```python
-chapters = await LessonWriter(text_model).write_lesson(
+writing = await LessonWriter(text_model).write_lesson(
     outline,
     materials,
 )
+chapters = writing.chapters
+lesson = Lesson.from_parts(outline=outline, chapters=chapters)
 ```
 
-Each operation is independent. Callers may skip transcript revision, provide a hand-written outline, subclass `LessonWriter` for a different lesson-level implementation, or use `ChapterWriter` directly when they want to control chapter grouping.
+`LessonWriter` writes chapters in outline order and carries each completed model
+response into the next chapter. `writing.chapter_writings` retains the exact
+request messages, provider response objects, parsed chapter, and per-call usage
+for inspection or persistence. Callers may skip transcript revision, provide a
+hand-written outline, subclass `LessonWriter` for a different lesson-level
+implementation, or use `ChapterWriter` directly when they want one independent
+chapter. `ChapterWriter.write_with_trace(...)` provides the same retained call
+data when writing one chapter directly.
 
-## Operations
+## Public interfaces
 
 - `TranscriptRevision(text_model).revise(...)` revises transcript text.
 - `ReferenceReader(text_model, vision_model).read(...)` reads reference documents.
@@ -78,7 +87,7 @@ Each operation is independent. Callers may skip transcript revision, provide a h
 - `GlossaryWriter(text_model).write(...)` writes glossary entries from chapters.
 - `Lesson.from_parts(...)` creates the final lesson deterministically.
 
-Each operation accepts the model arguments it needs directly. `ReferenceReader` accepts an optional `vision_model` and uses its `text_model` when one is not supplied. Models from `models-provider`, or another provider exposing `ainvoke`, are compatible.
+Each interface accepts the model arguments it needs directly. `ReferenceReader` accepts an optional `vision_model` and uses its `text_model` when one is not supplied. Models from `models-provider`, or another provider exposing `ainvoke`, are compatible.
 
 ## Custom operations
 

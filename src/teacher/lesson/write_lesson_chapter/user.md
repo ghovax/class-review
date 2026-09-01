@@ -16,11 +16,11 @@
 
 {{ chapter.chapter_context_xml }}
 
-## Concepts to develop
+## Concepts already covered
 
 {{ chapter.covered_concepts_xml }}
 
-## Avoid repetition
+## Prohibition ledger
 
 {{ chapter.do_not_repeat_ledger_xml }}
 

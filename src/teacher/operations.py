@@ -5,10 +5,10 @@ reference reading, outline drafting, chapter writing, and glossary writing.
 """
 
 from teacher.documents.reader import ReferenceReader
-from teacher.lesson.chapter import ChapterWriter
+from teacher.lesson.chapter import ChapterWriter, ChapterWriting
 from teacher.lesson.glossary import GlossaryWriter
 from teacher.lesson.outline import OutlineWriter
-from teacher.lesson.writer import LessonWriter
+from teacher.lesson.writer import LessonWriter, LessonWritingResult
 from teacher.transcript.revision import TranscriptRevision
 
 __all__ = [
@@ -16,6 +16,8 @@ __all__ = [
     "ReferenceReader",
     "OutlineWriter",
     "ChapterWriter",
+    "ChapterWriting",
     "GlossaryWriter",
     "LessonWriter",
+    "LessonWritingResult",
 ]

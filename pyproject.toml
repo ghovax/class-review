@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "teacher"
 version = "0.1.0"
-description = "Turn timestamped lectures into structured lessons with independent lesson-writing operations."
+description = "Turn timestamped lectures into structured lessons with ordered lesson writing."
 readme = "README.md"
 requires-python = ">=3.13"
 license = { text = "MIT" }

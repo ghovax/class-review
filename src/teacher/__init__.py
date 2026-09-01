@@ -28,8 +28,10 @@ from teacher.models import (
 )
 from teacher.operations import (
     ChapterWriter,
+    ChapterWriting,
     GlossaryWriter,
     LessonWriter,
+    LessonWritingResult,
     OutlineWriter,
     ReferenceReader,
     TranscriptRevision,
@@ -65,9 +67,11 @@ __all__ = [
     "ProgressionAxis",
     "ExplanationDepth",
     "ChapterWriter",
+    "ChapterWriting",
     "Chapter",
     "GlossaryWriter",
     "LessonWriter",
+    "LessonWritingResult",
     "GlossaryEntry",
     "GlossaryLink",
     "Citation",

@@ -148,9 +148,17 @@ def configure_logging(
 
 @dataclass(frozen=True, slots=True)
 class ModelAnswer:
-    """One model answer with the usage the call consumed."""
+    """One complete model call, including the response beyond visible text.
+
+    ``text`` is the normalized text used by parsers.  ``messages`` and
+    ``response`` retain the original request and provider response so callers
+    can inspect content blocks, tool calls, response metadata, and any
+    reasoning fields the selected model exposes.
+    """
 
     text: str
+    messages: tuple[BaseMessage, ...]
+    response: Any
     usage_by_model: dict[str, ModelUsage]
 
 
@@ -160,16 +168,45 @@ async def call_chat_model(
     *,
     metadata: dict[str, Any] | None = None,
 ) -> ModelAnswer:
-    """Calls a chat model and reports its answer with the usage it consumed."""
+    """Call a chat model without throwing away the provider response."""
+    request_messages = tuple(messages)
     with get_usage_metadata_callback() as usage_callback:
-        response = await chat_model.ainvoke(list(messages))
+        response = await chat_model.ainvoke(list(request_messages))
 
-    # `text` is a property returning a string subclass.
-    trimmed = response.text.strip()
+    # LangChain messages expose ``text`` while a small user-supplied model
+    # double may only expose ``content``.  Keep the original response either
+    # way; this string is only the parser-facing projection.
+    trimmed = _response_text(response).strip()
     if not trimmed:
         raise OperationError.retryable("the model returned an empty answer", dict(metadata or {}))
 
-    return ModelAnswer(text=trimmed, usage_by_model=_read_usage(usage_callback.usage_metadata))
+    return ModelAnswer(
+        text=trimmed,
+        messages=request_messages,
+        response=response,
+        usage_by_model=_read_usage(usage_callback.usage_metadata),
+    )
+
+
+def _response_text(response: Any) -> str:  # noqa: ANN401
+    """Read visible text while leaving the complete response untouched."""
+    text = getattr(response, "text", None)
+    if isinstance(text, str):
+        return text
+    content = getattr(response, "content", None)
+    if isinstance(content, str):
+        return content
+    if isinstance(content, Sequence):
+        parts: list[str] = []
+        for block in content:
+            if isinstance(block, str):
+                parts.append(block)
+            elif isinstance(block, Mapping):
+                value = block.get("text")
+                if isinstance(value, str):
+                    parts.append(value)
+        return "".join(parts)
+    return ""
 
 
 def _read_usage(usage_metadata: Any) -> dict[str, ModelUsage]:  # noqa: ANN401
