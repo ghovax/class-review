@@ -32,42 +32,42 @@ For each chapter or writing unit, record:
 - a clean topical title and a one-sentence purpose;
 - the owned transcript time span and source excerpts;
 - one or more concepts in chronological order;
-- the objective and the advancement mode for each concept;
-- the treatment intent: introduce, deepen, apply, or review;
-- the qualitative depth: high, medium, or low;
-- the rationale for that intent and depth;
+- the objective and the advancement emphasis for each concept;
+- the treatment emphasis, which may combine introduction, deepening, application, and review;
+- the relative explanatory emphasis, which may range from low through medium to high;
+- the rationale for the observed mixture of emphasis;
 - claims established for the first time and a substantive do-not-repeat ledger;
 - relevant reference documents and page ranges;
 - uncertainties, source conflicts, and citation targets.
 
-## Decide treatment intent
+## Assess treatment emphasis
 
-Treatment intent describes the learner-facing job of the concept in this location, not how important the topic is overall. Decide it by comparing the current treatment with what the outline has already established.
+Treatment emphasis describes the learner-facing work a passage does in this location, not how important the topic is overall. Introduction, deepening, application, and review are overlapping descriptions rather than mutually exclusive classes: one concept can partly introduce, deepen, apply, and review an idea, with one of those emphases more prominent than the others. Compare the current treatment with what the outline has already established.
 
-| Intent | Use when | The writing must do | Do not use when |
-| --- | --- | --- | --- |
-| Introduce | The concept is first established for this lesson or the learner has no usable prior foundation | Define the necessary terms, establish the baseline mechanism or idea, and provide the minimum reasoning needed to understand later material | The concept was already established and the passage only revisits it |
-| Deepen | The concept appeared earlier and the current material adds a non-trivial layer | Extend the established idea with a new mechanism, constraint, distinction, edge case, consequence, or substantially richer reasoning | The passage merely rephrases, summarizes, or adds a small detail without changing understanding |
-| Apply | An established concept is used to analyze a genuinely new case, decision, comparison, or worked example | Use the prior principle as a known baseline and develop the new case, outcome, trade-off, or decision logic | The example repeats the introductory derivation, uses toy values without a new insight, or requires re-teaching the mechanism from scratch |
-| Review | The concept is revisited for orientation, comparison, connection, or light reinforcement without material new depth | Refer to the established idea briefly by its stable name and connect it to the current point | The passage introduces a new layer, requires a full explanation, or is only being labeled review to avoid choosing a more accurate intent |
+| Emphasis | What it usually means | What it tends to contribute |
+| --- | --- | --- |
+| Introduce | The idea is being established for the learner, or a prior foundation is not usable here | Define necessary terms, establish the baseline idea or mechanism, and provide the reasoning needed for first understanding |
+| Deepen | The idea is already available and the passage adds a meaningful layer | Extend it with a new mechanism, constraint, distinction, edge case, consequence, or richer reasoning |
+| Apply | An available principle is used in a genuinely new case, decision, comparison, or worked example | Develop the new case, outcome, trade-off, or decision logic while treating the principle as a baseline |
+| Review | An established idea is revisited for orientation, connection, comparison, or light reinforcement | Reconnect to it briefly by its stable name so the current material can proceed |
 
-When a passage contains both a recap and a new contribution, classify the owned concept by the new contribution and make the recap a brief prerequisite reference. When the new contribution cannot stand without a complete re-explanation, merge the material with the earlier concept or move the boundary; do not call a duplicate treatment deepen or apply.
+When a passage contains several emphases, describe the combination and identify the dominant one only if the outline needs a compact summary. A passage may be mostly review with a small deepening element, or mostly introduction while also applying an idea to an example. If the new contribution is substantial, let it receive the space and reasoning it deserves; if it is slight, keep it slight rather than forcing a new category.
 
-## Decide explanation depth
+## Assess explanation emphasis
 
-Explanation depth measures qualitative treatment per moment, not the amount of airtime. A short passage can be high when it develops a dense mechanism; a long passage can be low when it repeats a simple point. Judge the reasoning, nuance, and learner burden actually present in the transcript.
+Explanation emphasis measures qualitative treatment per moment, not the amount of airtime. High, medium, and low are useful points on a continuum, not hard boundaries. A short passage can carry high emphasis when it develops a dense mechanism; a long passage can carry low emphasis when it repeats a simple point. Judge the reasoning, nuance, qualification, and learner burden actually present in the transcript.
 
-| Depth | Evidence in the transcript | Outline and writing consequence |
+| Relative emphasis | Evidence in the transcript | Outline and writing consequence |
 | --- | --- | --- |
 | High | The lecturer works through a mechanism or argument step by step, preserves causal links, handles meaningful nuance, exceptions, edge cases, competing explanations, or operational consequences | Reserve enough space to preserve the chain of reasoning and its qualifications; do not flatten it into a definition or list of conclusions |
 | Medium | The lecturer gives a clear explanation with the core reason, mechanism, example, or implication, but explores limited nuance or few edge cases | Explain the complete core idea and its main consequence with meaningful detail, without importing a deeper textbook treatment |
 | Low | The lecturer names, sketches, contrasts, or briefly mentions the idea with little unpacking or support | Keep the treatment concise and faithful; do not expand it merely because the topic is important in the wider field |
 
-Do not infer depth from chapter length, number of transcript sentences, repetition count, or document richness. Score the kind of explanation the source provides. The rationale should state which source signals led to the selected intent and depth.
+Do not infer emphasis from chapter length, number of transcript sentences, repetition count, or document richness. A concept may contain a range—for example, a medium explanation with one high-emphasis mechanism and a low-emphasis aside. If one summary value is needed, use the center of gravity of the treatment and preserve the internal variation in the rationale or notes. Explain which source signals led to the assessment.
 
-## Decide the advancement mode
+## Assess advancement emphasis
 
-The advancement mode identifies what makes the concept new relative to earlier concepts:
+Advancement emphasis identifies what makes the concept new relative to earlier concepts. These lenses can overlap: a mechanism may also be evidenced, and a constraint may create a trade-off. Use the one that best names the main contribution when a compact summary is needed, while preserving the other dimensions in the explanation.
 
 | Mode | The new contribution is primarily |
 | --- | --- |
@@ -76,9 +76,9 @@ The advancement mode identifies what makes the concept new relative to earlier c
 | Trade-off | A choice among competing goals, costs, benefits, risks, or outcomes, including the reasoning used to choose |
 | Evidence | An observation, measurement, example, experiment, quotation, or source-grounded fact that supports or tests an idea |
 
-Choose the mode that best describes the actual net-new work of the concept, not a generic label for its subject. If several modes are present, choose the one carrying the main advancement and record the others in the rationale or concept notes.
+Choose the emphasis that best describes the actual net-new work of the concept, not a generic label for its subject. If several modes are present, describe their relationship and, only when necessary, identify the one carrying the main advancement.
 
-Every later objective must be net-new relative to every earlier concept, not merely the immediately preceding one. A later concept may rely on an established mechanism, value, or example, but its objective must advance, constrain, apply, compare, or evidence it rather than re-derive it. Use deepen only for a material increase in understanding, apply only for a genuinely new case, and review for a concise connective revisit without new depth.
+Every later objective must be net-new relative to every earlier concept, not merely the immediately preceding one. A later concept may rely on an established mechanism, value, or example, but its objective must advance, constrain, apply, compare, or evidence it rather than re-derive it. Let the objective express the actual mixture of new contribution and connective review instead of forcing the passage into a single treatment category.
 
 For every concept, including the first, write a substantive do-not-repeat ledger. Name the terms and acronyms introduced, exact values and units, formulas, named examples, mechanism steps, and causal conclusions that the concept establishes for the first time. Phrase the ledger as guidance for later writing: later units may refer to an established item by name, but must not redefine it, rebuild its derivation, or restate its conclusion. An empty ledger is not a neutral choice; it removes the boundary information needed to keep later material additive.
 
@@ -88,4 +88,4 @@ Choose document references by the actual document section or page identity suppl
 
 ## Outline quality check
 
-Before writing, verify complete source coverage, chronological order, coherent dependencies, non-uniform content allocation, net-new objectives, substantive do-not-repeat ledgers, appropriate intent/depth, and no unsupported expansion from reference documents. Continue to [write-chapters.md](write-chapters.md) only after those checks pass.
+Before writing, verify complete source coverage, chronological order, coherent dependencies, non-uniform content allocation, net-new objectives, substantive do-not-repeat ledgers, an honest description of mixed emphasis, and no unsupported expansion from reference documents. Continue to [write-chapters.md](write-chapters.md) only after those checks pass.
