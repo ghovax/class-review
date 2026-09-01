@@ -15,6 +15,7 @@ from teacher.support import OperationError, apply_glossary_links
 from tempfile import TemporaryDirectory
 from typing import Final
 from urllib.parse import unquote, urlsplit
+from uuid import uuid4
 import json
 import re
 import subprocess
@@ -30,6 +31,8 @@ class ExportFormat(StrEnum):
     """A representation the exporter can emit."""
 
     MARKDOWN = "markdown"
+    HTML = "html"
+    DOCX = "docx"
     PDF = "pdf"
 
 
@@ -299,7 +302,7 @@ def render_export_template(name: str, variables: Mapping[str, object]) -> str:
         raise ExportError(f"export template {name!r} could not be rendered") from error
 
 
-def render_export_markdown(lesson: Lesson, metadata: ExportMetadata) -> str:
+def _render_markdown(lesson: Lesson, metadata: ExportMetadata) -> str:
     """Render a complete lesson from packaged blocks."""
     blocks = [
         render_export_template(
@@ -374,84 +377,8 @@ _ANCHOR_BEFORE_HEADING: Final[re.Pattern[bytes]] = re.compile(
 )
 
 
-def render_pdf(markdown: bytes, metadata: ExportMetadata) -> bytes:
-    """Converts canonical Markdown into PDF bytes."""
-    template_resource = resources.files("teacher.output_templates").joinpath(
-        "pandoc-typst.template"
-    )
-    with resources.as_file(template_resource) as template_path:
-        return _run_pandoc(markdown, metadata, template_path)
-
-
-def _run_pandoc(
-    markdown: bytes,
-    metadata: ExportMetadata,
-    template_path: Path,
-) -> bytes:
-    """Runs one bounded Pandoc-to-Typst conversion in an isolated directory."""
-    with TemporaryDirectory(prefix="teacher-export-") as temporary_directory:
-        working_directory = Path(temporary_directory)
-        output_path = working_directory / "lesson.pdf"
-        metadata_path = working_directory / "metadata.json"
-        pandoc_metadata = _pandoc_metadata(metadata)
-
-        if metadata.share_url:
-            qr_code_path = working_directory / "share-qr.svg"
-            segno.make_qr(metadata.share_url, error="m").save(
-                str(qr_code_path),
-                scale=4,
-                border=1,
-                dark="#000000",
-                light="#ffffff",
-            )
-            pandoc_metadata["qr-image-path"] = qr_code_path.name
-
-        metadata_path.write_text(json.dumps(pandoc_metadata, ensure_ascii=False), encoding="utf-8")
-        command = [
-            "pandoc",
-            "--sandbox",
-            "--from",
-            _PANDOC_INPUT_FORMAT,
-            "--shift-heading-level-by=-1",
-            "--toc",
-            "--toc-depth=2",
-            "--pdf-engine=typst",
-            f"--template={template_path}",
-            f"--metadata-file={metadata_path}",
-            "--output",
-            str(output_path),
-        ]
-        try:
-            completed = subprocess.run(
-                command,
-                input=_ANCHOR_BEFORE_HEADING.sub(rb"\2 {#\1}", markdown),
-                cwd=working_directory,
-                capture_output=True,
-                check=False,
-                timeout=_PANDOC_TIMEOUT_SECONDS,
-            )
-        except FileNotFoundError as error:
-            raise ExportError("PDF export requires pandoc and typst on PATH") from error
-        except OSError as error:
-            raise ExportError("PDF export could not start pandoc") from error
-        except subprocess.TimeoutExpired as error:
-            raise ExportError(f"PDF export exceeded {_PANDOC_TIMEOUT_SECONDS} seconds") from error
-
-        if completed.returncode != 0:
-            details = completed.stderr.decode("utf-8", errors="replace").strip()
-            reason = details or "pandoc exited unsuccessfully"
-            raise ExportError(f"PDF export failed: {reason}")
-        try:
-            rendered = output_path.read_bytes()
-        except OSError as error:
-            raise ExportError("PDF export completed without an output file") from error
-        if not rendered.startswith(b"%PDF-"):
-            raise ExportError("PDF export produced bytes that are not a PDF")
-        return rendered
-
-
 def _pandoc_metadata(metadata: ExportMetadata) -> dict[str, str]:
-    """Builds the scalar metadata consumed by the packaged Typst template."""
+    """Build the scalar metadata consumed by the packaged PDF template."""
     labels = export_labels(metadata.language)
     values = {"lang": primary_language(metadata.language)}
     if metadata.author and metadata.author.strip():
@@ -467,42 +394,130 @@ def _pandoc_metadata(metadata: ExportMetadata) -> dict[str, str]:
     return values
 
 
-"""File-oriented output API."""
+class MarkdownExporter:
+    """Render a lesson as canonical Markdown bytes."""
 
-
-class PdfExporter:
-    """Writes the bundled Pandoc and Typst PDF representation."""
-
-    def save(
+    def render(
         self,
         lesson: Lesson,
-        destination: str | Path,
         *,
         metadata: ExportMetadata | None = None,
-    ) -> Path:
-        path = Path(destination)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(lesson.export(ExportFormat.PDF, metadata=metadata))
-        return path
+    ) -> bytes:
+        return _render_markdown(lesson, metadata or ExportMetadata()).encode("utf-8")
 
 
-def _export_to_bytes(
-    lesson: Lesson,
-    *,
-    format: ExportFormat | str,  # noqa: A002
-    metadata: ExportMetadata | None = None,
+class PandocExporter:
+    """Render canonical Markdown in a selected Pandoc output format."""
+
+    def __init__(self, output_format: ExportFormat | str) -> None:
+        try:
+            selected = ExportFormat(output_format)
+        except ValueError as error:
+            supported = ", ".join(
+                item.value for item in ExportFormat if item is not ExportFormat.MARKDOWN
+            )
+            raise ExportError(
+                f"unsupported Pandoc format {output_format!r}; expected one of: {supported}"
+            ) from error
+        if selected is ExportFormat.MARKDOWN:
+            raise ExportError("PandocExporter does not render Markdown; use MarkdownExporter")
+        self.output_format = selected
+
+    def render(
+        self,
+        lesson: Lesson,
+        *,
+        metadata: ExportMetadata | None = None,
+    ) -> bytes:
+        resolved_metadata = metadata or ExportMetadata()
+        markdown = MarkdownExporter().render(lesson, metadata=resolved_metadata)
+        return _render_pandoc(markdown, resolved_metadata, self.output_format)
+
+
+def _render_pandoc(
+    markdown: bytes,
+    metadata: ExportMetadata,
+    output_format: ExportFormat,
 ) -> bytes:
-    """Render a lesson as Markdown or PDF bytes."""
-
-    try:
-        selected = ExportFormat(format)
-    except ValueError as error:
-        supported = ", ".join(item.value for item in ExportFormat)
-        raise ExportError(
-            f"unsupported export format {format!r}; expected one of: {supported}"
-        ) from error
-    resolved_metadata = metadata or ExportMetadata()
-    markdown = render_export_markdown(lesson, resolved_metadata).encode("utf-8")
-    return (
-        markdown if selected is ExportFormat.MARKDOWN else render_pdf(markdown, resolved_metadata)
+    """Convert Markdown using a private temporary directory."""
+    template_resource = resources.files("teacher.output_templates").joinpath(
+        "pandoc-typst.template"
     )
+    with resources.as_file(template_resource) as template_path:
+        return _run_pandoc(markdown, metadata, template_path, output_format)
+
+
+def _run_pandoc(
+    markdown: bytes,
+    metadata: ExportMetadata,
+    template_path: Path,
+    output_format: ExportFormat,
+) -> bytes:
+    """Run Pandoc with unique temporary names and return its result."""
+    with TemporaryDirectory(prefix="teacher-pandoc-") as temporary_directory:
+        working_directory = Path(temporary_directory)
+        output_path = working_directory / f"teacher-export-{uuid4().hex}.{output_format.value}"
+        metadata_path = working_directory / f"teacher-metadata-{uuid4().hex}.json"
+        pandoc_metadata = _pandoc_metadata(metadata)
+
+        if metadata.share_url and output_format is ExportFormat.PDF:
+            qr_code_path = working_directory / f"teacher-qr-{uuid4().hex}.svg"
+            segno.make_qr(metadata.share_url, error="m").save(
+                str(qr_code_path), scale=4, border=1, dark="#000000", light="#ffffff"
+            )
+            pandoc_metadata["qr-image-path"] = qr_code_path.name
+
+        metadata_path.write_text(json.dumps(pandoc_metadata, ensure_ascii=False), encoding="utf-8")
+        command = [
+            "pandoc",
+            "--sandbox",
+            "--from",
+            _PANDOC_INPUT_FORMAT,
+            "--standalone",
+            "--to",
+            output_format.value,
+            "--output",
+            str(output_path),
+            f"--metadata-file={metadata_path}",
+        ]
+        if output_format is ExportFormat.PDF:
+            command.extend(
+                [
+                    "--shift-heading-level-by=-1",
+                    "--toc",
+                    "--toc-depth=2",
+                    "--pdf-engine=typst",
+                    f"--template={template_path}",
+                ]
+            )
+
+        try:
+            completed = subprocess.run(
+                command,
+                input=_ANCHOR_BEFORE_HEADING.sub(rb"\2 {#\1}", markdown),
+                cwd=working_directory,
+                capture_output=True,
+                check=False,
+                timeout=_PANDOC_TIMEOUT_SECONDS,
+            )
+        except FileNotFoundError as error:
+            raise ExportError("Pandoc export requires pandoc on PATH") from error
+        except OSError as error:
+            raise ExportError("Pandoc export could not start") from error
+        except subprocess.TimeoutExpired as error:
+            raise ExportError(
+                f"Pandoc export exceeded {_PANDOC_TIMEOUT_SECONDS} seconds"
+            ) from error
+
+        if completed.returncode != 0:
+            details = completed.stderr.decode("utf-8", errors="replace").strip()
+            raise ExportError(f"Pandoc export failed: {details or 'pandoc exited unsuccessfully'}")
+        try:
+            rendered = output_path.read_bytes()
+        except OSError as error:
+            raise ExportError("Pandoc export completed without an output file") from error
+        if not rendered:
+            raise ExportError("Pandoc export produced an empty file")
+        if output_format is ExportFormat.PDF and not rendered.startswith(b"%PDF-"):
+            raise ExportError("Pandoc export produced bytes that are not a PDF")
+        return rendered

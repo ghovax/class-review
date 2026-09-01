@@ -42,8 +42,8 @@ from teacher.outputs import (
     ExportError,
     ExportFormat,
     ExportMetadata,
-    PdfExporter,
-    render_export_markdown,
+    MarkdownExporter,
+    PandocExporter,
 )
 
 __all__ = [
@@ -82,6 +82,6 @@ __all__ = [
     "ExportError",
     "ExportFormat",
     "ExportMetadata",
-    "PdfExporter",
-    "render_export_markdown",
+    "MarkdownExporter",
+    "PandocExporter",
 ]

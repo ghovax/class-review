@@ -92,13 +92,16 @@ The application can use these operations in ordinary Python, its own LangGraph, 
 
 ## Exporting
 
-Export belongs to the lesson:
+Markdown is the canonical lesson representation. Pandoc converts it to other formats.
 
 ```python
-from teacher import ExportFormat
+from teacher import ExportFormat, MarkdownExporter, PandocExporter
 
-markdown = lesson.export(ExportFormat.MARKDOWN)
-pdf = lesson.export(ExportFormat.PDF)
+markdown = MarkdownExporter().render(lesson)
+pdf = PandocExporter(ExportFormat.PDF).render(lesson)
+html = PandocExporter(ExportFormat.HTML).render(lesson)
 ```
 
-PDF export requires `pandoc` and `typst` on `PATH`.
+`PandocExporter` runs in a private temporary directory. Its output, metadata, and optional QR image each receive unique names, and the directory is removed after rendering. PDF uses the bundled Typst template; HTML and DOCX use Pandoc's native writers.
+
+PDF export requires `pandoc` and `typst` on `PATH`. HTML and DOCX require only `pandoc`.
