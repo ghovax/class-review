@@ -5,7 +5,6 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from langchain_core.callbacks import get_usage_metadata_callback
-from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage
 from models_provider import ModelUsage
 from teacher.models import GlossaryEntry, GlossaryLink
@@ -16,13 +15,13 @@ import traceback
 
 import structlog
 
-"""Shared errors, logging, model calls, and graph material rendering."""
+"""Shared errors, logging, model calls, and operation helpers."""
 
-"""Error types and retry classification shared by every graph node."""
+"""Error types and retry classification shared by every operation."""
 
 
-class PipelineError(Exception):
-    """A failure raised by a graph node."""
+class OperationError(Exception):
+    """A failure raised by a operation."""
 
     def __init__(
         self,
@@ -30,7 +29,7 @@ class PipelineError(Exception):
         metadata: dict[str, Any] | None = None,
         cause: BaseException | None = None,
     ) -> None:
-        """Builds a pipeline error carrying structured context."""
+        """Builds a operation error carrying structured context."""
         super().__init__(message)
         self.metadata: dict[str, Any] = dict(metadata or {})
         if cause is not None:
@@ -53,7 +52,7 @@ class PipelineError(Exception):
         metadata: dict[str, Any] | None = None,
         cause: BaseException | None = None,
     ) -> Self:
-        """Builds an error that short-circuits retries and aborts the run."""
+        """Builds an error that marks an operation failure as terminal."""
         return cls(message, {**(metadata or {}), "retryable": False}, cause)
 
     @property
@@ -62,40 +61,20 @@ class PipelineError(Exception):
         return bool(self.metadata.get("retryable", False))
 
 
-# Deliberately not suffixed "Error": a cancellation is an outcome the caller asked
-# for, not a fault, and callers distinguish the two by type.
-class GenerationCancelled(PipelineError):  # noqa: N818
-    """Raised when a caller aborts a run in progress."""
-
-    def __init__(self, message: str = "cancelled by the caller") -> None:
-        """Builds a cancellation signal."""
-        super().__init__(message, {"retryable": False})
-
-
-# Transport-level error codes that indicate a transient fault rather than a
-# contract violation.
 TRANSIENT_ERROR_CODES: Final[frozenset[str]] = frozenset(
     {"ETIMEDOUT", "ECONNRESET", "ECONNREFUSED", "EAI_AGAIN"}
 )
 
 
 def classify_retryable(error: BaseException) -> bool:
-    """Decides whether a failed node attempt should be retried."""
-    if isinstance(error, GenerationCancelled):
-        return False
-    if isinstance(error, PipelineError):
+    """Decide whether an operation failure is likely transient."""
+    if isinstance(error, OperationError):
         return error.is_retryable
-
     status_code = _read_status_code(error)
     if status_code is not None:
-        if status_code == 429:
-            return True
-        return 500 <= status_code < 600
-
+        return status_code == 429 or 500 <= status_code < 600
     error_code = getattr(error, "code", None)
-    if isinstance(error_code, str) and error_code in TRANSIENT_ERROR_CODES:
-        return True
-    return True
+    return not isinstance(error_code, str) or error_code in TRANSIENT_ERROR_CODES
 
 
 def describe_error(error: BaseException) -> dict[str, Any]:
@@ -112,7 +91,7 @@ def describe_error(error: BaseException) -> dict[str, Any]:
             for frame in traceback.extract_tb(error.__traceback__)
         ],
     }
-    if isinstance(error, PipelineError) and error.metadata:
+    if isinstance(error, OperationError) and error.metadata:
         described["error_metadata"] = error.metadata
     cause = error.__cause__
     if cause is not None:
@@ -185,7 +164,7 @@ class ModelAnswer:
 
 
 async def call_chat_model(
-    chat_model: BaseChatModel,
+    chat_model: Any,
     messages: Sequence[BaseMessage],
     *,
     metadata: dict[str, Any] | None = None,
@@ -197,7 +176,7 @@ async def call_chat_model(
     # `text` is a property returning a string subclass.
     trimmed = response.text.strip()
     if not trimmed:
-        raise PipelineError.retryable("the model returned an empty answer", dict(metadata or {}))
+        raise OperationError.retryable("the model returned an empty answer", dict(metadata or {}))
 
     return ModelAnswer(text=trimmed, usage_by_model=_read_usage(usage_callback.usage_metadata))
 

@@ -1,146 +1,106 @@
 # Teacher
 
-Teacher turns a timestamped transcript and optional document bytes into a structured lesson through a resumable graph. It cleans the transcript, extracts document material, plans chapters, writes the lesson, builds a glossary, and provides Markdown or PDF bytes.
+Teacher provides independent operations for turning timestamped transcripts and reference documents into structured lessons. It does not impose a workflow runner: applications choose the order, concurrency, persistence, retries, and any LangGraph integration themselves.
 
-## Invocation
+## Usage
 
-Transcribe audio separately and save the timestamped result before invoking Teacher. That saved transcript can be reused for every later lesson generation.
+The transcription application creates the timestamped transcript. Teacher receives that value; it does not download or transcribe audio.
 
 ```python
-from __future__ import annotations
-
-import asyncio
-import json
-from pathlib import Path
-
 from models_provider import Models
+
 from teacher import (
-    DocumentSource,
-    ExportFormat,
-    LessonGraph,
-    ModelSelection,
+    ChapterWriter,
+    GlossaryWriter,
+    Lesson,
+    LessonMaterials,
+    ModelsConfiguration,
+    OutlineWriter,
+    ReferenceDocument,
+    ReferenceReader,
     Transcript,
+    TranscriptRevision,
     TranscriptSegment,
-    export_to_bytes,
 )
 
-
-def load_transcript(path: Path) -> Transcript:
-    """Load the timestamped transcript saved by the transcription application."""
-    data = json.loads(path.read_text(encoding="utf-8"))
-    return Transcript(
-        segments=tuple(
-            TranscriptSegment(
-                start_seconds=segment["start_seconds"],
-                end_seconds=segment["end_seconds"],
-                content=segment["content"],
-            )
-            for segment in data["segments"]
-        ),
-        languages=tuple(data["languages"]),
-    )
-
-
-async def main() -> None:
-    transcript = load_transcript(Path("/tmp/calculus.transcript.json"))
-    local_pdf = DocumentSource.from_path("/tmp/calculus-notes.pdf")
-
-    # Documents can come from any source; Teacher receives their bytes.
-    documents = (local_pdf,)
-    models = Models.from_environment()
-    graph = LessonGraph(
-        models=ModelSelection(text=models.chat("openai/gpt-4.1-mini")),
-        checkpoint_path=Path("/tmp/calculus.lesson.sqlite"),
-    )
-
-    async with graph:
-        result = await graph.generate(
-            transcript=transcript,
-            documents=documents,
-            output_language="en",
-            run_id="calculus-lecture",
-        )
-
-    Path("/tmp/calculus.lesson.md").write_bytes(
-        export_to_bytes(result.lesson, format=ExportFormat.MARKDOWN)
-    )
-
-
-asyncio.run(main())
-```
-
-The application owns source clients and authentication; Teacher receives only the resulting bytes. The SQLite checkpoint and the Markdown output are explicit files, so a later process can resume or reuse the generated result.
-
-Load model environment variables in the host before calling `Models.from_environment()`; neither Teacher nor Models Provider parses `.env` files.
-
-`models` is a ready-to-use model selection. The text model handles transcript and lesson writing. An optional vision model handles rendered document pages; when omitted, the text model is reused.
-
-```python
-ModelSelection(
-    text=models.chat("openai/gpt-4.1-mini"),
-    vision=models.chat("openai/gpt-4.1-mini"),
+provider_models = Models.from_environment()
+models = ModelsConfiguration(
+    text=provider_models.chat("openai/gpt-4.1-mini"),
+    vision=provider_models.chat("openai/gpt-4.1-mini"),
 )
-```
 
-Teacher does not load a model catalogue or resolve credentials. Models Provider owns those concerns.
-
-## Input contract
-
-```python
-Transcript(
+transcript = Transcript(
     segments=(
         TranscriptSegment(
             start_seconds=0.0,
-            end_seconds=4.2,
-            content="Today we introduce spaced repetition.",
+            end_seconds=8.4,
+            content="Today we introduce the derivative.",
+        ),
+        TranscriptSegment(
+            start_seconds=8.4,
+            end_seconds=22.7,
+            content="A derivative measures how quickly a function changes.",
         ),
     ),
     languages=("en",),
 )
 
-document_path = Path("/tmp/calculus-lecture.pdf")
-document = DocumentSource(
-    content=document_path.read_bytes(),
-    file_name=document_path.name,
+documents = (ReferenceDocument.from_path("calculus-notes.pdf"),)
+
+transcript = await TranscriptRevision(models).revise(transcript, language="en")
+references = await ReferenceReader(models).read(documents)
+materials = LessonMaterials(transcript, references, language="en")
+outline = await OutlineWriter(models).draft(materials)
+chapters = tuple(
+    await ChapterWriter(models).write(chapter, materials)
+    for chapter in outline.chapters
 )
+glossary = await GlossaryWriter(models).write(outline, chapters, language="en")
+lesson = Lesson.from_parts(outline=outline, chapters=chapters, glossary=glossary)
 ```
 
-`DocumentSource.from_path(...)` is a convenience that reads bytes once. A web client, Google Drive client, or object-storage client can provide the same bytes directly. Teacher renders PDF bytes internally, so the graph does not care where they came from.
+Each operation is independent. A caller can skip transcript revision, provide a hand-written `LessonOutline`, write chapters concurrently, or replace one operation with a compatible class. The data objects contain values; the operation classes perform actions.
 
-## Output contract
+## Models
+
+`ModelsConfiguration` is the only model dependency each built-in operation needs. `text` is required. `vision` is optional and falls back to `text` for reference pages. Any `models-provider` chat model, or another compatible model implementing `ainvoke`, can be supplied.
 
 ```python
-LessonResult(
-    lesson=Lesson(...),
-    usage_by_model={"openai/gpt-4.1-mini": ModelUsage(...)},
-    run_id="generated-run-identity",
-)
+models = ModelsConfiguration(text=text_model, vision=vision_model)
+outline_writer = OutlineWriter(models)
 ```
 
-The run identity is generated automatically. Pass an explicit `run_id` only when an application needs a stable checkpoint key, then call `resume(run_id)` after an interruption.
+## Custom operations
 
-Exports are separate from graph execution:
+The built-in classes are also the extension points. Override only the operation an application wants to change:
 
 ```python
-markdown_bytes = export_to_bytes(lesson, format=ExportFormat.MARKDOWN)
-pdf_bytes = export_to_bytes(lesson, format=ExportFormat.PDF)
+from teacher import LessonMaterials, LessonOutline, OutlineWriter
+
+
+class CustomOutlineWriter(OutlineWriter):
+    async def draft(self, materials: LessonMaterials) -> LessonOutline:
+        return LessonOutline(
+            title="Calculus fundamentals",
+            description="An introduction to derivatives.",
+            chapters=(),
+        )
+
+
+outline = await CustomOutlineWriter(models).draft(materials)
 ```
 
-## Package layout
+An application can use these operations in ordinary Python, its own LangGraph, or another workflow system. Teacher does not expose a graph, checkpoint manager, or orchestration object.
 
-| Area               | Responsibility                              |
-| ------------------ | ------------------------------------------- |
-| `graph.py`         | Graph routing and node relationships        |
-| `transcript/`      | Terminology and transcript correction       |
-| `documents/`       | Page extraction, sections, and explanations |
-| `lesson/`          | Planning, chapters, glossary, and assembly  |
-| `models.py`        | Caller inputs and generated lesson values   |
-| `configuration.py` | Model selection and execution policies      |
-| `xml.py`           | Compact model XML parsing and recovery      |
-| `outputs.py`       | Markdown and PDF export                     |
+## Exporting
 
-XML is used only at the model boundary. Teacher parses it immediately into typed values and does not store raw XML in graph state.
+Export is separate from lesson creation:
 
-## Visual graph
+```python
+from teacher import ExportFormat, export_to_bytes
 
-Run `uv run --with "langgraph-cli[inmem]" langgraph dev --no-browser` from the repository root. The command starts a local in-memory server and prints the LangGraph Studio URL.
+markdown = export_to_bytes(lesson, format=ExportFormat.MARKDOWN)
+pdf = export_to_bytes(lesson, format=ExportFormat.PDF)
+```
+
+PDF export requires `pandoc` and `typst` on `PATH`.

@@ -8,10 +8,10 @@ from datetime import date
 from enum import StrEnum
 from importlib import resources
 from pathlib import PurePosixPath, Path
-from teacher.models import DocumentSource, Recording, Lesson, Citation
+from teacher.models import ReferenceDocument, Lesson, Citation
 from teacher.markdown import compose_markdown, render_table, shift_headings
 from teacher.prompts import Prompts
-from teacher.support import PipelineError, apply_glossary_links
+from teacher.support import OperationError, apply_glossary_links
 from tempfile import TemporaryDirectory
 from typing import Final
 from urllib.parse import unquote, urlsplit
@@ -40,8 +40,8 @@ class ExportMetadata:
     language: str = "en"
     author: str | None = None
     lesson_date: date | None = None
-    recordings: tuple[Recording, ...] = ()
-    reference_documents: tuple[DocumentSource, ...] = ()
+    recording_urls: tuple[str, ...] = ()
+    reference_documents: tuple[ReferenceDocument, ...] = ()
     share_url: str | None = None
     include_generated_notice: bool = True
     generated_notice: str | None = None
@@ -171,7 +171,7 @@ def build_source_tables(lecture: Lesson, metadata: ExportMetadata) -> list[str]:
     """Builds recording and reference-document tables as text blocks."""
     labels = export_labels(metadata.language)
     blocks: list[str] = []
-    recordings = tuple(metadata.recordings)
+    recordings = tuple(metadata.recording_urls)
     if recordings:
         total_duration = _lecture_duration_seconds(lecture)
         recording_rows = [
@@ -190,7 +190,7 @@ def build_source_tables(lecture: Lesson, metadata: ExportMetadata) -> list[str]:
         page_counts = _citation_page_counts(lecture)
         document_rows = [
             (
-                source_document_name(document, document_index),
+                reference_document_name(document, document_index),
                 f"{page_counts[document_index]} {labels.page_abbreviation}"
                 if document_index in page_counts
                 else "",
@@ -201,16 +201,14 @@ def build_source_tables(lecture: Lesson, metadata: ExportMetadata) -> list[str]:
     return blocks
 
 
-def source_document_name(document: DocumentSource, document_index: int) -> str:
+def reference_document_name(document: ReferenceDocument, document_index: int) -> str:
     """Resolves a stable display name for one reference document."""
     return document.file_name or f"Document {document_index + 1}"
 
 
-def _recording_name(recording: Recording, recording_index: int) -> str:
+def _recording_name(recording: str, recording_index: int) -> str:
     """Resolves a stable display name for one source recording."""
-    return (
-        recording.file_name or _url_file_name(recording.url) or f"Recording {recording_index + 1}"
-    )
+    return _url_file_name(recording) or f"Recording {recording_index + 1}"
 
 
 def _url_file_name(url: str) -> str:
@@ -274,11 +272,11 @@ def build_citation_definitions(lecture: Lesson, metadata: ExportMetadata) -> dic
 
 
 def _citation_definition(
-    citation: Citation, reference_documents: tuple[DocumentSource, ...]
+    citation: Citation, reference_documents: tuple[ReferenceDocument, ...]
 ) -> str:
     """Builds one citation definition from typed data."""
     if 0 <= citation.document_index < len(reference_documents):
-        document_name = source_document_name(
+        document_name = reference_document_name(
             reference_documents[citation.document_index], citation.document_index
         )
     else:
@@ -297,7 +295,7 @@ def render_export_template(name: str, variables: Mapping[str, object]) -> str:
 
     try:
         return _TEMPLATES.render(name, variables)
-    except PipelineError as error:
+    except OperationError as error:
         raise ExportError(f"export template {name!r} could not be rendered") from error
 
 
