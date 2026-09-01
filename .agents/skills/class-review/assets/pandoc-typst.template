@@ -28,6 +28,11 @@
 #show table.cell.where(y: 0): set text(weight: "bold", fill: accent-blue)
 #show table.cell.where(x: 0): set text(weight: "semibold")
 
+// Keep list markers visibly inside the text measure instead of flush with
+// the paragraph edge.
+#set list(indent: 1.25em)
+#set enum(indent: 1.25em)
+
 #show math.equation: set text(font: "Libertinus Math")
 
 // Headings in the accent blue. Chapter headings sit above a thin
