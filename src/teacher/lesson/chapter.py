@@ -29,8 +29,21 @@ class ChapterWriter:
         self.text_model = text_model
         self.prompts = get_prompts(prompts)
 
-    async def write(self, outline: ChapterOutline, materials: LessonMaterials) -> Chapter:
+    async def write(
+        self,
+        outline: ChapterOutline,
+        materials: LessonMaterials,
+        *,
+        chapter_index: int = 1,
+        total_chapters: int = 1,
+        previous_chapter_count: int = 0,
+        previous_concept_count: int = 0,
+    ) -> Chapter:
         """Write one chapter using only the outline's bounded source context."""
+        if not 1 <= chapter_index <= total_chapters:
+            raise ValueError("chapter_index must be between 1 and total_chapters")
+        if previous_chapter_count < 0 or previous_concept_count < 0:
+            raise ValueError("previous chapter and concept counts cannot be negative")
         prompts = self.prompts
         context = build_chapter_context(
             chapter=outline,
@@ -42,13 +55,13 @@ class ChapterWriter:
                 "shared_prompts/mathematics_notation_rules"
             ),
             "chapter": {
-                "index": 0,
-                "total": 1,
+                "index": chapter_index,
+                "total": total_chapters,
                 "start_seconds": round(context.start_seconds, 1),
                 "end_seconds": round(context.end_seconds, 1),
                 "concept_count": len(outline.concepts),
-                "previous_chapter_count": 0,
-                "previous_concept_count": 0,
+                "previous_chapter_count": previous_chapter_count,
+                "previous_concept_count": previous_concept_count,
                 "chapter_context_xml": _chapter_xml(outline),
                 "covered_concepts_xml": build_xml_document("CoveredConcepts", {}),
                 "do_not_repeat_ledger_xml": build_xml_document("ProhibitionLedger", {}),
@@ -67,6 +80,10 @@ class ChapterWriter:
                         "lesson/write_lesson_chapter/system",
                         {
                             "language": materials.language,
+                            "chapter": {
+                                "index": chapter_index,
+                                "total": total_chapters,
+                            },
                             "language_policy": prompts.render("shared_prompts/language_policy"),
                             "xml_policy": prompts.render("shared_prompts/xml_policy"),
                             "mathematics_notation_rules": prompts.render(

@@ -1,4 +1,4 @@
-"""Consolidated Teacher implementation."""
+"""Shared errors, logging, model calls, and lesson helpers."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from langchain_core.callbacks import get_usage_metadata_callback
 from langchain_core.messages import BaseMessage
 from models_provider import ModelUsage
+from teacher.interfaces import ChatModel
 from teacher.models import GlossaryEntry, GlossaryLink
 from typing import Any, Final, Self, Literal
 import logging
@@ -15,13 +16,9 @@ import traceback
 
 import structlog
 
-"""Shared errors, logging, model calls, and operation helpers."""
-
-"""Error types and retry classification shared by every operation."""
-
 
 class OperationError(Exception):
-    """A failure raised by a operation."""
+    """A failure raised by an operation."""
 
     def __init__(
         self,
@@ -29,7 +26,7 @@ class OperationError(Exception):
         metadata: dict[str, Any] | None = None,
         cause: BaseException | None = None,
     ) -> None:
-        """Builds a operation error carrying structured context."""
+        """Build an operation error carrying structured context."""
         super().__init__(message)
         self.metadata: dict[str, Any] = dict(metadata or {})
         if cause is not None:
@@ -74,7 +71,7 @@ def classify_retryable(error: BaseException) -> bool:
     if status_code is not None:
         return status_code == 429 or 500 <= status_code < 600
     error_code = getattr(error, "code", None)
-    return not isinstance(error_code, str) or error_code in TRANSIENT_ERROR_CODES
+    return isinstance(error_code, str) and error_code in TRANSIENT_ERROR_CODES
 
 
 def describe_error(error: BaseException) -> dict[str, Any]:
@@ -110,9 +107,6 @@ def _read_status_code(error: BaseException) -> int | None:
     if isinstance(candidate, int) and candidate > 0:
         return candidate
     return None
-
-
-"""Structured logging conventions used throughout the pipeline."""
 
 
 RenderingStyle = Literal["console", "json"]
@@ -152,9 +146,6 @@ def configure_logging(
     logging.basicConfig(format="%(message)s", level=level)
 
 
-"""Calling a chat model and reporting what the call consumed."""
-
-
 @dataclass(frozen=True, slots=True)
 class ModelAnswer:
     """One model answer with the usage the call consumed."""
@@ -164,7 +155,7 @@ class ModelAnswer:
 
 
 async def call_chat_model(
-    chat_model: Any,
+    chat_model: ChatModel,
     messages: Sequence[BaseMessage],
     *,
     metadata: dict[str, Any] | None = None,
@@ -191,9 +182,6 @@ def _read_usage(usage_metadata: Any) -> dict[str, ModelUsage]:  # noqa: ANN401
     return converted
 
 
-"""Find and render glossary links with plain text operations."""
-
-
 def compute_glossary_links(
     chapter_contents: Sequence[str], glossary_entries: Sequence[GlossaryEntry]
 ) -> list[tuple[GlossaryLink, ...]]:
@@ -216,11 +204,11 @@ def compute_glossary_links(
 
 
 def apply_glossary_links(content: str, links: Sequence[GlossaryLink]) -> str:
-    """Wrap stored character ranges in ordinary Markdown links."""
+    """Link stored character ranges to the glossary section."""
     result = content
     for link in sorted(links, key=lambda item: item.start, reverse=True):
         if not 0 <= link.start < link.end <= len(result):
             continue
         text = result[link.start : link.end]
-        result = f"{result[: link.start]}[{text}](#{link.key}){result[link.end :]}"
+        result = f"{result[: link.start]}[{text}](#glossary){result[link.end :]}"
     return result

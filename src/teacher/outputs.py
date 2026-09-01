@@ -1,4 +1,4 @@
-"""Consolidated Teacher implementation."""
+"""Render structured lessons as Markdown, HTML, DOCX, and PDF."""
 
 from __future__ import annotations
 
@@ -24,10 +24,6 @@ import segno
 from babel.core import UnknownLocaleError
 from babel.dates import format_date, format_time, get_datetime_format
 
-"""Lesson export to Markdown, PDF, and JSON."""
-
-"""Values shared across the public export API and its renderers."""
-
 
 class ExportFormat(StrEnum):
     """A representation the exporter can emit."""
@@ -52,9 +48,6 @@ class ExportMetadata:
 
 class ExportError(RuntimeError):
     """Reports that a requested representation could not be rendered."""
-
-
-"""Localized labels and dates used by exported documents."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -305,9 +298,6 @@ def export_labels(language: str | None) -> ExportLabels:
     return _LABELS_BY_LANGUAGE.get(primary_language(language), _LABELS_BY_LANGUAGE["en"])
 
 
-"""Building the source-listing tables used by lesson outputs."""
-
-
 def build_source_tables(lecture: Lesson, metadata: ExportMetadata) -> list[str]:
     """Builds recording and reference-document tables as text blocks."""
     labels = export_labels(metadata.language)
@@ -397,9 +387,6 @@ def _table(headers: tuple[str, str], rows: list[tuple[str, str]]) -> str:
     return render_table(headers, rows, code_columns=(0,))
 
 
-"""Building structured citation footnote bodies for lecture outputs."""
-
-
 def build_citation_definitions(lecture: Lesson, metadata: ExportMetadata) -> dict[str, str]:
     """Builds plain footnote bodies keyed by their public marker."""
     citations = sorted(
@@ -446,9 +433,6 @@ def _frontmatter_data(lesson: Lesson, metadata: ExportMetadata) -> dict[str, obj
         "reference_documents": references,
         "share_url": metadata.share_url,
     }
-
-
-"""Building the canonical Markdown export from plain lesson data."""
 
 
 _TEMPLATES = Prompts(package="teacher.output_templates")
@@ -510,51 +494,21 @@ def _glossary_blocks(lecture: Lesson, metadata: ExportMetadata) -> list[str]:
     if not lecture.glossary:
         return []
     labels = export_labels(metadata.language)
-    entries: list[str] = []
+    rows: list[tuple[str, str]] = []
     for entry in lecture.glossary:
         display_name = (
             f"{entry.short_form} ({entry.long_form})" if entry.long_form else entry.short_form
         )
-        entries.append(
-            render_export_template(
-                "glossary_entry",
-                {
-                    "key": entry.key,
-                    "title": _escape_table_cell(display_name),
-                    "description": _escape_table_cell(entry.description),
-                },
-            ).strip()
-        )
+        rows.append((display_name, entry.description))
     return [
-        render_export_template(
-            "glossary",
-            {
-                "title": labels.glossary,
-                "term_label": labels.glossary_term,
-                "definition_label": labels.glossary_definition,
-                "entries": "\n".join(entries),
-            },
-        ).strip()
+        render_export_template("glossary", {"title": labels.glossary}).strip(),
+        render_table((labels.glossary_term, labels.glossary_definition), rows),
     ]
-
-
-def _escape_table_cell(value: str) -> str:
-    """Keep interpolated glossary text inside one Markdown table cell."""
-    return (
-        value.replace("\\", "\\\\")
-        .replace("|", "\\|")
-        .replace("\r\n", "\n")
-        .replace("\r", "\n")
-        .replace("\n", "<br>")
-    )
 
 
 def _shift_headings(markdown: str, levels: int) -> str:
     """Moves every heading in a chapter by a fixed number of levels."""
     return shift_headings(markdown, levels)
-
-
-"""Converting canonical lecture Markdown into PDF bytes with Pandoc and Typst."""
 
 
 _PANDOC_TIMEOUT_SECONDS: Final[int] = 40

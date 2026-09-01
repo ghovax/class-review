@@ -1,4 +1,4 @@
-"""Consolidated Teacher implementation."""
+"""Recover, validate, and build XML exchanged with models."""
 
 from __future__ import annotations
 
@@ -10,11 +10,6 @@ from pydantic import BaseModel, BeforeValidator, ValidationError
 from teacher.support import OperationError, get_logger
 from typing import Any, Final, Annotated
 import re
-
-"""XML recovery, schema validation, and document construction."""
-
-"""Recovering usable XML from a model's answer."""
-
 
 logger = get_logger(__name__)
 
@@ -160,9 +155,6 @@ def _escape_stray_markup_characters(element_text: str) -> str:
     return "".join(segments)
 
 
-"""Validating recovered XML against a schema, and the coercions it needs."""
-
-
 logger = get_logger(__name__)
 
 
@@ -278,9 +270,6 @@ def _format_field_path(location: Sequence[Any]) -> str:
         else:
             rendered += f".{segment}" if rendered else str(segment)
     return rendered
-
-
-"""Building the XML documents that carry structured content into a prompt."""
 
 
 def build_xml_document(
