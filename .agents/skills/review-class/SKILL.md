@@ -18,6 +18,8 @@ Read the instruction files in this order, and only when the preceding phase has 
 3. Third, once the outline exists, read the [chapter-writing instructions](instructions/write-chapters.md) and write the lesson using the grouping that best preserves its reasoning.
 4. Finally, once the lesson is complete, read the [export instructions](instructions/export.md) and render the requested format.
 
+This order protects the reasoning. Loading later instructions too early can poison the analysis by letting formatting, chapter-writing, or export concerns influence source acquisition and outline decisions. Skipping a phase creates the same risk: the agent may elaborate unsupported material, lose the lecture's progression, or optimize the output format before the content is trustworthy.
+
 Do not load later phase instructions early when they are not relevant. Keep internal planning classifications and intermediate model records out of the student-facing lesson unless the user asks to inspect them.
 
 ## Boundaries
