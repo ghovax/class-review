@@ -14,10 +14,10 @@ Treat treatment intent, explanation depth, and advancement mode as operational g
 
 | Label | Writing behavior |
 | --- | --- |
-| introduce | Establish the learner's baseline: define necessary terms, explain the core idea, and supply the reasoning required for the first understanding |
-| deepen | Assume the named baseline and add a substantial layer such as mechanism, constraint, distinction, edge case, consequence, or richer reasoning |
-| apply | Use the established principle without re-deriving it and work through a genuinely new case, decision, comparison, or outcome |
-| review | Use a short, stable reference to reconnect established material; do not rebuild the explanation or pretend it is new |
+| Introduce | Establish the learner's baseline: define necessary terms, explain the core idea, and supply the reasoning required for the first understanding |
+| Deepen | Assume the named baseline and add a substantial layer such as mechanism, constraint, distinction, edge case, consequence, or richer reasoning |
+| Apply | Use the established principle without re-deriving it and work through a genuinely new case, decision, comparison, or outcome |
+| Review | Use a short, stable reference to reconnect established material; do not rebuild the explanation or pretend it is new |
 
 For depth, high preserves a dense mechanism, causal argument, meaningful nuance, or edge-case analysis; medium explains the core idea and its main implication with useful detail; low stays concise because the source only sketches or mentions the point. Depth is qualitative, not proportional to airtime. For advancement, mechanism explains how the result is produced, constraint explains where or why the idea is limited, trade-off explains a competing choice, and evidence supplies the observation or source support that tests the idea.
 

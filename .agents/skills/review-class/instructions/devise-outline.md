@@ -46,10 +46,10 @@ Treatment intent describes the learner-facing job of the concept in this locatio
 
 | Intent | Use when | The writing must do | Do not use when |
 | --- | --- | --- | --- |
-| introduce | The concept is first established for this lesson or the learner has no usable prior foundation | Define the necessary terms, establish the baseline mechanism or idea, and provide the minimum reasoning needed to understand later material | The concept was already established and the passage only revisits it |
-| deepen | The concept appeared earlier and the current material adds a non-trivial layer | Extend the established idea with a new mechanism, constraint, distinction, edge case, consequence, or substantially richer reasoning | The passage merely rephrases, summarizes, or adds a small detail without changing understanding |
-| apply | An established concept is used to analyze a genuinely new case, decision, comparison, or worked example | Use the prior principle as a known baseline and develop the new case, outcome, trade-off, or decision logic | The example repeats the introductory derivation, uses toy values without a new insight, or requires re-teaching the mechanism from scratch |
-| review | The concept is revisited for orientation, comparison, connection, or light reinforcement without material new depth | Refer to the established idea briefly by its stable name and connect it to the current point | The passage introduces a new layer, requires a full explanation, or is only being labeled review to avoid choosing a more accurate intent |
+| Introduce | The concept is first established for this lesson or the learner has no usable prior foundation | Define the necessary terms, establish the baseline mechanism or idea, and provide the minimum reasoning needed to understand later material | The concept was already established and the passage only revisits it |
+| Deepen | The concept appeared earlier and the current material adds a non-trivial layer | Extend the established idea with a new mechanism, constraint, distinction, edge case, consequence, or substantially richer reasoning | The passage merely rephrases, summarizes, or adds a small detail without changing understanding |
+| Apply | An established concept is used to analyze a genuinely new case, decision, comparison, or worked example | Use the prior principle as a known baseline and develop the new case, outcome, trade-off, or decision logic | The example repeats the introductory derivation, uses toy values without a new insight, or requires re-teaching the mechanism from scratch |
+| Review | The concept is revisited for orientation, comparison, connection, or light reinforcement without material new depth | Refer to the established idea briefly by its stable name and connect it to the current point | The passage introduces a new layer, requires a full explanation, or is only being labeled review to avoid choosing a more accurate intent |
 
 When a passage contains both a recap and a new contribution, classify the owned concept by the new contribution and make the recap a brief prerequisite reference. When the new contribution cannot stand without a complete re-explanation, merge the material with the earlier concept or move the boundary; do not call a duplicate treatment deepen or apply.
 
@@ -59,9 +59,9 @@ Explanation depth measures qualitative treatment per moment, not the amount of a
 
 | Depth | Evidence in the transcript | Outline and writing consequence |
 | --- | --- | --- |
-| high | The lecturer works through a mechanism or argument step by step, preserves causal links, handles meaningful nuance, exceptions, edge cases, competing explanations, or operational consequences | Reserve enough space to preserve the chain of reasoning and its qualifications; do not flatten it into a definition or list of conclusions |
-| medium | The lecturer gives a clear explanation with the core reason, mechanism, example, or implication, but explores limited nuance or few edge cases | Explain the complete core idea and its main consequence with meaningful detail, without importing a deeper textbook treatment |
-| low | The lecturer names, sketches, contrasts, or briefly mentions the idea with little unpacking or support | Keep the treatment concise and faithful; do not expand it merely because the topic is important in the wider field |
+| High | The lecturer works through a mechanism or argument step by step, preserves causal links, handles meaningful nuance, exceptions, edge cases, competing explanations, or operational consequences | Reserve enough space to preserve the chain of reasoning and its qualifications; do not flatten it into a definition or list of conclusions |
+| Medium | The lecturer gives a clear explanation with the core reason, mechanism, example, or implication, but explores limited nuance or few edge cases | Explain the complete core idea and its main consequence with meaningful detail, without importing a deeper textbook treatment |
+| Low | The lecturer names, sketches, contrasts, or briefly mentions the idea with little unpacking or support | Keep the treatment concise and faithful; do not expand it merely because the topic is important in the wider field |
 
 Do not infer depth from chapter length, number of transcript sentences, repetition count, or document richness. Score the kind of explanation the source provides. The rationale should state which source signals led to the selected intent and depth.
 
@@ -71,10 +71,10 @@ The advancement mode identifies what makes the concept new relative to earlier c
 
 | Mode | The new contribution is primarily |
 | --- | --- |
-| mechanism | How a process, system, or argument produces its result, including the causal steps that make the result intelligible |
-| constraint | A boundary, condition, exception, limitation, requirement, or failure mode that changes when the established idea applies |
-| trade-off | A choice among competing goals, costs, benefits, risks, or outcomes, including the reasoning used to choose |
-| evidence | An observation, measurement, example, experiment, quotation, or source-grounded fact that supports or tests an idea |
+| Mechanism | How a process, system, or argument produces its result, including the causal steps that make the result intelligible |
+| Constraint | A boundary, condition, exception, limitation, requirement, or failure mode that changes when the established idea applies |
+| Trade-off | A choice among competing goals, costs, benefits, risks, or outcomes, including the reasoning used to choose |
+| Evidence | An observation, measurement, example, experiment, quotation, or source-grounded fact that supports or tests an idea |
 
 Choose the mode that best describes the actual net-new work of the concept, not a generic label for its subject. If several modes are present, choose the one carrying the main advancement and record the others in the rationale or concept notes.
 
