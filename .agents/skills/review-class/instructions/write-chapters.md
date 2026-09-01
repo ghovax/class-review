@@ -8,6 +8,21 @@ The transcript controls substance, order, reasoning, and depth. References may c
 
 Normalize obvious transcription defects, duplicated fragments, malformed numerals, and surface terminology only when the intended reading is supported by the surrounding argument. Do not assign one component's properties to another, broaden a sub-case into a universal law, or turn a deliberate unknown into a fact.
 
+## Execute the outline labels
+
+Treat `Intent`, `ExplanationDepth`, and `MustAdvanceBy` as operational instructions, not decorative tags:
+
+| Label | Writing behavior |
+| --- | --- |
+| `Introduce` | Establish the learner's baseline: define necessary terms, explain the core idea, and supply the reasoning required for the first understanding |
+| `Deepen` | Assume the named baseline and add a substantial layer such as mechanism, constraint, distinction, edge case, consequence, or richer reasoning |
+| `Apply` | Use the established principle without re-deriving it and work through a genuinely new case, decision, comparison, or outcome |
+| `Review` | Use a short, stable reference to reconnect established material; do not rebuild the explanation or pretend it is new |
+
+For depth, `High` preserves a dense mechanism, causal argument, meaningful nuance, or edge-case analysis; `Medium` explains the core idea and its main implication with useful detail; `Low` stays concise because the source only sketches or mentions the point. Depth is qualitative, not proportional to airtime. For advancement, `Mechanism` explains how the result is produced, `Constraint` explains where or why the idea is limited, `Tradeoff` explains a competing choice, and `Evidence` supplies the observation or source support that tests the idea.
+
+If the transcript revisits an established point, compare it against the prior prose and ledger before writing. Keep the recap to the minimum needed for the new intent, and write only the net-new advancement at the selected depth. Do not label a restatement `Deepen`, a repeated toy example `Apply`, or an extensive treatment `High` when the source provides no corresponding reasoning.
+
 ## Flexible writing units
 
 Choose the writing unit from the material and the available context window. It may be the whole lesson, a group of chapters, one chapter, or a smaller coherent unit. Atomic chapter writing is an implementation detail, not a required public strategy. When writing iteratively, carry forward the completed visible prose, terminology decisions, established claims, unresolved uncertainties, and citation mapping.
