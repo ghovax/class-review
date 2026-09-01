@@ -4,10 +4,9 @@
 .ruff_cache/
 __pycache__/
 *.py[cod]
-*.sqlite*
 *.log
 *.pid
 dist/
 build/
-temporary-tests
+.tmp/
 .langgraph_api/

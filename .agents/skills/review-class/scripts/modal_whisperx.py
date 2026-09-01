@@ -1,18 +1,119 @@
-"""Modal deployment for WhisperX transcription."""
+"""Modal deployment for WhisperX lecture transcription."""
 
 from __future__ import annotations
 
+import json
+import subprocess
+import tempfile
 import urllib.error
+import urllib.request
 
 import modal
 
-from teacher.modal_apps.common import (
-    MediaValidationError,
-    decode_to_pcm,
-    download,
-    probe_audio,
-    validate_items,
-)
+
+class MediaValidationError(ValueError):
+    """A media validation failure with an HTTP status for the endpoint."""
+
+    def __init__(self, message: str, status_code: int = 400):
+        super().__init__(message)
+        self.status_code = status_code
+
+
+def download(url: str) -> bytes:
+    """Download remote media bytes with a bounded request."""
+    with urllib.request.urlopen(url, timeout=120) as response:
+        return response.read()
+
+
+def probe_audio(file_bytes: bytes) -> dict[str, float | str | None]:
+    """Validate media and return its duration and detected format."""
+    with tempfile.NamedTemporaryFile(suffix=".audio") as temporary:
+        temporary.write(file_bytes)
+        temporary.flush()
+        result = subprocess.run(
+            [
+                "ffprobe",
+                "-v",
+                "quiet",
+                "-print_format",
+                "json",
+                "-show_format",
+                "-show_streams",
+                temporary.name,
+            ],
+            capture_output=True,
+            check=False,
+        )
+    if result.returncode != 0:
+        raise MediaValidationError(f"Not a valid media file: {result.stderr.decode()}")
+    info = json.loads(result.stdout)
+    streams = info.get("streams", [])
+    if not any(stream.get("codec_type") == "audio" for stream in streams):
+        raise MediaValidationError("No audio stream found in file")
+    duration = float(info.get("format", {}).get("duration") or 0)
+    if duration <= 0:
+        duration = next(
+            (
+                float(item["duration"])
+                for item in streams
+                if item.get("codec_type") == "audio" and item.get("duration")
+            ),
+            0.0,
+        )
+    if duration <= 0:
+        raise MediaValidationError("Could not determine audio duration")
+    if duration > 10_800:
+        raise MediaValidationError("Audio exceeds the three-hour limit")
+    return {"duration": duration, "format": info.get("format", {}).get("format_name")}
+
+
+def decode_to_pcm(file_bytes: bytes) -> bytes:
+    """Decode media to mono 16 kHz signed PCM for the ASR model."""
+    with tempfile.NamedTemporaryFile(suffix=".audio") as temporary:
+        temporary.write(file_bytes)
+        temporary.flush()
+        result = subprocess.run(
+            [
+                "ffmpeg",
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-threads",
+                "0",
+                "-i",
+                temporary.name,
+                "-vn",
+                "-ac",
+                "1",
+                "-ar",
+                "16000",
+                "-f",
+                "s16le",
+                "pipe:1",
+            ],
+            capture_output=True,
+            check=False,
+        )
+    if result.returncode != 0:
+        raise MediaValidationError(f"ffmpeg failed: {result.stderr.decode()}", status_code=422)
+    return result.stdout
+
+
+def validate_items(data: dict) -> list[dict[str, str | int]]:
+    """Validate and order endpoint inputs by their stable integer index."""
+    items = data.get("items")
+    if not isinstance(items, list) or not items:
+        raise MediaValidationError("Missing or empty 'items' field")
+    validated = []
+    for item in items:
+        if not isinstance(item, dict):
+            raise MediaValidationError("Each item must be an object")
+        url, index = item.get("url"), item.get("index")
+        if not isinstance(url, str) or not url.strip() or not isinstance(index, int):
+            raise MediaValidationError("Each item needs a URL and integer index")
+        validated.append({"url": url.strip(), "index": index})
+    return sorted(validated, key=lambda item: int(item["index"]))
+
 
 gpu_image = (
     modal.Image.from_registry("nvidia/cuda:12.8.0-cudnn-devel-ubuntu22.04", add_python="3.12")
@@ -28,13 +129,12 @@ gpu_image = (
     .entrypoint([])
 )
 cpu_image = modal.Image.debian_slim().pip_install("fastapi[standard]")
-app = modal.App("teacher-whisperx")
-model_cache = modal.Volume.from_name("teacher-whisperx-cache", create_if_missing=True)
+app = modal.App("review-class-whisperx")
+model_cache = modal.Volume.from_name("review-class-whisperx-cache", create_if_missing=True)
 
 
 def merge_adjacent_segments(segments: list[dict]) -> list[dict]:
-    """Merge adjacent Whisper segments until a sentence terminator."""
-
+    """Merge adjacent ASR segments until a sentence terminator."""
     if not segments:
         return []
     closers = "\"'”’»›)]}）】〕］｝〉》」』"
@@ -73,7 +173,6 @@ def merge_adjacent_segments(segments: list[dict]) -> list[dict]:
 
 def _capitalize(segment: dict) -> dict:
     """Capitalize the first alphabetic character of one segment."""
-
     text = segment.get("text") or ""
     for index, character in enumerate(text):
         if character.isalpha():
@@ -92,12 +191,11 @@ def _capitalize(segment: dict) -> dict:
     volumes={"/cache": model_cache},
 )
 class WhisperXModel:
-    """Keeps the WhisperX model ready on a GPU container."""
+    """Keep the WhisperX model warm on a GPU container."""
 
     @modal.enter(snap=True)
     def load_weights(self) -> None:
-        """Load and warm the fixed WhisperX model."""
-
+        """Load and warm the fixed WhisperX model before requests."""
         import numpy as np
         import whisperx  # pyright: ignore[reportMissingImports]
 
@@ -125,8 +223,7 @@ class WhisperXModel:
 
     @modal.method()
     def transcribe_url(self, url: str, index: int, language: str | None = None) -> dict:
-        """Download, decode, and transcribe one URL inside the GPU container."""
-
+        """Download, validate, decode, and transcribe one recording."""
         import numpy as np
 
         base = {"url": url, "index": index}
@@ -142,6 +239,7 @@ class WhisperXModel:
             }
         except MediaValidationError as error:
             return {**base, "error": str(error), "status_code": error.status_code}
+
         waveform = np.frombuffer(pcm_bytes, dtype=np.int16).astype(np.float32) / 32768.0
         result = self.model.transcribe(
             audio=waveform, batch_size=64, language=language, task="transcribe"
@@ -156,28 +254,27 @@ class WhisperXModel:
 @app.function(image=cpu_image, timeout=3600)
 @modal.fastapi_endpoint(method="POST", requires_proxy_auth=True)
 def transcribe(data: dict):
-    """Transcribe one same-language input set across GPU containers."""
-
+    """Transcribe indexed recordings in parallel across GPU containers."""
     try:
         items = validate_items(data)
     except MediaValidationError as error:
         return {"error": str(error)}, error.status_code
     language = (data.get("language") or "").strip().replace("_", "-").lower() or None
     model = WhisperXModel()
-    results = list(
-        model.transcribe_url.map(
-            [item["url"] for item in items],
-            [item["index"] for item in items],
-            [language] * len(items),
+    return {
+        "results": list(
+            model.transcribe_url.map(
+                [item["url"] for item in items],
+                [item["index"] for item in items],
+                [language] * len(items),
+            )
         )
-    )
-    return {"results": results}
+    }
 
 
 @app.local_entrypoint()
 def main(url: str, language: str = "") -> None:
-    """Run a comma-separated set of URLs from the Modal CLI."""
-
+    """Run comma-separated URLs through the Modal deployment."""
     urls = [item.strip() for item in url.split(",") if item.strip()]
     selected = language.strip().replace("_", "-").lower() or None
     model = WhisperXModel()

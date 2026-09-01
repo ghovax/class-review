@@ -1,1 +1,0 @@
-"""Deployable Modal transcription applications."""

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Review Class"
+  short_description: "Build review classes from lectures"
+  default_prompt: "Use $review-class to source a transcript, devise a flexible outline, write the lesson, and export it."
