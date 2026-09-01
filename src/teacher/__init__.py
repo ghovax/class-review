@@ -3,8 +3,6 @@
 from teacher.configuration import (
     ChatModel,
     LessonConfiguration,
-    ModelsConfiguration,
-    OperationConfiguration,
     RetryConfiguration,
     TranscriptConfiguration,
 )
@@ -45,14 +43,11 @@ from teacher.outputs import (
     ExportFormat,
     ExportMetadata,
     PdfExporter,
-    export_to_bytes,
     render_export_markdown,
 )
 
 __all__ = [
     "ChatModel",
-    "ModelsConfiguration",
-    "OperationConfiguration",
     "RetryConfiguration",
     "TranscriptConfiguration",
     "LessonConfiguration",
@@ -88,6 +83,5 @@ __all__ = [
     "ExportFormat",
     "ExportMetadata",
     "PdfExporter",
-    "export_to_bytes",
     "render_export_markdown",
 ]

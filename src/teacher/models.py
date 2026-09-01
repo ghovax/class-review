@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 import re
-from typing import Self
+from typing import Any, Self
 
 
 class ConceptIntent(StrEnum):
@@ -209,6 +209,12 @@ class Lesson:
     description: str
     chapters: tuple[Chapter, ...]
     glossary: tuple[GlossaryEntry, ...] = ()
+
+    def export(self, format: str, *, metadata: Any = None) -> bytes:
+        """Render this lesson as the requested representation."""
+        from teacher.outputs import _export_to_bytes
+
+        return _export_to_bytes(self, format=format, metadata=metadata)
 
     @classmethod
     def from_parts(

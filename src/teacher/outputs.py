@@ -482,11 +482,11 @@ class PdfExporter:
     ) -> Path:
         path = Path(destination)
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(export_to_bytes(lesson, format=ExportFormat.PDF, metadata=metadata))
+        path.write_bytes(lesson.export(ExportFormat.PDF, metadata=metadata))
         return path
 
 
-def export_to_bytes(
+def _export_to_bytes(
     lesson: Lesson,
     *,
     format: ExportFormat | str,  # noqa: A002

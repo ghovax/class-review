@@ -13,8 +13,9 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from lxml import etree
 from pydantic import BaseModel, Field
 
-from teacher.configuration import ModelsConfiguration, OperationConfiguration
+from teacher.configuration import ChatModel, LessonConfiguration, TranscriptConfiguration
 from teacher.lesson.context import build_chapter_context
+from teacher.prompts import Prompts
 from teacher.models import (
     Chapter,
     ChapterOutline,
@@ -42,23 +43,32 @@ from teacher.support import OperationError, call_chat_model
 from teacher.xml import OneOrMany, RequiredText, build_xml_document, parse_xml_with_schema
 
 
-def _configuration(value: ModelsConfiguration | OperationConfiguration) -> OperationConfiguration:
-    return (
-        value if isinstance(value, OperationConfiguration) else OperationConfiguration(models=value)
-    )
+def _prompts(value: Prompts | None) -> Prompts:
+    return value or Prompts()
 
 
 class TranscriptRevision:
     """Revises transcript text while keeping its timestamps and languages."""
 
-    def __init__(self, configuration: ModelsConfiguration | OperationConfiguration) -> None:
-        self.configuration = _configuration(configuration)
+    def __init__(
+        self,
+        text_model: ChatModel,
+        *,
+        prompts: Prompts | None = None,
+        transcript_configuration: TranscriptConfiguration | None = None,
+        lesson_configuration: LessonConfiguration | None = None,
+    ) -> None:
+        self.text_model = text_model
+        self.vision_model: ChatModel | None = None
+        self.prompts = _prompts(prompts)
+        self.transcript_configuration = transcript_configuration or TranscriptConfiguration()
+        self.lesson_configuration = lesson_configuration or LessonConfiguration()
 
     async def revise(self, transcript: Transcript, *, language: str) -> Transcript:
         terminology = await self._find_terminology(transcript, language)
         pieces = _split_transcript(
             transcript.segments,
-            self.configuration.transcript.maximum_request_seconds,
+            self.transcript_configuration.maximum_request_seconds,
         )
         revised: list[TranscriptSegment] = []
         for piece in pieces:
@@ -68,10 +78,10 @@ class TranscriptRevision:
     async def _find_terminology(
         self, transcript: Transcript, language: str
     ) -> tuple[tuple[str, tuple[str, ...], str], ...]:
-        prompts = self.configuration.prompts
+        prompts = self.prompts
         try:
             answer = await call_chat_model(
-                self.configuration.models.text,
+                self.text_model,
                 [
                     SystemMessage(
                         prompts.render(
@@ -112,7 +122,7 @@ class TranscriptRevision:
         terminology: tuple[tuple[str, tuple[str, ...], str], ...],
         language: str,
     ) -> list[TranscriptSegment]:
-        prompts = self.configuration.prompts
+        prompts = self.prompts
         source = build_xml_document(
             "Transcript",
             {
@@ -131,7 +141,7 @@ class TranscriptRevision:
             },
         )
         answer = await call_chat_model(
-            self.configuration.models.text,
+            self.text_model,
             [
                 SystemMessage(
                     prompts.render(
@@ -184,8 +194,20 @@ class TranscriptRevision:
 class ReferenceReader:
     """Reads PDF references into material that other operations can use."""
 
-    def __init__(self, configuration: ModelsConfiguration | OperationConfiguration) -> None:
-        self.configuration = _configuration(configuration)
+    def __init__(
+        self,
+        text_model: ChatModel,
+        vision_model: ChatModel | None = None,
+        *,
+        prompts: Prompts | None = None,
+        transcript_configuration: TranscriptConfiguration | None = None,
+        lesson_configuration: LessonConfiguration | None = None,
+    ) -> None:
+        self.text_model = text_model
+        self.vision_model = vision_model
+        self.prompts = _prompts(prompts)
+        self.transcript_configuration = transcript_configuration or TranscriptConfiguration()
+        self.lesson_configuration = lesson_configuration or LessonConfiguration()
 
     async def read(self, documents: tuple[ReferenceDocument, ...]) -> ReferenceMaterial:
         references = tuple(
@@ -201,11 +223,11 @@ class ReferenceReader:
         pages = await asyncio.to_thread(_render_pdf, document)
         if not pages:
             raise ValueError(f"reference {document.file_name or index} has no pages")
-        model = self.configuration.models.vision or self.configuration.models.text
+        model = self.vision_model or self.text_model
 
         async def read_page(page: tuple[int, bytes]) -> ReferencePage:
             number, image = page
-            prompts = self.configuration.prompts
+            prompts = self.prompts
             answer = await call_chat_model(
                 model,
                 [
@@ -259,14 +281,14 @@ class ReferenceReader:
     ) -> tuple[ReferenceSections, ...]:
         if not references:
             return ()
-        prompts = self.configuration.prompts
+        prompts = self.prompts
         page_list = "\n".join(
             f"Document {item.document_index}, page {page.page_number}: {page.summary or ''}"
             for item in references
             for page in item.pages
         )
         answer = await call_chat_model(
-            self.configuration.models.text,
+            self.text_model,
             [
                 SystemMessage(
                     prompts.render(
@@ -321,7 +343,7 @@ class ReferenceReader:
         self, references: tuple[Reference, ...], sections: tuple[ReferenceSections, ...]
     ) -> tuple[ReferenceNote, ...]:
         by_index = {item.document_index: item for item in references}
-        prompts = self.configuration.prompts
+        prompts = self.prompts
 
         async def explain(item: ReferenceSections, section: ReferenceSection) -> ReferenceNote:
             reference = by_index[item.document_index]
@@ -331,7 +353,7 @@ class ReferenceReader:
                 if section.start_page <= page.page_number <= section.end_page
             )
             answer = await call_chat_model(
-                self.configuration.models.text,
+                self.text_model,
                 [
                     SystemMessage(
                         prompts.render(
@@ -375,15 +397,26 @@ class ReferenceReader:
 class OutlineWriter:
     """Writes a proposed lesson outline from assembled materials."""
 
-    def __init__(self, configuration: ModelsConfiguration | OperationConfiguration) -> None:
-        self.configuration = _configuration(configuration)
+    def __init__(
+        self,
+        text_model: ChatModel,
+        *,
+        prompts: Prompts | None = None,
+        transcript_configuration: TranscriptConfiguration | None = None,
+        lesson_configuration: LessonConfiguration | None = None,
+    ) -> None:
+        self.text_model = text_model
+        self.vision_model: ChatModel | None = None
+        self.prompts = _prompts(prompts)
+        self.transcript_configuration = transcript_configuration or TranscriptConfiguration()
+        self.lesson_configuration = lesson_configuration or LessonConfiguration()
 
     async def draft(self, materials: LessonMaterials) -> LessonOutline:
-        prompts = self.configuration.prompts
+        prompts = self.prompts
         start = min(item.start_seconds for item in materials.transcript.segments)
         end = max(item.end_seconds for item in materials.transcript.segments)
         answer = await call_chat_model(
-            self.configuration.models.text,
+            self.text_model,
             [
                 SystemMessage(
                     prompts.render(
@@ -430,16 +463,27 @@ class OutlineWriter:
 class ChapterWriter:
     """Writes one chapter from a chapter outline and the lesson materials."""
 
-    def __init__(self, configuration: ModelsConfiguration | OperationConfiguration) -> None:
-        self.configuration = _configuration(configuration)
+    def __init__(
+        self,
+        text_model: ChatModel,
+        *,
+        prompts: Prompts | None = None,
+        transcript_configuration: TranscriptConfiguration | None = None,
+        lesson_configuration: LessonConfiguration | None = None,
+    ) -> None:
+        self.text_model = text_model
+        self.vision_model: ChatModel | None = None
+        self.prompts = _prompts(prompts)
+        self.transcript_configuration = transcript_configuration or TranscriptConfiguration()
+        self.lesson_configuration = lesson_configuration or LessonConfiguration()
 
     async def write(self, outline: ChapterOutline, materials: LessonMaterials) -> Chapter:
-        prompts = self.configuration.prompts
+        prompts = self.prompts
         context = build_chapter_context(
             chapter=outline,
             segments=materials.transcript.segments,
-            lesson_configuration=self.configuration.lesson,
-            transcript_configuration=self.configuration.transcript,
+            lesson_configuration=self.lesson_configuration,
+            transcript_configuration=self.transcript_configuration,
         )
         variables = {
             "language": materials.language,
@@ -465,7 +509,7 @@ class ChapterWriter:
             },
         }
         answer = await call_chat_model(
-            self.configuration.models.text,
+            self.text_model,
             [
                 SystemMessage(
                     prompts.render(
@@ -490,18 +534,29 @@ class ChapterWriter:
 class GlossaryWriter:
     """Writes glossary entries from completed chapters."""
 
-    def __init__(self, configuration: ModelsConfiguration | OperationConfiguration) -> None:
-        self.configuration = _configuration(configuration)
+    def __init__(
+        self,
+        text_model: ChatModel,
+        *,
+        prompts: Prompts | None = None,
+        transcript_configuration: TranscriptConfiguration | None = None,
+        lesson_configuration: LessonConfiguration | None = None,
+    ) -> None:
+        self.text_model = text_model
+        self.vision_model: ChatModel | None = None
+        self.prompts = _prompts(prompts)
+        self.transcript_configuration = transcript_configuration or TranscriptConfiguration()
+        self.lesson_configuration = lesson_configuration or LessonConfiguration()
 
     async def write(
         self, outline: LessonOutline, chapters: tuple[Chapter, ...], *, language: str
     ) -> tuple[GlossaryEntry, ...]:
         if not chapters:
             return ()
-        prompts = self.configuration.prompts
+        prompts = self.prompts
         content = "\n\n".join(f"# {chapter.title}\n{chapter.content}" for chapter in chapters)
         answer = await call_chat_model(
-            self.configuration.models.text,
+            self.text_model,
             [
                 SystemMessage(
                     prompts.render(
@@ -540,7 +595,7 @@ class GlossaryWriter:
             seen.add(key)
             entries.append(
                 GlossaryEntry(
-                    _new_key(self.configuration.lesson.glossary_key_length),
+                    _new_key(self.lesson_configuration.glossary_key_length),
                     term.short_form,
                     term.description,
                     term.long_form or None,
