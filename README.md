@@ -14,6 +14,7 @@ from teacher import (
     GlossaryWriter,
     Lesson,
     LessonMaterials,
+    LessonWriter,
     OutlineWriter,
     ReferenceDocument,
     ReferenceReader,
@@ -55,7 +56,19 @@ glossary = await GlossaryWriter(text_model).write(outline, chapters, language="e
 lesson = Lesson.from_parts(outline=outline, chapters=chapters, glossary=glossary)
 ```
 
-Each operation is independent. Callers may skip transcript revision, provide a hand-written outline, write chapters concurrently, or replace an operation with a compatible class.
+`ChapterWriter` is the low-level choice when a caller wants one chapter as an
+independent unit. `LessonWriter` accepts the complete outline and lets the
+caller choose sequential or concurrent chapter execution:
+
+```python
+chapters = await LessonWriter(text_model).write(
+    outline,
+    materials,
+    strategy="sequential",
+)
+```
+
+Each operation is independent. Callers may skip transcript revision, provide a hand-written outline, choose how chapters are grouped, or replace an operation with a compatible class.
 
 ## Operations
 

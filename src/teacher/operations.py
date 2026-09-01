@@ -8,6 +8,7 @@ from teacher.documents.reader import ReferenceReader
 from teacher.lesson.chapter import ChapterWriter
 from teacher.lesson.glossary import GlossaryWriter
 from teacher.lesson.outline import OutlineWriter
+from teacher.lesson.writer import LessonWriter, LessonWritingStrategy
 from teacher.transcript.revision import TranscriptRevision
 
 __all__ = [
@@ -16,4 +17,6 @@ __all__ = [
     "OutlineWriter",
     "ChapterWriter",
     "GlossaryWriter",
+    "LessonWriter",
+    "LessonWritingStrategy",
 ]
