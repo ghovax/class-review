@@ -1,13 +1,13 @@
 ---
-name: review-class
-description: Help an agent turn a lecture recording or user-provided transcript into a review-class lesson, with Modal-first transcription, progressive lesson planning and writing, and Pandoc/Typst export.
+name: class-review
+description: Help an agent turn a lecture recording or user-provided transcript into a class review, with Modal-first transcription, progressive lesson planning and writing, and Pandoc/Typst export.
 metadata:
-  short-description: Build a review-class lesson from a lecture
+  short-description: Build a class review from a lecture
 ---
 
-# Review-class workflow
+# Class-review workflow
 
-Use this skill when the user wants a lecture turned into a structured review class, study notes, chapters, or an exported document. Treat chapter grouping, iteration boundaries, and model-call granularity as implementation choices selected by the material and runtime.
+Use this skill when the user wants a lecture turned into a structured class review, study notes, chapters, or an exported document. Treat chapter grouping, iteration boundaries, and model-call granularity as implementation choices selected by the material and runtime.
 
 ## Progressive instructions
 

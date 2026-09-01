@@ -129,8 +129,8 @@ gpu_image = (
     .entrypoint([])
 )
 cpu_image = modal.Image.debian_slim().pip_install("fastapi[standard]")
-app = modal.App("review-class-parakeet")
-model_cache = modal.Volume.from_name("review-class-parakeet-cache", create_if_missing=True)
+app = modal.App("class-review-parakeet")
+model_cache = modal.Volume.from_name("class-review-parakeet-cache", create_if_missing=True)
 
 
 @app.cls(

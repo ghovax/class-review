@@ -37,16 +37,13 @@ For each unit:
 6. Open directly on substance. Avoid contents previews, progress announcements, backward pointers, forward references, and transition sentences whose only job is to announce where the reader is.
 7. End each concept on its last substantive sentence. Do not append a recap, a setup for the next concept, an offer to elaborate, or generation commentary.
 
-## Shape follows content
+## Choose the presentation form
 
-Use the smallest structure that makes the relationship clear. One content unit should have one didactic function.
+No presentation form has priority by default. Choose the form, or combination of forms, that makes the source's structure clearest while preserving every substantive detail. A single concept may move from explanatory prose to a list of cases, then to a comparison table, and back to prose that interprets the comparison. The choice should follow the information, not a preference for prose, lists, or tables.
 
-- Use argumentative prose for a connected mechanism, explanation, implication, or causal chain. Each sentence should refine, support, contrast, or follow from the preceding one.
-- Use a labeled list for genuinely parallel types, properties, requirements, cases, or procedural steps. Give each item enough explanation to carry its real substance; do not duplicate the list in preceding prose.
-- Use a table for a multidimensional comparison: two or more entities described by two or more shared attributes. Keep headers and cells concise and do not repeat the matrix as prose.
-- Use a hybrid mechanism–list/table–consequence shape when a causal explanation naturally produces an enumerable set and then resumes its reasoning.
-- Use subsections when a concept contains distinct sub-mechanisms or phases. Do not create headings for every paragraph or use headings as a substitute for an explanation.
-- Use equations only for genuine mathematical structure. Keep them inline unless the requested format clearly benefits from display math.
+One content unit should have one didactic function, but the complete lesson may interweave several forms. Use argumentative prose for a connected mechanism, explanation, implication, or causal chain when sentences are the clearest way to preserve it. Use a labeled list for genuinely parallel types, properties, requirements, cases, or procedural steps. Use a table for a multidimensional comparison: two or more entities described by two or more shared attributes. Use equations or other formal notation when the subject requires them. Use subsections when a concept contains distinct sub-mechanisms or phases.
+
+Do not repeat the same information in prose, a list, and a table merely to create visual variety. Conversely, do not flatten a rich mechanism into prose when a list or table would make its parts clearer, and do not force a comparison into a paragraph when a table would make the relationships visible. Lists and tables are not permission to omit nuance, qualifications, causal links, or evidence: preserve the full depth of the source in whichever form you choose.
 
 ## Publication-style presentation
 
@@ -54,9 +51,9 @@ Write like a polished paper, textbook chapter, or professional study handout. Do
 
 Do not represent ordinary causal, procedural, or chronological sequences as ASCII arrow chains such as `A -> B -> C`, or as LaTeX arrow series such as `$A \to B \to C$`. Prefer a numbered or labeled list when the steps are separate, or connected prose when the relationship is continuous; lists are clearer for learners and make each step auditable. Keep arrow notation only when it is genuinely part of the subject matter—for example, a chemical reaction or transformation, a mathematical mapping, or another formal relation that the source actually teaches. Even then, use it sparingly and do not decorate ordinary exposition with it.
 
-## Human-readable prose
+## Human-readable expression
 
-Write as a careful human instructor would write for an intelligent learner. Cover the full supported substance and preserve its precision, but give the reader one manageable logical move at a time. Prefer short or medium-length sentences, concrete verbs, and clear paragraph boundaries. Split a sentence when it contains several nested clauses, qualifications, or independent conclusions; use a list when the material contains separate parallel steps or cases.
+Write every form as a careful human instructor would present it to an intelligent learner. Cover the full supported substance and preserve its precision, but give the reader one manageable logical move at a time. In prose, prefer short or medium-length sentences, concrete verbs, and clear paragraph boundaries. Split a sentence when it contains several nested clauses, qualifications, or independent conclusions; use a list when the material contains separate parallel steps or cases.
 
 Use technical language when the lesson requires it, but do not use jargon to sound authoritative. Define a necessary term at its first important use, then use it consistently. Replace avoidable specialist wording with ordinary language, without replacing a precise technical distinction with a vague simplification. Keep the complete reasoning intact while making the path through it easy to follow.
 

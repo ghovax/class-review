@@ -129,8 +129,8 @@ gpu_image = (
     .entrypoint([])
 )
 cpu_image = modal.Image.debian_slim().pip_install("fastapi[standard]")
-app = modal.App("review-class-whisperx")
-model_cache = modal.Volume.from_name("review-class-whisperx-cache", create_if_missing=True)
+app = modal.App("class-review-whisperx")
+model_cache = modal.Volume.from_name("class-review-whisperx-cache", create_if_missing=True)
 
 
 def merge_adjacent_segments(segments: list[dict]) -> list[dict]:
