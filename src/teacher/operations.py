@@ -827,7 +827,7 @@ def _read_chapter(content: str) -> tuple[str | None, str, list[Citation]]:
 
 def _new_key(length: int) -> str:
     alphabet = "abcdefghijklmnopqrstuvwxyz0123456789"
-    return "gls-" + "".join(secrets.choice(alphabet) for _ in range(length))
+    return "glossary-" + "".join(secrets.choice(alphabet) for _ in range(length))
 
 
 def _render_pdf(document: ReferenceDocument) -> list[tuple[int, bytes]]:
