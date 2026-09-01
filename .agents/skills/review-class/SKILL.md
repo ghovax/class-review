@@ -13,10 +13,10 @@ Use this skill when the user wants a lecture turned into a structured review cla
 
 Read the instruction files in this order, and only when the preceding phase has produced the material needed by the next phase:
 
-1. First read [source-transcript.md](instructions/source-transcript.md) and obtain a trustworthy timestamped source.
-2. Second, once the transcript and references exist, read [devise-outline.md](instructions/devise-outline.md) and build the lesson outline.
-3. Third, once the outline exists, read [write-chapters.md](instructions/write-chapters.md) and write the lesson using the grouping that best preserves its reasoning.
-4. Finally, once the lesson is complete, read [export.md](instructions/export.md) and render the requested format.
+1. First read the [source instructions](instructions/source-transcript.md) and obtain a trustworthy timestamped source.
+2. Second, once the transcript and references exist, read the [outline instructions](instructions/devise-outline.md) and build the lesson outline.
+3. Third, once the outline exists, read the [chapter-writing instructions](instructions/write-chapters.md) and write the lesson using the grouping that best preserves its reasoning.
+4. Finally, once the lesson is complete, read the [export instructions](instructions/export.md) and render the requested format.
 
 Do not load later phase instructions early when they are not relevant. Keep internal planning classifications and intermediate model records out of the student-facing lesson unless the user asks to inspect them.
 

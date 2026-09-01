@@ -88,4 +88,4 @@ Choose document references by the actual document section or page identity suppl
 
 ## Outline quality check
 
-Before writing, verify complete source coverage, chronological order, coherent dependencies, non-uniform content allocation, net-new objectives, substantive do-not-repeat ledgers, an honest description of mixed intent and depth, and no unsupported expansion from reference documents. Continue to [write-chapters.md](write-chapters.md) only after those checks pass.
+Before writing, verify complete source coverage, chronological order, coherent dependencies, non-uniform content allocation, net-new objectives, substantive do-not-repeat ledgers, an honest description of mixed intent and depth, and no unsupported expansion from reference documents. Continue to the [chapter-writing instructions](write-chapters.md) only after those checks pass.
