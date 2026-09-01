@@ -41,6 +41,7 @@
 // touch of size.
 #show heading: set text(fill: accent-blue)
 #show heading: set block(above: 1.5em, below: 1em)
+#set heading(numbering: none)
 #show heading.where(level: 1): set text(size: 1.15em)
 #show heading.where(level: 1): it => block(below: 0.85em, width: 100%, breakable: false)[
   #it
@@ -79,9 +80,6 @@ $header-includes$
 
 $endfor$
 #show: doc => conf(
-$if(subtitle)$
-  subtitle: [$subtitle$],
-$endif$
 $if(keywords)$
   keywords: ($for(keywords)$$keywords$$sep$,$endfor$),
 $endif$
@@ -139,24 +137,18 @@ $endif$
 $if(title)$
 #set document(title: [$title$])
 // Title block, rendered here (not by conf) for full styling control: a
-// larger, calmer title, a thin centred accent rule, and a muted subtitle
-// and date.
+// larger, calmer title, a thin centred accent rule, and a localized timestamp.
 #block(width: 100%, below: 1.6em)[
   #align(center)[
     #block(below: 1.2em)[
       #text(size: 1.95em, weight: 700, hyphenate: false)[$title$]
     ]
-$if(subtitle)$
-    #block(below: 0.5em)[
-      #text(size: 1.2em, weight: 500, hyphenate: false)[$subtitle$]
-    ]
-$endif$
     #line(length: 37.5%, stroke: 0.5pt + luma(40))
 $if(lesson-date)$
     #block(above: 0.7em)[#text(size: 0.9em)[$lesson-date$]]
 $endif$
 $if(description)$
-    #block(above: 1.1em, below: 0.45em)[
+    #block(above: 1.35em, below: 0.85em)[
       #text(size: 1.1em, weight: "bold", fill: accent-blue)[Abstract]
     ]
     #block(width: 100%)[
@@ -180,6 +172,26 @@ $for(include-before)$
 $include-before$
 
 $endfor$
+$if(audio-files)$
+// Source-file listing table from structured Pandoc metadata. Keep this as
+// the template-owned table rather than appending a Markdown source block.
+#table(
+  columns: (1fr, auto),
+  table.header([$if(recordings-label)$$recordings-label$$else$Recordings$endif$], [$if(duration-label)$$duration-label$$else$Duration$endif$]),
+  table.hline(),
+$for(audio-files)$  [#text(font: "DejaVu Sans Mono", size: 0.76125em)[$it.name$]], [$if(it.duration)$$it.duration$$endif$],
+$endfor$)
+
+$endif$
+$if(reference-files)$
+#table(
+  columns: (1fr, auto),
+  table.header([$if(reference-documents-label)$$reference-documents-label$$else$Reference documents$endif$], [$if(pages-label)$$pages-label$$else$Pages$endif$]),
+  table.hline(),
+$for(reference-files)$  [#text(font: "DejaVu Sans Mono", size: 0.76125em)[$it.name$]], [$if(it.pages)$$it.pages$$endif$],
+$endfor$)
+
+$endif$
 // Table of contents: chapter entries bold with breathing room
 // above each entry; concept entries lighter, muted and smaller;
 // a subtle light-grey dotted leader replaces the dense default so the

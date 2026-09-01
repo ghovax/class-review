@@ -40,9 +40,13 @@ For each chapter or writing unit, record:
 - relevant reference documents and page ranges;
 - uncertainties, source conflicts, and citation targets.
 
+Keep chapter and concept titles topical and unnumbered. Do not encode ordinals such as `1.` or `2.1` in heading text; ordering belongs to the outline structure and the table of contents, not to visible heading labels.
+
+For each concept, also record the connective reasoning that the final prose must preserve: the question or prior idea it responds to, the observation or claim introduced, the mechanism or argument that explains it, the consequence or limitation that follows, and the next concept it makes possible. Do not reduce a concept to a dictionary entry merely because it has a definition; the outline must expose how its parts depend on one another.
+
 ## Write the abstract
 
-Treat the lesson description as a paper-style abstract, not a short promotional blurb. It should synthesize the whole lesson by stating the subject and scope, the central question or problem when one exists, the approach or framework used in the lecture, the main mechanisms or relationships developed, the principal conclusions or practical implications, and the important limitations or unresolved points. Base every part on the transcript and relevant references. Use as much space as the lesson genuinely needs; do not force a fixed sentence count, pad it with generalities, or reduce a complex lesson to a title-like summary.
+Treat the lesson description as a concise paper-style abstract, not a promotional blurb or a chapter-by-chapter inventory. Keep it to one compact paragraph, normally 40–80 words and rarely more than 100. Write it in the lecturer's first-person voice, using “I” for what I introduce, explain, or conclude and “we” when I lead the learner through shared reasoning; do not write “the lecture introduces” or otherwise describe the lesson from outside. In that limited space, synthesize the subject and scope, the central question or problem when one exists, the approach or framework used in the lecture, the principal mechanism or practical implication, and the most important limitation or unresolved point. Compress by connecting related ideas rather than by listing them. Base every sentence on the transcript and relevant references; do not pad the abstract with generalities or reproduce the body in miniature.
 
 ## Assess treatment intent
 

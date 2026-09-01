@@ -1,12 +1,20 @@
 # Write the lesson
 
-Read the outline, the transcript excerpts owned by the current writing unit, the relevant references, and the accumulated visible lesson context. Write a coherent review class in the requested language. The learner should see a direct academic explanation, not a description of the source material or the generation process.
+Read the outline, the transcript excerpts owned by the current writing unit, the relevant references, and the accumulated visible lesson context. Write a coherent review class in the requested language. The learner should hear the lecturer explaining the subject directly, not read a description of the source material, the lesson, or the generation process.
 
 ## Source fidelity
 
 The transcript controls substance, order, reasoning, and depth. References may clarify or verify a point already supported by the lecture, but they do not authorize new scope. Preserve exact values, units, signs, identifiers, distinctions, and named entities whenever they are retained. Resolve transcript/reference conflicts before writing, and make the body claim and its citation agree on the same resolved value.
 
 Normalize obvious transcription defects, duplicated fragments, malformed numerals, and surface terminology only when the intended reading is supported by the surrounding argument. Do not assign one component's properties to another, broaden a sub-case into a universal law, or turn a deliberate unknown into a fact.
+
+## Lecturer voice and connective exposition
+
+Write every learner-facing paragraph, including the abstract, from the lecturer's perspective. Use first-person singular for the lecturer's choices, explanations, observations, and conclusions: “I begin with...”, “I use this example to show...”, and “I cannot infer...” are appropriate. Use first-person plural when the lecturer and learner reason through an implication together: “We can now see why...”. Address the learner directly with “you” when giving an instruction or inviting an observation. Avoid outside narration such as “the lecture introduces,” “the lecturer explains,” “this chapter discusses,” or “the lesson covers”; those phrases turn the material into a report instead of instruction. Maintain the lecturer's first-person perspective throughout every paragraph rather than reverting to impersonal textbook summary.
+
+Build the lesson as a chain of connected explanations. For each major idea, make the prose show: the problem or question that calls for it, the observation or definition that answers part of it, the mechanism or reasoning that makes the answer intelligible, the consequence or limitation that follows, and the next question or step this creates. Use explicit connective language when needed—“because,” “therefore,” “this matters when,” “that distinction lets us,” and “the next difficulty is”—but make the connections substantive rather than decorative. When an example appears, explain what it demonstrates and how it changes the argument. When a table or list is necessary, introduce the organizing principle and interpret the result in surrounding prose; never leave the reader to reconstruct the relationships from isolated entries.
+
+Run a dictionary-and-reporting check before finalizing. Remove paragraphs that merely define one term, name one fact, or summarize what the lecture did without explaining why it matters. Replace them with connected exposition that relates the term to the active question, its operation, its consequence, or another established concept. Keep headings topical and concise, but make the prose beneath them do the explanatory work.
 
 ## Follow treatment intent and depth
 
@@ -33,9 +41,12 @@ For each unit:
 2. Compare every new passage with all earlier visible prose and the do-not-repeat ledger. Treat earlier prose as the ground truth when it is richer than the ledger.
 3. Develop only the net-new contribution. When a later passage relies on an established term, mechanism, value, or example, refer to it by name and advance from it instead of redefining it.
 4. Preserve the source's causal, procedural, and evidentiary reasoning. Do not compress a chain until its conclusion becomes an unsupported fact.
-5. Write in direct professor-to-learner voice. Do not mention the transcript, recording, pages, slides, prompt, metadata, outline, or lesson position.
-6. Open directly on substance. Avoid contents previews, progress announcements, backward pointers, forward references, and transition sentences whose only job is to announce where the reader is.
-7. End each concept on its last substantive sentence. Do not append a recap, a setup for the next concept, an offer to elaborate, or generation commentary.
+5. Write in direct first-person lecturer-to-learner voice. Use “I” and “we” naturally to make the speaking perspective explicit. Do not mention the transcript, recording, pages, slides, prompt, metadata, outline, or lesson position.
+6. Use concise, topical, unnumbered headings. Do not write ordinal prefixes such as `1.` or `2.1` into heading text; section ordering is handled by the document structure and table of contents.
+7. Open directly on substance. Avoid contents previews, progress announcements, backward pointers, forward references, and transition sentences whose only job is to announce where the reader is.
+8. End each concept on its last substantive sentence. Do not append a recap, a setup for the next concept, an offer to elaborate, or generation commentary.
+
+Timestamped source segments are an internal evidence and planning aid. Do not place transcript timecodes, timestamp labels, or timestamped links in the learner-facing lesson. Use ordinary source citations or a conventional bibliography entry without a time parameter; retain precise segment timestamps only in the normalized source, outline, and internal claim mapping. The document-level lesson timestamp may be rendered by the export template from `date`/`lesson-date`.
 
 ## Choose the presentation form
 
@@ -71,10 +82,14 @@ Use inline LaTeX for genuine mathematics, including equations, relations, indice
 
 Cite a claim where the chosen output format supports citations, placing the citation immediately after the sentence it supports. Cite the page or source that supports that specific claim, not a topical neighbor. When the lecture supplies the claim but no reference supports it, do not attach an unrelated citation. Keep citation text in the requested language and make it agree with the body on every relevant value and identifier.
 
+For a lecture-only source, a conventional source link or bibliography entry is sufficient. Do not turn the lecture's internal time map into visible timecode citations. Timestamp precision belongs in the preserved source and outline, not in the student-facing prose or PDF.
+
+Keep recording provenance in `recording_urls` and export-table metadata in `audio-files` as structured `{name, duration}` entries; keep reference-file export metadata in `reference-files` as `{name, pages}` entries. The selected template renders those fields through its predefined `Recordings | Duration` and `Reference documents | Pages` tables. Keep transcript-service and retrieval details in intermediate artifacts unless the template explicitly supports them. Do not spell metadata out as prose, add a manually authored `Sources` or `Source` section, or append a second bibliography-like block to the lesson body.
+
 ## Intermediate call data
 
 For every model call, retain the exact request messages, response object, visible output, response metadata, tool calls, token usage, cache counters, and provider-exposed reasoning fields when the runtime exposes them. Use the complete assistant response as context for later writing units when the model interface supports it. Keep private reasoning opaque and separate from the student-facing lesson; never invent, paraphrase, or publish hidden chain-of-thought.
 
 If a call is retried, retain the successful result and the failure metadata. Never silently replace an earlier unit's source, terminology, citation, or established claim without recording the change. Preserve the raw transcript and intermediate artifacts even when a normalized lesson is produced.
 
-Before exporting, verify complete coverage, coherent progression, no transcript dump, no unsupported claims, no duplicated or drifting terminology, no accidental numbering, no raw internal classifications, no transport markup, and no automatic-generation boilerplate. Continue to the [export instructions](export.md).
+Before exporting, verify complete coverage, coherent progression, first-person lecturer voice, connective explanations, no third-person lesson report, no dictionary-like definition sequence, no transcript dump, no unsupported claims, no duplicated or drifting terminology, no accidental numbering, no raw internal classifications, no transport markup, and no automatic-generation boilerplate. Continue to the [export instructions](export.md).
