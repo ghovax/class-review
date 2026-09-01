@@ -64,4 +64,4 @@ For every model call, retain the exact request messages, response object, visibl
 
 If a call is retried, retain the successful result and the failure metadata. Never silently replace an earlier unit's source, terminology, citation, or established claim without recording the change. Preserve the raw transcript and intermediate artifacts even when a normalized lesson is produced.
 
-Before exporting, verify complete coverage, coherent progression, no transcript dump, no unsupported claims, no duplicated or drifting terminology, no accidental numbering, no raw internal classifications, no transport markup, and no automatic-generation boilerplate. Continue to [export.md](export.md).
+Before exporting, verify complete coverage, coherent progression, no transcript dump, no unsupported claims, no duplicated or drifting terminology, no accidental numbering, no raw internal classifications, no transport markup, and no automatic-generation boilerplate. Continue to the [export instructions](export.md).
