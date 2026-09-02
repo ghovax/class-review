@@ -1,10 +1,21 @@
 # Devise the outline
 
-Read the complete normalized transcript and the relevant reference material before proposing the lesson structure. The outline should make the lecture teachable without replacing the lecture's scope, order, or reasoning with a generic textbook structure.
+Read the complete normalized transcript and relevant reference material before proposing the lesson structure. Make the lecture teachable without replacing its scope, order, or reasoning with a generic textbook structure.
+
+Keep the following as separate planning artifacts:
+
+- outline;
+- source excerpts;
+- reference mapping;
+- uncertainties;
+- internal classifications; and
+- claim-to-source mappings.
+
+These artifacts guide drafting but must not leak into the learner-facing lesson. Do not write the lesson until the outline covers the source in chronological order.
 
 ## Internal classification
 
-Classify each meaningful span internally with one or more macro-categories. The table is a planning instrument, not lesson content.
+Classify each meaningful span internally with one or more macro-categories. This table is a planning instrument, not lesson content.
 
 | Macro-category | Identify | Use it to decide |
 | --- | --- | --- |
@@ -19,38 +30,89 @@ Classify each meaningful span internally with one or more macro-categories. The 
 
 ## Source and conflict rules
 
-Use the transcript as the authority for the available substance, sequence, qualitative depth, and pedagogical boundaries. Use references to stabilize a term, clarify a directly relevant point, or support a citation. When sources disagree about the same entity, resolve the conflict internally before drafting: prefer the interpretation that is internally consistent with the surrounding reasoning, then the one that best explains likely transcription or extraction errors, then the more specific supported value. Do not present two incompatible values as though they were complementary.
+Use the transcript as the authority for:
 
-Do not generalize a claim beyond the cases the lecture supports. Preserve named components and their individual attributes. Keep deliberate unknowns, deferred questions, exceptions, and limitations visible rather than resolving them from outside knowledge. Normalize obvious transcription artefacts only when the intended reading is clear and supported by the surrounding material.
+- available substance;
+- sequence;
+- qualitative depth; and
+- pedagogical boundaries.
+
+Use references only to:
+
+- stabilize a term;
+- clarify a directly relevant point; or
+- support a citation.
+
+When sources disagree about the same entity, resolve the conflict internally in this order:
+
+1. prefer the interpretation consistent with the surrounding reasoning;
+2. then prefer the interpretation that best explains likely transcription or extraction errors; and
+3. then prefer the more specific supported value.
+
+Do not present incompatible values as though they were complementary.
+
+During normalization:
+
+- do not generalize a claim beyond the cases the lecture supports;
+- preserve named components and their individual attributes;
+- keep deliberate unknowns, deferred questions, exceptions, and limitations visible; and
+- normalize obvious transcription artefacts only when the intended reading is clear and supported by the surrounding argument.
 
 ## Outline structure
 
-Let semantic topic flow, changes in objective, and changes in reasoning determine chapter boundaries. Do not split by paragraph count, equal time, or a fixed number of concepts. A chapter may contain several related concepts, and a concept may need several subsections or a larger writing unit.
+Let chapter boundaries follow:
+
+- semantic topic flow;
+- changes in learner objective; and
+- changes in reasoning.
+
+Do not split by paragraph count, equal time, or a fixed number of concepts. A chapter may contain several related concepts, and a concept may need several subsections or a larger writing unit.
 
 For each chapter or writing unit, record:
 
-- a clean topical title and a substantive abstract-like description of the lesson;
+- a clean topical title and a substantive abstract-like description;
 - the owned transcript time span and source excerpts;
-- one or more concepts in chronological order;
-- the objective and the main advancement for each concept;
-- the treatment intent, which may combine introduction, deepening, application, and review;
-- the relative explanatory depth, which may range from low through medium to high;
+- concepts in chronological order;
+- the objective and main advancement for each concept;
+- treatment intent, including any mixture of introduction, deepening, application, and review;
+- relative explanatory depth from low through medium to high;
 - the rationale for the observed mixture of intent and depth;
-- claims established for the first time and a substantive do-not-repeat ledger;
-- relevant reference documents and page ranges;
+- claims established for the first time;
+- a substantive do-not-repeat ledger;
+- relevant reference documents and page ranges; and
 - uncertainties, source conflicts, and citation targets.
 
-Keep chapter and concept titles topical and unnumbered. Do not encode ordinals such as `1.` or `2.1` in heading text; ordering belongs to the outline structure and the table of contents, not to visible heading labels.
+Keep chapter and concept titles topical and unnumbered. Do not encode ordinals such as `1.` or `2.1` in heading text; ordering belongs to the outline structure and table of contents, not to visible heading labels.
 
-For each concept, also record the connective reasoning that the final prose must preserve: the question or prior idea it responds to, the observation or claim introduced, the mechanism or argument that explains it, the consequence or limitation that follows, and the next concept it makes possible. Do not reduce a concept to a dictionary entry merely because it has a definition; the outline must expose how its parts depend on one another.
+For each concept, record the connective reasoning that the final prose must preserve:
+
+- the question or prior idea it responds to;
+- the observation or claim it introduces;
+- the mechanism or argument that explains it;
+- the consequence or limitation that follows; and
+- the next concept it makes possible.
+
+Do not reduce a concept to a dictionary entry merely because it has a definition. The outline must expose how its parts depend on one another.
 
 ## Write the abstract
 
-Treat the lesson description as a concise paper-style abstract, not a promotional blurb or a chapter-by-chapter inventory. Keep it to one compact paragraph, normally 40–80 words and rarely more than 100. Write it in the lecturer's first-person voice, using “I” for what I introduce, explain, or conclude and “we” when I lead the learner through shared reasoning; do not write “the lecture introduces” or otherwise describe the lesson from outside. In that limited space, synthesize the subject and scope, the central question or problem when one exists, the approach or framework used in the lecture, the principal mechanism or practical implication, and the most important limitation or unresolved point. Compress by connecting related ideas rather than by listing them. Base every sentence on the transcript and relevant references; do not pad the abstract with generalities or reproduce the body in miniature.
+Treat the lesson description as a concise paper-style abstract, not a promotional blurb or chapter-by-chapter inventory. It must:
+
+- be one compact paragraph;
+- normally contain 40–80 words and rarely more than 100;
+- use the lecturer's first-person voice;
+- use “I” for what I introduce, explain, or conclude;
+- use “we” when I lead the learner through shared reasoning;
+- avoid outside narration such as “the lecture introduces”;
+- synthesize the subject and scope, central question, approach, principal mechanism or implication, and meaningful limitation;
+- connect related ideas rather than list them; and
+- remain grounded in the transcript and relevant references.
+
+Do not pad the abstract with generalities or reproduce the body in miniature.
 
 ## Assess treatment intent
 
-Treatment intent describes the learner-facing work a passage does in this location, not how important the topic is overall. Introduction, deepening, application, and review are overlapping descriptions rather than mutually exclusive classes: one concept can partly introduce, deepen, apply, and review an idea, with one intent more prominent than the others. Treatment intent answers what the passage is doing for the learner; explanatory depth answers how thoroughly it does that work; attention answers how much space or effort the material receives. Compare the current treatment with what the outline has already established.
+Treatment intent describes the learner-facing work a passage does in its current location, not how important the topic is overall. Introduction, deepening, application, and review can overlap.
 
 | Treatment intent | What it usually means | What it tends to contribute |
 | --- | --- | --- |
@@ -59,11 +121,18 @@ Treatment intent describes the learner-facing work a passage does in this locati
 | Apply | An available principle is used in a genuinely new case, decision, comparison, or worked example | Develop the new case, outcome, trade-off, or decision logic while treating the principle as a baseline |
 | Review | An established idea is revisited for orientation, connection, comparison, or light reinforcement | Reconnect to it briefly by its stable name so the current material can proceed |
 
-When a passage contains several intents, describe the combination and identify the predominant intent only if the outline needs a compact summary. A passage may be mostly review with a small deepening element, or mostly introduction while also applying an idea to an example. If the new contribution is substantial, let it receive the space and reasoning it deserves; if it is slight, keep it slight rather than forcing a category.
+When several intents are present:
+
+- describe the combination;
+- identify a predominant intent only when a compact summary requires it;
+- keep review proportionate when the passage adds only a small new layer; and
+- give substantial new contributions the space and reasoning they require.
+
+Do not force a mixed passage into a single category.
 
 ## Assess explanatory depth
 
-Explanatory depth measures the thoroughness of the treatment per moment, not the amount of airtime or the importance of the topic. High, medium, and low are useful points on a continuum, not hard boundaries. A short passage can have high depth when it develops a dense mechanism; a long passage can have low depth when it repeats a simple point. Judge the reasoning, nuance, qualification, and learner burden actually present in the transcript.
+Explanatory depth measures thoroughness per moment, not airtime or importance. Judge the reasoning, nuance, qualification, and learner burden actually present in the transcript.
 
 | Depth | Evidence in the transcript | Outline and writing consequence |
 | --- | --- | --- |
@@ -71,11 +140,23 @@ Explanatory depth measures the thoroughness of the treatment per moment, not the
 | Medium | The lecturer gives a clear explanation with the core reason, mechanism, example, or implication, but explores limited nuance or few edge cases | Explain the complete core idea and its main consequence with meaningful detail, without importing a deeper textbook treatment |
 | Low | The lecturer names, sketches, contrasts, or briefly mentions the idea with little unpacking or support | Keep the treatment concise and faithful; do not expand it merely because the topic is important in the wider field |
 
-Do not infer depth from chapter length, number of transcript sentences, repetition count, or document richness. A concept may contain a range—for example, a medium treatment with one deeply developed mechanism and a lightly mentioned aside. If one summary value is needed, use the center of gravity of the treatment and preserve the internal variation in the rationale or notes. Explain which source signals led to the assessment, and keep attention proportional to the material rather than using attention as a substitute for depth.
+Do not infer depth from:
+
+- chapter length;
+- number of transcript sentences;
+- repetition count; or
+- document richness.
+
+A concept may contain a range of depths. If one summary value is needed:
+
+- use the center of gravity of the treatment;
+- preserve internal variation in the rationale or notes;
+- explain which source signals led to the assessment; and
+- keep attention proportional to the material rather than using it as a substitute for depth.
 
 ## Describe the main advancement
 
-The main advancement describes what makes the concept new relative to earlier concepts. The following perspectives can overlap: a mechanism may also be evidenced, and a constraint may create a trade-off. Use the perspective that best names the main contribution when a compact summary is needed, while preserving the other dimensions in the explanation.
+The main advancement describes what makes a concept new relative to earlier concepts. The perspectives can overlap: a mechanism may also be evidenced, and a constraint may create a trade-off.
 
 | Perspective | The new contribution is primarily |
 | --- | --- |
@@ -84,16 +165,54 @@ The main advancement describes what makes the concept new relative to earlier co
 | Trade-off | A choice among competing goals, costs, benefits, risks, or outcomes, including the reasoning used to choose |
 | Evidence | An observation, measurement, example, experiment, quotation, or source-grounded fact that supports or tests an idea |
 
-Choose the perspective that best describes the actual net-new work of the concept, not a generic label for its subject. If several perspectives are present, describe their relationship and, only when necessary, identify the one carrying the main advancement.
+For each concept:
 
-Every later objective must be net-new relative to every earlier concept, not merely the immediately preceding one. A later concept may rely on an established mechanism, value, or example, but its objective must advance, constrain, apply, compare, or evidence it rather than re-derive it. Let the objective express the actual mixture of new contribution and connective review instead of forcing the passage into a single treatment category.
+- choose the perspective that describes its actual net-new work, not a generic label for its subject;
+- describe the relationship when several perspectives are present; and
+- identify one main advancement only when a compact summary requires it.
 
-For every concept, including the first, write a substantive do-not-repeat ledger. Name the terms and acronyms introduced, exact values and units, formulas, named examples, mechanism steps, and causal conclusions that the concept establishes for the first time. Phrase the ledger as guidance for later writing: later units may refer to an established item by name, but must not redefine it, rebuild its derivation, or restate its conclusion. An empty ledger is not a neutral choice; it removes the boundary information needed to keep later material additive.
+For every later objective:
 
-Keep concept boundaries aligned to real transcript segments where possible. Do not bisect a segment simply to manufacture a new concept; group its connected subtopics and assign any internal structure during chapter writing. Keep chapter spans chronological and non-overlapping, allowing only negligible timing uncertainty at a boundary.
+- make it net-new relative to every earlier concept, not merely the immediately preceding one;
+- allow it to rely on an established mechanism, value, or example;
+- require it to advance, constrain, apply, compare, or evidence that established material; and
+- express the actual mixture of new contribution and connective review rather than forcing a single treatment category.
 
-Choose document references by the actual document section or page identity supplied with the material. Never confuse a section ordinal with a page number or timestamp. Omit a reference when the concept is not substantively grounded in it.
+For every concept, including the first, write a substantive do-not-repeat ledger. Record:
+
+- terms and acronyms introduced;
+- exact values and units;
+- formulas;
+- named examples;
+- mechanism steps; and
+- causal conclusions established for the first time.
+
+Phrase the ledger as guidance for later writing. Later units may refer to an established item by name, but must not redefine it, rebuild its derivation, or restate its conclusion. An empty ledger removes the boundary information needed to keep later material additive.
+
+Keep concept boundaries aligned to real transcript segments where possible:
+
+- do not bisect a segment merely to manufacture a new concept;
+- group connected subtopics and assign internal structure during chapter writing; and
+- keep chapter spans chronological and non-overlapping, allowing only negligible timing uncertainty at a boundary.
+
+Choose document references by the supplied document section or page identity. Never confuse:
+
+- a section ordinal with a page number; or
+- a page number with a timestamp.
+
+Omit a reference when the concept is not substantively grounded in it.
 
 ## Outline quality check
 
-Before writing, verify complete source coverage, chronological order, coherent dependencies, non-uniform content allocation, net-new objectives, substantive do-not-repeat ledgers, an honest description of mixed intent and depth, and no unsupported expansion from reference documents. Continue to the [chapter-writing instructions](write-chapters.md) only after those checks pass.
+Before writing, verify:
+
+- complete source coverage;
+- chronological order;
+- coherent dependencies;
+- non-uniform content allocation;
+- net-new objectives;
+- substantive do-not-repeat ledgers;
+- an honest description of mixed intent and depth; and
+- no unsupported expansion from reference documents.
+
+Continue to the [chapter-writing instructions](write-chapters.md) only after these checks pass.

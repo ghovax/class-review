@@ -144,8 +144,8 @@ $if(title)$
       #text(size: 1.95em, weight: 700, hyphenate: false)[$title$]
     ]
     #line(length: 37.5%, stroke: 0.5pt + luma(40))
-$if(lesson-date)$
-    #block(above: 0.7em)[#text(size: 0.9em)[$lesson-date$]]
+$if(date)$
+    #block(above: 0.7em)[#text(size: 0.9em)[$date$]]
 $endif$
 $if(description)$
     #block(above: 1.35em, below: 0.85em)[
