@@ -1,6 +1,6 @@
 # Devise the outline
 
-Read the complete normalized transcript and relevant reference material before proposing the lesson structure. Make the lecture teachable without replacing its scope, order, or reasoning with a generic textbook structure.
+Read the complete source content and relevant reference material before proposing the lesson structure. Use timestamps when they are available, but do not require them or a particular transcript schema. Make the lecture teachable without replacing its scope, order, or reasoning with a generic textbook structure.
 
 Keep the following as separate planning artifacts:
 
@@ -30,33 +30,38 @@ Classify each meaningful span internally with one or more macro-categories. This
 
 ## Source and conflict rules
 
-Use the transcript as the authority for:
+Use the supplied lecture source as the primary source for:
 
-- available substance;
+- intended scope and substance;
 - sequence;
-- qualitative depth; and
-- pedagogical boundaries.
+- qualitative depth;
+- pedagogical boundaries; and
+- the reasoning path the lecturer uses to develop each idea.
 
-Use references only to:
+Use relevant knowledge and references to:
 
 - stabilize a term;
-- clarify a directly relevant point; or
-- support a citation.
+- clarify or verify a directly relevant point;
+- supply a necessary missing reasoning bridge; or
+- correct a directly relevant incoherent or factually incorrect step.
+
+They do not authorize unrelated new scope. Record substantive repairs and unresolved conflicts in the outline and claim-to-source mapping so the writing phase can produce a complete learner-facing explanation without concealing the evidentiary basis.
 
 When sources disagree about the same entity, resolve the conflict internally in this order:
 
 1. prefer the interpretation consistent with the surrounding reasoning;
-2. then prefer the interpretation that best explains likely transcription or extraction errors; and
-3. then prefer the more specific supported value.
+2. distinguish a likely transcription or extraction error from an actual lecturer error;
+3. for an actual lecturer error, prefer the correct value supported by reliable knowledge and directly relevant references; and
+4. when the conflict remains unresolved, preserve the qualification and record it rather than presenting a guess as fact.
 
 Do not present incompatible values as though they were complementary.
 
-During normalization:
+While interpreting the source:
 
 - do not generalize a claim beyond the cases the lecture supports;
 - preserve named components and their individual attributes;
 - keep deliberate unknowns, deferred questions, exceptions, and limitations visible; and
-- normalize obvious transcription artefacts only when the intended reading is clear and supported by the surrounding argument.
+- do not rewrite the source into a fixed format; resolve an obvious transcription artefact only when the intended reading is clear and supported by the surrounding argument.
 
 ## Outline structure
 
@@ -71,7 +76,7 @@ Do not split by paragraph count, equal time, or a fixed number of concepts. A ch
 For each chapter or writing unit, record:
 
 - a clean topical title and a substantive abstract-like description;
-- the owned transcript time span and source excerpts;
+- the owned source span, using a time range when timestamps are available, and source excerpts;
 - concepts in chronological order;
 - the objective and main advancement for each concept;
 - treatment intent, including any mixture of introduction, deepening, application, and review;
@@ -88,11 +93,11 @@ For each concept, record the connective reasoning that the final prose must pres
 
 - the question or prior idea it responds to;
 - the observation or claim it introduces;
-- the mechanism or argument that explains it;
+- the intermediate inferences, mechanism, or argument that explains it;
 - the consequence or limitation that follows; and
 - the next concept it makes possible.
 
-Do not reduce a concept to a dictionary entry merely because it has a definition. The outline must expose how its parts depend on one another.
+Do not reduce a concept to a dictionary entry or a beginning-and-conclusion summary merely because it has a definition. The outline must expose how its parts depend on one another and identify any missing bridge, contradiction, or error that must be repaired before drafting.
 
 ## Write the abstract
 
@@ -189,11 +194,11 @@ For every concept, including the first, write a substantive do-not-repeat ledger
 
 Phrase the ledger as guidance for later writing. Later units may refer to an established item by name, but must not redefine it, rebuild its derivation, or restate its conclusion. An empty ledger removes the boundary information needed to keep later material additive.
 
-Keep concept boundaries aligned to real transcript segments where possible:
+Keep concept boundaries aligned to real source spans where possible:
 
-- do not bisect a segment merely to manufacture a new concept;
+- when timestamps or segments are available, do not bisect one merely to manufacture a new concept;
 - group connected subtopics and assign internal structure during chapter writing; and
-- keep chapter spans chronological and non-overlapping, allowing only negligible timing uncertainty at a boundary.
+- keep chapter spans chronological and non-overlapping when timing exists; otherwise preserve the source order without inventing time ranges.
 
 Choose document references by the supplied document section or page identity. Never confuse:
 

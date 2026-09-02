@@ -1,4 +1,4 @@
 interface:
   display_name: "Class Review"
   short_description: "Build class reviews from lectures"
-  default_prompt: "Use $class-review to source a transcript, devise a flexible outline, write the lesson, and export it."
+  default_prompt: "Use $class-review to source the lecture content, devise a flexible outline, write the lesson, and export it."

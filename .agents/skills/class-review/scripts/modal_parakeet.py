@@ -167,7 +167,7 @@ class ParakeetModel:
         base = {"url": url, "index": index}
         try:
             file_bytes = download(url)
-            probe_audio(file_bytes)
+            media_info = probe_audio(file_bytes)
             pcm_bytes = decode_to_pcm(file_bytes)
         except urllib.error.URLError as error:
             return {
@@ -182,6 +182,7 @@ class ParakeetModel:
         hypothesis = self.model.transcribe([waveform], batch_size=1, timestamps=True)[0]
         return {
             **base,
+            "duration": media_info["duration"],
             "segments": [
                 {"start": item["start"], "end": item["end"], "text": item["segment"]}
                 for item in hypothesis.timestamp.get("segment", [])

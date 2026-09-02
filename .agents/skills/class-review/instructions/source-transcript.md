@@ -1,12 +1,13 @@
 # Source the lecture
 
-Obtain a timestamped transcript before planning the lesson. Never overwrite the source while cleaning it.
+Obtain the available lecture source before planning the lesson. Use the source in the form it arrives; timestamps are valuable when present but are not required. Never rewrite the source merely to fit a canonical transcript format.
 
 Keep the source run durable and inspectable. Preserve these as separate artifacts:
 
 - the original recording or user submission;
-- the raw transcription response;
-- each normalized or corrected transcript;
+- the raw transcription response, when transcription is performed;
+- the source transcript or other source content as received;
+- any user-requested edits, together with a record of what changed;
 - the source-run record and validation results;
 - raw request/response metadata exposed by the provider;
 - the outline and reference mapping;
@@ -15,12 +16,24 @@ Keep the source run durable and inspectable. Preserve these as separate artifact
 
 Do not collapse these records into the learner-facing lesson.
 
+## Inputs to collect
+
+Identify the inputs before choosing a source path:
+
+- a lecture recording URL or file, or a user-provided transcript/source document;
+- optional reference documents or links, preserving their filenames, page identity, and provenance;
+- the requested learner-facing language;
+- the requested export format and destination, when known; and
+- the lesson duration or length, using reliable recording metadata when available or asking the user when it is not.
+
+Optional inputs include a source-language hint, title, lecturer identity, and lesson date. Do not require timestamps, a transcript schema, or any other particular representation. Do not infer lesson duration from transcript length, word count, chapter count, or missing timecodes.
+
 ## Choose the source path
 
 Prefer Modal for audio transcription. The skill contains two self-contained deployments:
 
 - `modal_parakeet.py` runs NVIDIA Parakeet for timestamped segments;
-- `modal_whisperx.py` runs WhisperX with controlled decoding and sentence-oriented segments; and
+- `modal_whisperx.py` runs WhisperX with controlled decoding and returns the provider's segments; and
 - WhisperX accepts an optional language hint.
 
 Deploy the selected script with the Modal CLI:
@@ -60,8 +73,8 @@ Submit an `items` list with stable integer indices. When the recording is known 
 When combining recordings:
 
 - keep the returned indices;
-- normalize each result to ordered segments with `start_seconds`, `end_seconds`, and `content`;
-- preserve detected language and the raw response beside the normalized form; and
+- preserve the provider's response for each recording, including timestamps when available;
+- keep the recordings in source order without converting them into a common segment schema; and
 - reject empty or malformed items rather than silently dropping them.
 
 Use local transcription only when:
@@ -70,52 +83,37 @@ Use local transcription only when:
 - model dependencies and FFmpeg are available; or
 - the user explicitly chooses local execution.
 
-Do not silently run a long lecture on an inadequate CPU setup. Check that a local fallback produces the same normalized segment shape as the Modal path.
+Do not silently run a long lecture on an inadequate CPU setup. Check that a local fallback produces usable source content and relevant metadata; it does not need to mimic the Modal response shape.
 
 ## If the user provides the transcript
 
-If there is no usable recording, ask for a timestamped transcript. Accept:
+If there is no usable recording, ask for whatever transcript, source file, or source content the user has. Accept any format that the agent/runtime can read or extract; do not impose an allowlist or require reformatting merely for convenience. If a format cannot be read, ask for the same content in any more accessible form.
 
-- JSON;
-- Markdown;
-- plain text with timestamps; or
-- another clearly structured format.
+Timestamps are preferred because they support precise source mapping, but they are optional. Preserve the supplied content and structure as-is. Do not add synthetic timecodes or convert the transcript to a fixed internal shape.
 
-Normalize the accepted transcript without changing the spoken words. Use this internal shape:
+Preserve the user's wording and mark uncertain portions instead of guessing. If the source has no reliable lesson duration, ask the user for the lesson duration or length. Do not infer it from word count, transcript length, chapter count, or the absence of timestamps.
 
-```json
-{
-  "languages": ["en"],
-  "segments": [
-    {
-      "start_seconds": 0.0,
-      "end_seconds": 8.4,
-      "content": "Today we introduce the derivative."
-    }
-  ]
-}
-```
+## Transcription cost
 
-Preserve the user's wording. Mark uncertain portions instead of guessing. If correction is requested:
+Use the following as rough planning information for the transcription step: experimental measurements put the average cost at approximately $0.02–$0.05 per lesson. In those measurements, the cost changed little between lessons of roughly one hour and roughly two hours. Treat this as an empirical estimate rather than a guarantee, and retain actual provider usage or billing information when it is available.
 
-- make corrections in a new transcript version; and
-- retain a record of what changed.
+As of 2026-09-02, Modal's sign-up and pricing pages advertise approximately $30 in free monthly compute credits. Treat this offer as time-sensitive and verify it at sign-up; do not confuse the monthly account allowance with the measured per-lesson transcription cost.
 
 ## Validate the source
 
 Before outlining, validate the source:
 
-- every segment is non-empty;
-- timestamps are non-negative and ordered;
-- every end follows its start;
-- the complete available recording timeline is covered;
+- the source content is non-empty;
+- the source order and recording associations are preserved;
+- when timestamps are present, they are non-negative and ordered, and each end follows its start;
+- when timestamps are absent, do not reject the source or fabricate them; ask for lesson duration when it is not available from reliable recording metadata;
 - the recording language and output language remain distinct; and
 - reference PDFs or notes retain their original filenames, page numbers, and provenance.
 
 Preserve source identity separately from transcript timing:
 
 - record the public recording link in `recording_urls`;
-- for Pandoc/Typst, derive `audio-files` with one `{name, duration}` mapping per recording;
+- for Pandoc/Typst, derive `audio-files` with one `{name, duration}` mapping per recording when reliable metadata or user-provided duration exists;
 - derive `reference-files` with one `{name, pages}` mapping per supplied reference file;
 - let the supplied template render those fields through its predefined tables;
 - keep transcript-service identity and retrieval details in the intermediate source record unless a selected template explicitly supports them;
@@ -124,7 +122,7 @@ Preserve source identity separately from transcript timing:
 
 This document-level timestamp is separate from transcript timecodes, which stay internal by default.
 
-Treat the transcript as the authority for:
+Treat the recording, transcript, or other supplied source content as the authority for:
 
 - what was said;
 - its order; and

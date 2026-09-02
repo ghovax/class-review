@@ -133,54 +133,6 @@ app = modal.App("class-review-whisperx")
 model_cache = modal.Volume.from_name("class-review-whisperx-cache", create_if_missing=True)
 
 
-def merge_adjacent_segments(segments: list[dict]) -> list[dict]:
-    """Merge adjacent ASR segments until a sentence terminator."""
-    if not segments:
-        return []
-    closers = "\"'”’»›)]}）】〕］｝〉》」』"
-    terminators = ".!?…。！？｡۔؟॥။"
-    merged: list[dict] = []
-    current = dict(segments[0])
-    current["text"] = (current.get("text") or "").strip()
-    for raw in segments[1:]:
-        following = dict(raw)
-        following["text"] = (following.get("text") or "").strip()
-        trailing = current["text"].rstrip()
-        while trailing and trailing[-1] in closers:
-            trailing = trailing[:-1].rstrip()
-        if trailing and trailing[-1] in terminators:
-            merged.append(_capitalize(current))
-            current = following
-            continue
-        text = following["text"]
-        for index, character in enumerate(text):
-            if character.isalpha():
-                text = text[:index] + character.lower() + text[index + 1 :]
-                break
-        separator = (
-            ""
-            if not current["text"]
-            or not text
-            or current["text"].endswith(" ")
-            or text[0] in ",.;:!?%)]}”’»›"
-            else " "
-        )
-        current["text"] += separator + text
-        current["end"] = following.get("end", current.get("end"))
-    merged.append(_capitalize(current))
-    return merged
-
-
-def _capitalize(segment: dict) -> dict:
-    """Capitalize the first alphabetic character of one segment."""
-    text = segment.get("text") or ""
-    for index, character in enumerate(text):
-        if character.isalpha():
-            segment["text"] = text[:index] + character.upper() + text[index + 1 :]
-            break
-    return segment
-
-
 @app.cls(
     gpu="L40S",
     image=gpu_image,
@@ -229,7 +181,7 @@ class WhisperXModel:
         base = {"url": url, "index": index}
         try:
             file_bytes = download(url)
-            probe_audio(file_bytes)
+            media_info = probe_audio(file_bytes)
             pcm_bytes = decode_to_pcm(file_bytes)
         except urllib.error.URLError as error:
             return {
@@ -246,7 +198,8 @@ class WhisperXModel:
         )
         return {
             **base,
-            "segments": merge_adjacent_segments(result.get("segments", [])),
+            "duration": media_info["duration"],
+            "segments": result.get("segments", []),
             "detected_language": result.get("language", language or ""),
         }
 
