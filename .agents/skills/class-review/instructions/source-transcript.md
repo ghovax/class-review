@@ -2,19 +2,16 @@
 
 Obtain the available lecture source before planning the lesson. Use the source in the form it arrives; timestamps are valuable when present but are not required. Never rewrite the source merely to fit a canonical transcript format.
 
-Keep the source run durable and inspectable. Preserve these as separate artifacts:
+Keep working material in the current context by default. Do not serialize intermediate source, transcript, extraction, validation, outline, reference-map, model-call, or draft artifacts into the repository. Leave user-provided files where they are; do not copy or overwrite them.
 
-- the original recording or user submission;
-- the raw transcription response, when transcription is performed;
-- the source transcript or other source content as received;
-- any user-requested edits, together with a record of what changed;
-- the source-run record and validation results;
-- raw request/response metadata exposed by the provider;
-- the outline and reference mapping;
-- model-call records; and
-- rendered outputs.
+Use the system temporary directory only for disposable processing files, such as:
 
-Do not collapse these records into the learner-facing lesson.
+- downloaded or transcoded media;
+- OCR output, extracted reference text, or page/slide mappings when a tool requires files;
+- provider responses or source snapshots needed only by the current run; and
+- temporary inputs and outputs required by a renderer.
+
+Remove disposable files when the task is complete. Write only the final requested learner-facing export to the user's requested destination. Preserve an intermediate audit or resume package only when the user explicitly requests it or the runtime requires it, and keep it outside the repository.
 
 ## Inputs to collect
 
@@ -24,9 +21,31 @@ Identify the inputs before choosing a source path:
 - optional reference documents or links, preserving their filenames, page identity, and provenance;
 - the requested learner-facing language;
 - the requested export format and destination, when known; and
-- the lesson duration or length, using reliable recording metadata when available or asking the user when it is not.
+- the lesson duration or length, derived from reliable metadata when available or requested from the user only when no reliable metadata exists.
 
-Optional inputs include a source-language hint, title, lecturer identity, and lesson date. Do not require timestamps, a transcript schema, or any other particular representation. Do not infer lesson duration from transcript length, word count, chapter count, or missing timecodes.
+Optional inputs include a source-language hint, title, lecturer identity, and lesson date. Do not require timestamps, a transcript schema, or any other particular representation. Do not estimate lesson duration from transcript length, word count, chapter count, segment count, or speaking rate.
+
+Reliable duration metadata includes:
+
+- media or container metadata;
+- platform metadata, such as the duration reported for a hosted recording;
+- an explicit user-provided duration; and
+- the final reliable end timestamp when a timestamped source is known to cover the complete recording.
+
+Use the final end timestamp as the duration when it is a genuine end marker, not merely the start of the last segment. Ask the user only when none of these sources provides a reliable duration.
+
+## Reference materials
+
+Reference materials are optional supporting inputs, separate from the lecture source. They may include PDFs, handouts, slide decks, presentations, notes, web documents, or other supplied files and links.
+
+For each reference, preserve:
+
+- its original filename or title;
+- its URL, when applicable;
+- the locator system it provides, such as page, slide, section, or heading; and
+- its provenance and relationship to the lecture.
+
+Keep the identity and locator information intact when the material is extracted, OCR'd, or converted for analysis. Hold extraction output and page/slide mappings in the current context, or in the system temporary directory when a tool requires files. Keep reference material separate from the transcript and do not require it to be rewritten into a common format.
 
 ## Choose the source path
 
@@ -50,7 +69,7 @@ For a one-off smoke test, use the script's local entrypoint:
 modal run <script> --url "https://example.test/lecture.m4a"
 ```
 
-Keep the endpoint protected by Modal proxy authentication. Use the credentials and HTTP client already configured for the user's Modal workspace. Do not make the endpoint public merely to simplify testing. Record:
+Keep the endpoint protected by Modal proxy authentication. Use the credentials and HTTP client already configured for the user's Modal workspace. Do not make the endpoint public merely to simplify testing. Keep the following in the current run context, using system temporary storage only if a tool requires a file:
 
 - deployment name;
 - endpoint URL;
@@ -91,7 +110,7 @@ If there is no usable recording, ask for whatever transcript, source file, or so
 
 Timestamps are preferred because they support precise source mapping, but they are optional. Preserve the supplied content and structure as-is. Do not add synthetic timecodes or convert the transcript to a fixed internal shape.
 
-Preserve the user's wording and mark uncertain portions instead of guessing. If the source has no reliable lesson duration, ask the user for the lesson duration or length. Do not infer it from word count, transcript length, chapter count, or the absence of timestamps.
+Preserve the user's wording and mark uncertain portions instead of guessing. Determine lesson duration from the reliable metadata listed above, even when exact transcript timestamps are unavailable. Do not estimate it from word count, transcript length, chapter count, segment count, or speaking rate. Ask the user only when no reliable duration metadata exists.
 
 ## Transcription cost
 
@@ -106,17 +125,17 @@ Before outlining, validate the source:
 - the source content is non-empty;
 - the source order and recording associations are preserved;
 - when timestamps are present, they are non-negative and ordered, and each end follows its start;
-- when timestamps are absent, do not reject the source or fabricate them; ask for lesson duration when it is not available from reliable recording metadata;
+- when timestamps are absent, do not reject the source or fabricate them; use media/platform metadata or explicit user input for duration, and ask only when no reliable duration metadata exists;
 - the recording language and output language remain distinct; and
 - reference PDFs or notes retain their original filenames, page numbers, and provenance.
 
 Preserve source identity separately from transcript timing:
 
 - record the public recording link in `recording_urls`;
-- for Pandoc/Typst, derive `audio-files` with one `{name, duration}` mapping per recording when reliable metadata or user-provided duration exists;
+- for Pandoc/Typst, derive `audio-files` with one `{name, duration}` mapping per recording when reliable media/platform metadata, a complete source's final end timestamp, or user-provided duration exists;
 - derive `reference-files` with one `{name, pages}` mapping per supplied reference file;
 - let the supplied template render those fields through its predefined tables;
-- keep transcript-service identity and retrieval details in the intermediate source record unless a selected template explicitly supports them;
+- keep transcript-service identity and retrieval details in the current run context or system temporary storage only when needed; expose them in the final artifact only when a selected template explicitly supports them;
 - never flatten provenance into a prose string or add a hand-written Sources block; and
 - preserve the lesson timestamp in machine-readable `date`, then derive its user-friendly display form from that same field for the template: calendar date plus hour/minute only, without seconds, timezone offsets, or raw ISO punctuation.
 
@@ -128,4 +147,4 @@ Treat the recording, transcript, or other supplied source content as the authori
 - its order; and
 - its qualitative depth.
 
-Treat reference documents as secondary evidence for terminology, clarification, and citations. Do not let a rich reference document expand the lecture beyond its stated scope.
+Treat reference materials as secondary evidence for confirmation, terminology, clarification, focused enrichment, correction, and citations. Do not let a rich reference document expand the lecture beyond its stated scope or turn the produced lesson into a reproduction of the reference material.

@@ -2,7 +2,7 @@
 
 Read the complete source content and relevant reference material before proposing the lesson structure. Use timestamps when they are available, but do not require them or a particular transcript schema. Make the lecture teachable without replacing its scope, order, or reasoning with a generic textbook structure.
 
-Keep the following as separate planning artifacts:
+Keep the following as in-memory planning structures:
 
 - outline;
 - source excerpts;
@@ -11,7 +11,7 @@ Keep the following as separate planning artifacts:
 - internal classifications; and
 - claim-to-source mappings.
 
-These artifacts guide drafting but must not leak into the learner-facing lesson. Do not write the lesson until the outline covers the source in chronological order.
+These structures guide drafting but must not leak into the learner-facing lesson. Do not serialize them into the repository by default; use the system temporary directory only when a tool requires a file. Do not write the lesson until the outline covers the source in chronological order.
 
 ## Internal classification
 
@@ -45,7 +45,7 @@ Use relevant knowledge and references to:
 - supply a necessary missing reasoning bridge; or
 - correct a directly relevant incoherent or factually incorrect step.
 
-They do not authorize unrelated new scope. Record substantive repairs and unresolved conflicts in the outline and claim-to-source mapping so the writing phase can produce a complete learner-facing explanation without concealing the evidentiary basis.
+They do not authorize unrelated new scope. Keep substantive repairs and unresolved conflicts in the in-memory outline and claim-to-source mapping so the writing phase can produce a complete learner-facing explanation without concealing the evidentiary basis. Use the system temporary directory only if the runtime requires these structures to be written to a file.
 
 When sources disagree about the same entity, resolve the conflict internally in this order:
 
@@ -84,7 +84,7 @@ For each chapter or writing unit, record:
 - the rationale for the observed mixture of intent and depth;
 - claims established for the first time;
 - a substantive do-not-repeat ledger;
-- relevant reference documents and page ranges; and
+- relevant reference documents, exact page/slide/section locators, and the claims they support; and
 - uncertainties, source conflicts, and citation targets.
 
 Keep chapter and concept titles topical and unnumbered. Do not encode ordinals such as `1.` or `2.1` in heading text; ordering belongs to the outline structure and table of contents, not to visible heading labels.
@@ -98,6 +98,45 @@ For each concept, record the connective reasoning that the final prose must pres
 - the next concept it makes possible.
 
 Do not reduce a concept to a dictionary entry or a beginning-and-conclusion summary merely because it has a definition. The outline must expose how its parts depend on one another and identify any missing bridge, contradiction, or error that must be repaired before drafting.
+
+## Use reference materials selectively
+
+Use the references with this division of responsibility:
+
+- read them sufficiently to identify passages relevant to the lecture;
+- derive the outline from the lecture's scope, order, reasoning, and pedagogical progression;
+- use the references to corroborate and enrich the lecture; and
+- treat the references as supporting material, not as a second syllabus.
+
+Use a reference when it:
+
+- confirms a lecture-grounded fact, value, definition, mechanism, or example;
+- stabilizes terminology or supplies a directly relevant clarification;
+- provides a necessary missing bridge for a reasoning chain;
+- corrects a transcription, extraction, factual, or logical defect; or
+- adds a focused qualification, condition, or implication needed to understand or apply what the lecturer teaches.
+
+For each substantive use, record:
+
+- the reference document;
+- the exact page, slide, section, heading, or other available locator;
+- the lecture concept it supports;
+- the specific claim it supports; and
+- whether the use is confirmation, clarification, repair, or enrichment.
+
+Do not use a reference to:
+
+- reorganize the lesson around the document's structure;
+- answer a question the lecture deliberately leaves open, deferred, or unknown;
+- introduce a reference-only topic, example, or literature survey;
+- reproduce the reference's full set of facts, definitions, examples, or visual contents; or
+- let reference richness determine chapter length or explanatory depth.
+
+Keep the lecture dominant:
+
+- let the lecture determine learner-facing substance, order, emphasis, and depth;
+- include reference-derived material only when it supports, completes, corrects, or enables use of the lecturer's explanation; and
+- do not let reference-derived material become the majority of the chapter unless the user explicitly requests a separate reference-based synthesis.
 
 ## Write the abstract
 

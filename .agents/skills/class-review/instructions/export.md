@@ -1,6 +1,8 @@
 # Export the lesson
 
-Read the finished lesson as structured content before serializing it. Prefer a Markdown AST and the serializer supplied by the chosen library; do not hand-build YAML or Markdown by concatenating strings when an AST/serializer is available.
+This export instruction is the controlling export contract whenever `class-review` is active. Do not substitute a generic PDF, DOCX, Markdown, presentation, or document-export workflow. Use another format-specific skill only for a narrow rendering or inspection mechanic required below, and keep this skill's content, metadata, temporary-file, and output rules in force.
+
+Export only the completed learner-facing lesson in the requested format. Keep the source, outline, reference mapping, and drafts in the current working context; place disposable renderer inputs and outputs under the system temporary directory and remove them after use. Do not serialize intermediate lesson data or create temporary files in the repository.
 
 ## Canonical Markdown
 
@@ -40,7 +42,10 @@ Preserve the lesson timestamp in the machine-readable `date` field and use that 
 Keep source citations ordinary and local to the claims they support:
 
 - use ordinary Markdown footnotes or the citation syntax selected by Pandoc;
-- preserve source identity, page, and claim alignment;
+- preserve reference identity, exact page/slide/section locator, and claim alignment;
+- cite supplied PDFs, handouts, presentations, and other support material at the sentence or claim they directly support, rather than clustering citations at the end of a chapter;
+- ensure the citation's locator contains the specific value, definition, mechanism step, example, or qualification asserted by the attached sentence, not merely a related topic;
+- resolve transcript/reference disagreement before emitting either the body claim or its citation, so they agree on the same entity and value;
 - do not embed transport markup in the body; and
 - do not display transcript segment timecodes or timestamped citation links.
 
@@ -73,9 +78,16 @@ Populate the predefined source tables with mappings, not prose:
 - `recordings-label`, `duration-label`, `reference-documents-label`, and `pages-label`: localized overrides only when needed; and
 - omit a table's metadata when there is no corresponding source rather than fabricating a row.
 
-The template renders these entries through its predefined `Recordings | Duration` and `Reference documents | Pages` tables. Do not rename them to `sources`, `source_title`, or `reference_documents`; do not concatenate labels; and do not create Markdown tables in the lesson body.
+The template renders these entries through its predefined recording metadata table and reference metadata table. The reference table has a limited purpose:
 
-Keep transcript-service identity, retrieval details, raw responses, outlines, references, model-call records, and other intermediate artifacts outside the learner-facing body unless the selected template explicitly supports them.
+- list supplied reference names and available locator metadata;
+- preserve compact provenance;
+- do not reproduce the supplied documents; and
+- do not substitute for local inline citations in the lesson body.
+
+Do not rename the fields to `sources`, `source_title`, or `reference_documents`; do not concatenate labels; and do not create Markdown tables in the lesson body.
+
+Keep transcript-service identity, retrieval details, raw responses, outlines, references, model-call context, and other working data out of the learner-facing body and out of repository files. Include only final metadata fields explicitly supported by the selected template; use system temporary storage only when a tool requires a working file.
 
 The body must begin directly with lesson content. Do not duplicate the title, abstract, contents, recording/reference tables, or other template-owned metadata in the body. Do not rely on a custom filter or wrapper to conceal duplicates. Fill the template's existing title, timestamp, abstract, contents, source-table, heading, table, citation, footnote, and page-numbering mechanisms rather than replacing them with a parallel renderer-specific system.
 

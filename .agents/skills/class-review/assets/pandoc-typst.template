@@ -89,9 +89,6 @@ $endif$
 $if(region)$
   region: "$region$",
 $endif$
-$if(abstract-title)$
-  abstract-title: [$abstract-title$],
-$endif$
 $if(abstract)$
   abstract: [$abstract$],
 $endif$
@@ -149,7 +146,7 @@ $if(date)$
 $endif$
 $if(description)$
     #block(above: 1.35em, below: 0.85em)[
-      #text(size: 1.1em, weight: "bold", fill: accent-blue)[Abstract]
+      #text(size: 1.1em, weight: "bold", fill: accent-blue)[$if(abstract-title)$$abstract-title$$else$Abstract$endif$]
     ]
     #block(width: 100%)[
       #set par(justify: true)

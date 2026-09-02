@@ -2,7 +2,7 @@
 
 Read the outline, the source excerpts owned by the current writing unit, the relevant references, and the accumulated visible lesson context. Write a coherent review class in the requested language. The learner should hear the lecturer explaining the subject directly, not read a description of the source material, the lesson, or the generation process.
 
-Keep the learner-facing artifact as ordinary Markdown with YAML frontmatter and ordinary citations. Do not emit XML, transport envelopes, internal records, or generation-process commentary in the lesson. Preserve the raw transcript, outline, references, model-call records, and prior lesson versions separately from the visible prose.
+Keep the learner-facing artifact as ordinary Markdown with YAML frontmatter and ordinary citations. Do not emit XML, transport envelopes, internal records, or generation-process commentary in the lesson. Keep the raw source, outline, references, model-call context, and prior drafts in the current working context rather than serializing them into the repository. If a tool requires a file, use the system temporary directory and remove it after use.
 
 ## Source fidelity
 
@@ -13,7 +13,7 @@ Use the supplied lecture source as the primary source for:
 - reasoning goals and progression; and
 - explanatory depth.
 
-Use relevant knowledge and references to clarify, verify, supply a necessary missing bridge, or correct an incoherent or factually incorrect explanation. They do not authorize unrelated new scope. A source's authority does not require reproducing an error; preserve the lecturer's teaching objective and reasoning path while correcting the defective step and recording substantive repairs in the intermediate artifacts. When retaining a claim, preserve:
+Use relevant knowledge and references to clarify, verify, supply a necessary missing bridge, or correct an incoherent or factually incorrect explanation. They do not authorize unrelated new scope. A source's authority does not require reproducing an error; preserve the lecturer's teaching objective and reasoning path while correcting the defective step and keeping substantive repairs in the current working mapping. When retaining a claim, preserve:
 
 - exact values and units;
 - signs;
@@ -45,7 +45,44 @@ Repair the explanation whenever the source leaves a necessary gap or contains an
 - explain the repaired step as part of the lesson so that no necessary gap remains in the learner-facing argument; and
 - preserve unresolved uncertainty only when the available evidence cannot establish a correction, rather than silently inventing one.
 
-Keep the repair proportionate. Add what is necessary to make the lecturer's supported reasoning complete, not a generic textbook treatment or an unrelated expansion. Record substantive corrections, inserted bridges, and unresolved conflicts in the intermediate claim/source mapping even when the learner-facing prose reads as one coherent explanation.
+Keep the repair proportionate. Add what is necessary to make the lecturer's supported reasoning complete, not a generic textbook treatment or an unrelated expansion. Keep substantive corrections, inserted bridges, and unresolved conflicts in the current claim/source mapping; use the system temporary directory only if a tool requires that mapping to be written to a file.
+
+## Use reference materials as support
+
+Reference materials are secondary support, not a co-equal narrative. Apply these priorities:
+
+- let the lecture determine the chapter's scope, order, reasoning, emphasis, and depth;
+- make the chapter usable as a replacement for lecture notes or the recording;
+- assume the student will consult supplied PDFs, handouts, presentations, and other materials alongside it; and
+- do not turn the chapter into a compressed version of every source document.
+
+Use selected reference material to:
+
+- confirm what the lecture teaches;
+- clarify terminology or a directly relevant point;
+- repair a necessary gap or defective explanation; and
+- narrowly enrich the lecture with a qualification, condition, implication, or example needed for understanding or application.
+
+Include only details that help the learner understand, follow, remember, reproduce, test, or apply the lecturer's reasoning. Leave out the excess when a reference contains much more information than the lecture uses. Reference-derived material should not become the majority of the chapter unless the user explicitly asks for a reference-based synthesis.
+
+Every concept that materially uses a reference document must carry at least one local citation when the output format supports citations. Citation coverage is not a reason to add reference content: cite the specific reference-supported claim, not an entire paragraph or chapter merely because a document was available.
+
+When a reference supplies a necessary bridge or correction:
+
+- place it at the exact point where the lecture's reasoning needs it;
+- explain its relation to the surrounding argument;
+- state the resulting knowledge directly in the professor's voice;
+- keep source identity in the citation and template-owned metadata; and
+- do not write a parallel summary of the PDF or slides, narrate what a document says, follow the document's page order, or point the learner toward source layouts.
+
+Do not use reference material to:
+
+- answer a deliberate unknown;
+- resolve a deferred question;
+- broaden a sub-case into general coverage; or
+- introduce a reference-only topic.
+
+When a reference is relevant but conflicts with the lecture, resolve the conflict before writing, keep the body and citation aligned on the same value, and keep substantive additions, corrections, and unresolved conflicts in the current working mapping.
 
 ## Lecturer voice and connective exposition
 
@@ -161,9 +198,9 @@ When timestamps are present, source timecodes are an internal evidence and plann
 - do not place transcript timecodes or timestamp labels in the lesson;
 - do not create timestamped citation links;
 - use ordinary source citations without a time parameter; and
-- retain precise segment timestamps only in the preserved source record, outline, and internal claim mapping.
+- retain precise segment timestamps only in the current source context, outline, and internal claim mapping; use system temporary storage only when a tool requires a file.
 
-Do not fabricate timecodes when the source does not contain them. A user-provided or reliable recording duration may support lesson metadata, but it is not a substitute for exact segment timestamps.
+Do not fabricate timecodes when the source does not contain them. A duration derived from reliable media/platform metadata, a complete source's final end timestamp, or explicit user input may support lesson metadata, but it is not a substitute for exact segment timestamps.
 
 The document-level lesson timestamp may be rendered by the export template from the single `date` field.
 
@@ -201,6 +238,8 @@ Use one coherent publication system across the entire lesson:
 - keep heading hierarchy, typography, list treatment, table treatment, citation style, spacing, and formality consistent;
 - do not improvise a different visual or rhetorical style for each chapter; and
 - let content determine structure while the shared style system keeps the document unified.
+
+Use italics and bold sparingly to highlight only words or expressions that carry genuine conceptual importance. Prefer one emphasis style at a time; do not emphasize whole sentences or use emphasis decoratively.
 
 Do not represent ordinary causal, procedural, or chronological sequences as arrow chains. Prefer:
 
@@ -257,8 +296,10 @@ Write causal relationships as sentences, not symbol chains. Retain arrow notatio
 Cite claims where the chosen output format supports citations:
 
 - place each citation immediately after the sentence it supports;
-- cite the page or source that supports that specific claim;
+- cite the exact page, slide, section, heading, or other locator that directly supports that specific claim;
 - do not attach an unrelated citation when the lecture supplies the claim but no reference does;
+- when a supplied PDF, handout, presentation, or other reference materially supports a sentence, cite that reference locally rather than clustering citations at the end of a chapter;
+- ensure the cited source supports the sentence's specific value, definition, mechanism step, example, or qualification, not merely its general topic;
 - keep citation text in the requested language; and
 - ensure the citation agrees with the body on every relevant value and identifier.
 
@@ -268,25 +309,32 @@ Keep recording and reference provenance in the metadata structures supported by 
 
 - `recording_urls` contains public recording links;
 - `audio-files` contains `{name, duration}` entries;
-- `reference-files` contains `{name, pages}` entries; and
+- `reference-files` contains `{name, pages}` entries for the compact reference metadata table; and
 - the template renders those fields through its predefined source tables.
 
-Keep transcript-service and retrieval details in intermediate artifacts unless the template explicitly supports them. Do not spell metadata out as prose, add a manually authored `Sources` or `Source` section, or append a second bibliography-like block to the lesson body.
+The template-owned reference metadata table is a compact provenance inventory:
 
-## Intermediate call data
+- list supplied reference identity and available locator metadata there;
+- do not reproduce reference content in the table; and
+- do not treat the table as a substitute for local inline citations in the lesson body.
 
-For every model call, retain the following when the runtime exposes them:
+Put substantive reference-supported claims in the lesson body only when they serve the lecture's explanation.
 
-- exact request messages;
-- response object and visible output;
+Keep transcript-service and retrieval details in the current working context or system temporary storage only when needed. Expose them in the final artifact only when the template explicitly supports them. Do not spell metadata out as prose, add a manually authored `Sources` or `Source` section, or append a second bibliography-like block to the lesson body.
+
+## Working data and persistence
+
+Use runtime-provided call data in the current context when it is useful for continuity or verification:
+
+- request and response content;
 - response metadata and tool calls;
-- token usage and cache counters;
+- usage and cache information;
 - provider-exposed reasoning fields; and
-- failure metadata when a call is retried, alongside the successful result.
+- retry or failure information when relevant.
 
-Use the complete assistant response as context for later writing units when the model interface supports it. Keep private reasoning opaque and separate from the student-facing lesson; never invent, paraphrase, or publish hidden chain-of-thought.
+Do not create a file for each call or serialize this working data into the repository. Use the system temporary directory only when the runtime requires persistence, and remove those files when they are no longer needed. Keep private reasoning opaque and separate from the student-facing lesson; never invent, paraphrase, or publish hidden chain-of-thought.
 
-Never silently replace an earlier unit's source, terminology, citation, or established claim without recording the change. Preserve the raw transcript and intermediate artifacts even when a polished lesson is produced.
+Never silently replace an earlier unit's source, terminology, citation, or established claim without noting the change in the current working context. Do not preserve raw transcripts, drafts, or intermediate artifacts as repository files merely because a polished lesson is produced.
 
 Before exporting, verify:
 
