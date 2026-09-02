@@ -69,7 +69,100 @@ For a one-off smoke test, use the script's local entrypoint:
 modal run <script> --url "https://example.test/lecture.m4a"
 ```
 
-Keep the endpoint protected by Modal proxy authentication. Use the credentials and HTTP client already configured for the user's Modal workspace. Do not make the endpoint public merely to simplify testing. Keep the following in the current run context, using system temporary storage only if a tool requires a file:
+### Persist Modal credentials locally for future chats
+
+When the user explicitly requests local persistence, save the Proxy Token ID and Secret after the first-time setup so a later chat can reuse Modal without asking the beginner to repeat the setup. Do not save credentials silently when the user has not authorized local persistence.
+
+Resolve this fixed logical filename relative to the directory that contains SKILL.md:
+
+```text
+secrets/modal-proxy-token.json
+```
+
+Create the parent directory if needed. Store only the minimum information required to identify and authenticate the workspace:
+
+```json
+{
+  "workspace": "<username>",
+  "environment": "main",
+  "token_id": "wk-...",
+  "token_secret": "ws-..."
+}
+```
+
+Use a JSON file because it is easy for the agent to locate and parse in a new chat. Resolve it from the active skill folder, not from the current project or working directory. On macOS and Linux, create the directory with mode 0700 and the file with mode 0600. On Windows, restrict the file ACL to the current user. If secure permissions cannot be applied, do not write the Secret to disk and explain the limitation. In the repository copy, keep this path ignored by Git so the local credential file can never be committed.
+
+Never place this file in the repository, a project directory, a synchronized folder, a transcript, or a generated artifact. Do not print the Secret, include it in a status message, or commit it. Read it only in memory when constructing the authenticated request. If the file is missing, malformed, unreadable, or the endpoint returns 401, guide the user through token creation again without exposing any stored value.
+
+At the beginning of every new Modal transcription task, resolve this path and look for a valid file before asking the user for credentials. If both token fields are present, use them automatically for the matching Workspace and Environment. If valid saved credentials exist and a usable recording URL is available, prefer the Modal transcription path by default; use local transcription only when the user explicitly chooses it or the Modal path is unavailable.
+
+During first-time setup, instruct the user to open the Modal dashboard, select the correct Workspace and Environment, go to Workspace settings, open Proxy Tokens, create a token, and copy the Token ID and Token Secret. After the user supplies the values and has authorized local persistence, write the JSON file immediately without echoing the values. Keep the workspace value as the user's actual Workspace slug; placeholders such as <username> in this document are not literal credentials.
+
+### Find and call the deployed Web Function
+
+The URL in the Modal dashboard is a browser page for inspecting the deployment; it is not the HTTP URL to send transcription requests to. For a deployed app, Modal's default Web Function URL is:
+
+```text
+https://<username>--<app>-<function>.modal.run
+```
+
+Here, the username placeholder is the Modal Workspace slug, not a literal value. For example, if the workspace is example-workspace, the deployed app is parakeet-pipeline, and the Web Function is transcribe, the URL is:
+
+```text
+https://<workspace-slug>--parakeet-pipeline-transcribe.modal.run
+```
+
+Use the URL printed by modal deploy or shown in the deployed app's Web Functions section as the authority if the function has a custom label or the app uses a non-default environment suffix. A URL created with modal serve is temporary and normally includes a -dev suffix. See the Modal Web Function URL documentation (https://modal.com/docs/guide/webhook-urls) for the URL components and custom labels.
+
+The Parakeet and WhisperX scripts in this skill expose a transcribe Web Function with method="POST" and requires_proxy_auth=True. Send a JSON request body; do not use the Modal dashboard URL, a GET request, or a local filesystem path for the media.
+
+If no valid saved credentials are found, follow the first-time Proxy Token setup above before making an authenticated request. Keep the values outside the repository and out of transcripts, logs, prompts, and chat messages. Load them at request time through the saved credential file, environment variables, or an equivalent secret store.
+
+For example:
+
+```bash
+export MODAL_TOKEN_ID="wk-..."
+export MODAL_TOKEN_SECRET="ws-..."
+```
+
+Authenticate either with the Modal-Key and Modal-Secret headers or with the equivalent Authorization: Bearer TOKEN_ID.TOKEN_SECRET header. The separate headers are used in the example below. See the Modal Proxy Token documentation (https://modal.com/docs/guide/webhook-proxy-auth) for the supported authentication forms.
+
+Submit an items list with stable integer indices. The media URLs must be anonymously downloadable by the Modal container:
+
+```bash
+curl -L --fail-with-body -H "Modal-Key: $MODAL_TOKEN_ID" -H "Modal-Secret: $MODAL_TOKEN_SECRET" -H "Content-Type: application/json" --data '{"items":[{"url":"https://example.test/lecture-01.m4a","index":0}]}' "https://<username>--<app>-transcribe.modal.run"
+```
+
+The Parakeet response contains one result per item, preserving url and index, with the detected duration and timestamped segments containing start, end, and text. For multiple recordings, keep each index unique and stable so results can be matched to the source order. The endpoint returns 400 for missing or malformed items, 422 when the downloaded file is not valid media or has no audio stream, and 502 when the remote download fails.
+
+The Web Function may return a redirect for a request that exceeds the short HTTP request window while the underlying Modal Function continues processing. Keep -L in curl or enable redirect following in the HTTP client. The Modal timeout documentation (https://modal.com/docs/guide/webhook-timeouts) describes this behavior.
+
+### Use Google Drive audio files
+
+A Google Drive share link works only if the file is shared for anonymous viewing. In Google Drive, open Share, set General access to Anyone with the link, keep the role Viewer, and copy the link. Do not provide a link that requires the Modal container to sign in.
+
+The usual shareable link has one of these forms:
+
+```text
+https://drive.google.com/file/d/<FILE_ID>/view?usp=sharing
+https://drive.google.com/open?id=<FILE_ID>
+```
+
+Extract the exact file ID and convert it to the direct download URL:
+
+```text
+https://drive.google.com/uc?export=download&id=<FILE_ID>
+```
+
+Use that uc?export=download URL as the items[].url value. Before sending it to Modal, test that it downloads the media without authentication and does not return an HTML sign-in or confirmation page:
+
+```bash
+curl -L -o /dev/null -w "status=%{http_code} type=%{content_type}\n" "https://drive.google.com/uc?export=download&id=<FILE_ID>"
+```
+
+If the test returns an HTML page instead of the audio bytes, use a different publicly downloadable host or a signed download URL. The Modal code downloads the URL with a plain HTTP client and then runs ffprobe; it cannot use a user's browser cookies or complete a Google account login.
+
+Keep the deployment name, endpoint URL, request payload, response, and errors in the current run context, using system temporary storage only if a tool requires a file:
 
 - deployment name;
 - endpoint URL;
@@ -77,7 +170,7 @@ Keep the endpoint protected by Modal proxy authentication. Use the credentials a
 - response; and
 - errors.
 
-Submit an `items` list with stable integer indices. When the recording is known to be in one language, WhisperX may receive a BCP 47 hint:
+For WhisperX only, when the recording is known to be in one language, you may include the language hint shown below:
 
 ```json
 {

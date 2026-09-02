@@ -3,3 +3,5 @@
 .ruff_cache/
 __pycache__/
 *.py[cod]
+# Local Modal proxy credentials
+/.agents/skills/class-review/secrets/modal-proxy-token.json
